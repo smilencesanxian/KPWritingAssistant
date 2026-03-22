@@ -1,0 +1,790 @@
+# KP作文宝 - Progress Log
+
+## 2026-03-21 - Task 39: 端到端流程测试
+
+### What was done:
+- Ran `npm run lint` - no errors
+- Ran `npm run build` - successful (Next.js 16.2.0, all 20 pages/routes generated without errors)
+- Ran Playwright browser tests to verify all key pages render correctly:
+  - Homepage (/) - KP作文宝 landing page with login/register CTAs and bottom navigation
+  - Register (/register) - form with email, password, confirm password fields
+  - Login (/login) - form with email, password fields
+  - Protected routes (/upload, /history, /highlights, /error-points) - correctly redirect to /login when unauthenticated
+
+### Testing:
+- `npm run lint`: passed with 0 errors
+- `npm run build`: compiled successfully, TypeScript clean, all 20 routes generated
+- Playwright screenshots confirmed all pages render correctly
+- Auth middleware correctly protects routes and redirects to /login
+
+### Notes:
+- Full MVP flow (upload → OCR → correction → model essay → copybook) requires live Supabase + API keys to test end-to-end; auth/routing layer verified working
+- Chinese font rendering in headless Chromium shows boxes but this is a test environment issue, not a real app issue
+
+## 2026-03-21 - Task 37: 响应式设计和移动端适配
+
+### What was done:
+- **BottomNav (`src/components/layout/BottomNav.tsx`)**: 将 `paddingBottom` 从 `env(safe-area-inset-bottom)` 改为 `max(env(safe-area-inset-bottom), 16px)`，确保在所有设备上有最小底部间距
+- **AppLayout (`src/components/layout/AppLayout.tsx`)**: 将 main 的 `pb-16` 改为 inline style `calc(4rem + max(env(safe-area-inset-bottom, 0px), 16px))`，让内容区域自适应安全区域
+- **ErrorTooltip (`src/components/correction/ErrorTooltip.tsx`)**: 添加 `touchstart` 事件监听器（与 `mousedown` 一起），改善移动端点击外部关闭体验；添加 `max-w-[min(16rem,calc(100vw-2rem))]` 限制宽度防止溢出屏幕；添加 `onTouchStart` stopPropagation 防止误触
+- **历史记录删除 API (`src/lib/db/essays.ts` + `src/app/api/essays/[id]/route.ts`)**: 添加 `deleteSubmission` 函数和 DELETE 路由处理器，支持删除作文记录
+- **HistoryItem (`src/components/history/HistoryItem.tsx`)**: 改写为支持右滑显示删除按钮（CSS transform + touch 事件），新增 `onDelete` prop，`px-4` 移至 Link 内；添加状态 `isDragging` 控制过渡动画
+- **HistoryPage (`src/app/history/page.tsx`)**: 列表容器改为 `overflow-hidden` 确保右滑效果正常；传递 `onDelete` 回调做乐观更新 + DELETE API 调用
+- **HighlightItem (`src/components/highlights/HighlightItem.tsx`)**: 改写为右滑显示删除按钮模式，隐藏原内联删除按钮（桌面端保留），`px-4` 移至内容行
+- **HighlightsPage (`src/app/highlights/page.tsx`)**: 列表容器改为 `overflow-hidden` 确保右滑效果正常
+- 注：上传页 `capture="environment"` 属性已在之前任务中实现，本次确认无需修改
+
+### Testing:
+- `npm run lint` 通过（0 errors）
+- `npm run build` 构建成功
+- Playwright 在 375px 宽度测试：历史页、亮点库页、上传页均正常渲染，底部导航可见且间距正确，无布局溢出问题
+
+### Notes:
+- 右滑删除使用 `useState` 管理 `isDragging`（而非 useRef）以避免在 render 中访问 ref 的 lint 错误
+- ErrorTooltip 的定位使用 `min()` CSS 函数控制不超出屏幕右边缘
+
+## 2026-03-21 - Task 36: 错误处理和边界情况
+
+### What was done:
+- 创建 `src/app/corrections/[id]/error.tsx`：批改详情页错误边界，显示'批改数据加载失败'和'重试'按钮
+- 创建 `src/app/history/error.tsx`：历史页错误边界，显示'历史记录加载失败'和'重试'按钮
+- 创建 `src/lib/api-client.ts`：封装客户端 fetch 函数，包含：
+  - `apiFetch`：基础包装，支持超时（默认30s）和网络错误处理
+  - `useApiClient` Hook：自动处理 401（清除 session 并跳转 /login）、500（Toast '服务器异常，请稍后重试'）、网络超时
+- 更新 `src/app/upload/page.tsx`：
+  - OCR 失败后显示顶部黄色提示条'图片识别失败，请手动输入作文内容'（更醒目的 banner 样式）
+  - 批改 API（/api/correct）返回 500 时：显示错误状态卡片（correction-failed 步骤），提供'重新批改'按钮（保留 submission_id 直接重试）和'返回修改'按钮
+
+### Testing:
+- `npm run lint` 无错误
+- `npm run build` 构建成功
+
+### Notes:
+- API 路由已是 `{ error: string }` 格式，`api-client.ts` 额外支持 `code` 字段
+- correction-failed 步骤保存 submissionId，重试时不重复创建 essay 记录
+
+## 2026-03-21 - Task 35: Loading 状态和骨架屏
+
+### What was done:
+- 创建 `src/app/loading.tsx`：全局页面过渡加载组件，居中展示 Spinner
+- 创建 `src/app/corrections/[id]/loading.tsx`：骨架屏，顶部评分区三列（随机宽度），原文区8行文字骨架，范文区6行文字骨架
+- 创建 `src/app/history/loading.tsx`：5个历史记录卡片骨架，每卡片含标题、日期、分数标签
+- 创建 `src/app/highlights/loading.tsx`：搜索框骨架 + 10个亮点列表项骨架
+- 创建 `src/app/error-points/loading.tsx`：Tab骨架（3个圆角胶囊）+ 6个错误点卡片骨架（2列网格）
+- 更新 `src/app/upload/page.tsx` OCR识别加载：图片预览上叠加扫描线 CSS 动画，底部蓝色提示条"正在识别手写文字..."
+- 更新 `src/app/upload/page.tsx` 批改中加载动画：替换 Spinner 为脑袋 SVG 图标 + `animate-pulse` 脉动动画，保留轮播进度文案（每1.8秒切换）
+- 更新 `src/app/globals.css`：添加 `@keyframes scan-line` 动画（扫描线上下往返）
+
+### Testing:
+- `npm run lint` 通过（无错误）
+- `npm run build` 构建成功
+- 浏览器测试：访问各页面正常跳转至登录页（符合预期，middleware 鉴权保护）
+
+### Notes:
+- loading.tsx 为 Next.js App Router 约定文件，在服务端数据加载期间自动显示
+- 扫描线动画通过全局 CSS `@keyframes scan-line` 定义，在 upload 页面的图片预览 div 内叠加显示
+
+## 2026-03-21 - Task 34: 个人设置页
+
+### What was done:
+- 创建 `src/components/ui/Toggle.tsx`：iOS 风格开关组件，圆形滑块 + 颜色过渡动画，支持 `checked`、`onChange`、`disabled` 属性，使用 `role="switch"` 语义
+- 创建 `src/components/profile/SettingItem.tsx`：设置列表项组件，左侧圆角图标区 + 标签文字，右侧自定义内容区（可选箭头），支持 `clickable` 控制是否可点击
+- 创建 `src/app/profile/page.tsx`：
+  - 顶部用户信息区：圆形头像（邮箱首字母，primary-500 背景白字）、显示邮箱
+  - 设置列表卡片：每周错题提醒（Toggle，点击提示"即将推出"）、字体管理（显示"当前：Gochi Hand"，不可点击）、意见反馈（显示 feedback@kpwriting.com）、关于我们（v1.0.0）
+  - 底部全宽退出登录按钮（红色边框文字），第一次点击弹出确认 Toast，3 秒内再次点击执行 Supabase signOut 并跳转 /login
+- 更新 `src/components/layout/BottomNav.tsx`：新增"我的"导航项（用户图标，链接至 /profile）
+
+### Testing:
+- `npm run lint` 通过（0 errors）
+- `npm run build` 构建成功，`/profile` 路由正常生成
+- Playwright 浏览器测试：底部导航显示"首页、历史、亮点库、易错点、我的"5个标签，点击"我的"正确跳转 /login（auth 中间件保护正常工作）
+
+### Notes:
+- /profile 已在 middleware.ts 的 protectedRoutes 中注册，无需修改中间件
+- WSL 文件系统上 Next.js Turbopack 的 HMR 有时不工作，需要重启 dev server 才能反映改动
+
+## 2026-03-21 - Task 33: 历史记录页
+
+### What was done:
+- 更新 `src/lib/db/essays.ts`：新增 `SubmissionWithScore` 类型，`getSubmissions` 函数通过 Supabase join 同时查询 `corrections(id, total_score)`，返回包含 `correction_id` 和 `total_score` 的扩展类型
+- 创建 `src/components/history/HistoryItem.tsx`：历史记录列表项组件，左侧文档图标（颜色按总分：高分≥24绿、中分≥18蓝、低分橙、无分灰），中间显示作文标题（无标题则格式化为"M月D日的作文"）和相对批改时间，右侧总分标签（如"21/30"或"批改中"），点击跳转 `/corrections/[correction_id]`
+- 创建 `src/app/history/page.tsx`：客户端组件，初始加载调用 `/api/essays?page=1&limit=10`，IntersectionObserver 无限滚动加载下一页，移动端 touch 下拉刷新（拖拽距离 >60px），空状态显示文档插图 + "暂无批改历史" + "去批改第一篇"按钮，底部显示"已加载全部 N 条记录"
+
+### Testing:
+- `npm run lint` 无错误
+- `npm run build` 构建成功，/history 路由正常生成
+- 访问 /history 正确重定向到 /login（auth middleware 生效）
+
+### Notes:
+- corrections 表与 essay_submissions 是一对一关系，Supabase join 返回数组，取 [0] 即可
+- 任务描述中 `/corrections/[id]（submission id）` 实际应为 correction_id，已按 correction_id 实现跳转
+
+## 2026-03-21 - Task 32: 易错点详情页
+
+### What was done:
+- 创建 `src/lib/knowledge/error-explanations.ts`：为 9 种错误类型（主谓一致、动词时态、冠词、介词、拼写、标点、词汇、句子结构、单复数）预设知识点文本、3条对比例句和3道填空练习题
+- 创建 `src/components/error/ErrorInstanceItem.tsx`：错误例句列表项，红色显示原始错误句，绿色显示修正句，灰色显示日期
+- 创建 `src/components/error/PracticeQuestion.tsx`：可展开答案的练习题组件（客户端组件，点击"查看答案"展示答案）
+- 创建 `src/components/error/ErrorPointDetailActions.tsx`：客户端组件，处理"已掌握"按钮（显示"即将上线"Toast）和"生成专项练习纸"按钮（显示"即将推出"Toast）
+- 创建 `src/app/error-points/[id]/page.tsx`：服务端组件，服务端 getErrorPointById 获取数据，展示知识点讲解卡片（浅蓝色背景）、用户错误记录列表和专项练习题
+
+### Testing:
+- `npm run lint` 通过（无错误）
+- `npm run build` 构建成功，/error-points/[id] 路由已注册
+- 浏览器访问 /error-points/[id] 正确重定向到 /login（auth middleware 保护）
+
+### Notes:
+- 知识点数据为静态预设，按 error_type 键值查找，fallback 为通用说明
+- "已掌握"和"生成专项练习纸"均为 V2.0 占位按钮，点击显示 Toast
+
+## 2026-03-21 - Task 31: 易错点列表页
+
+### What was done:
+- 创建 `src/components/error/ErrorPointCard.tsx`：错误点卡片组件，左侧错误类型图标（不同颜色），is_flagged=true 时显示橙色警告图标并左边框橙色高亮，中间显示错误类型中文名和出现次数，右侧最后出现日期和箭头图标
+- 创建 `src/app/error-points/page.tsx`：客户端组件，顶部筛选 Tab（全部/易错点），列表展示错误类型卡片，空状态奖杯图标+文案，点击卡片跳转 /error-points/[id]
+
+### Testing:
+- `npm run lint` 通过（无错误）
+- `npm run build` 构建成功，/error-points 路由已注册
+- 浏览器访问 /error-points 正确重定向到 /login（auth middleware 保护）
+
+### Notes:
+- 错误类型图标颜色配置在 ErrorPointCard.tsx 的 ERROR_TYPE_CONFIG 中，覆盖了主要错误类型
+- API 调用 GET /api/error-points（全部）和 GET /api/error-points?flagged_only=true（易错点）
+
+## 2026-03-21 - Task 30: 亮点库页面
+
+### What was done:
+- 创建 `src/components/highlights/HighlightItem.tsx`：亮点列表项，左侧类型图标（词汇/短语/句子），中间文本，右侧垃圾桶删除按钮
+- 创建 `src/components/highlights/AddHighlightModal.tsx`：底部抽屉弹窗，含文本 textarea、类型下拉选择、确认添加按钮，带表单验证
+- 创建 `src/app/highlights/page.tsx`：客户端组件，包含顶部搜索框（debounce 500ms）、类型筛选 Tab 栏（全部/词汇/短语/句子）、亮点列表、空状态插图、底触加载更多（IntersectionObserver）、删除确认 Toast、右下角 FAB 按钮
+
+### Testing:
+- `npm run lint` 通过（无错误）
+- `npm run build` 成功（/highlights 路由正确生成）
+- 浏览器测试：访问 /highlights 正确重定向到 /login（middleware 认证正常）
+
+### Notes:
+- 删除采用乐观更新（立即从列表移除，失败时重新拉取）
+- 无限滚动使用 IntersectionObserver，每次加载 20 条
+- 搜索和类型切换时重置到第 1 页
+
+## 2026-03-21 - Task 29: 字帖预览和下载页
+
+### What was done:
+- 添加 `getCopybookById` 函数到 `src/lib/db/copybooks.ts`，按 id 和 user_id 查询字帖记录
+- 创建 `src/app/copybook/[id]/page.tsx`：服务端组件，鉴权后加载字帖，不存在则 notFound()；展示 CopybookPreview、字体说明、打印提示、下载PDF按钮、返回批改结果链接；SEO title 设为 'KP作文宝 - 字帖下载'
+- 创建 `src/components/copybook/CopybookPreview.tsx`：桌面端用 iframe 嵌入 PDF（高度600px），移动端降级为 '点击查看 PDF' 链接；pdf_url 为空时显示占位提示
+
+### Testing:
+- `npm run lint` 通过（无错误）
+- `npm run build` 构建成功，/copybook/[id] 路由已注册
+- 浏览器测试：访问 /copybook/test-id 正确重定向到登录页（未认证用户）
+
+### Notes:
+- CopybookPreview 使用 'use client' 标记（含条件渲染逻辑）
+- 移动端通过 Tailwind sm: 断点区分桌面/移动展示
+
+## 2026-03-21 - Task 28: 批改结果页 - 亮点展示和范文生成
+
+### What was done:
+- 添加 `getHighlightsBySubmissionId` 函数到 `src/lib/db/highlights.ts`，按 source_submission_id 查询亮点
+- 创建 `src/components/correction/HighlightsList.tsx`：展示本次批改提取的亮点列表，每项显示类型标签（词汇/短语/句子）和文本，右侧显示'已加入亮点库'
+- 创建 `src/components/correction/LevelSelector.tsx`：三等宽按钮（合格/优秀/卓越），选中态主色背景白字，非选中态灰色边框
+- 创建 `src/components/correction/ModelEssayView.tsx`：客户端组件，管理级别选择状态；级别切换时若已有缓存直接展示，否则调用 POST /api/generate/model-essay 并显示'正在生成范文...'加载动画；范文以等宽字体行高1.8展示；底部'生成字帖'按钮调用 /api/generate/copybook 并跳转 /copybook/[id]
+- 更新 `src/app/corrections/[id]/page.tsx`：并行加载亮点和范文数据（getHighlightsBySubmissionId + getModelEssaysByCorrectionId），渲染 HighlightsList 和 ModelEssayView 组件
+
+### Testing:
+- npm run lint: 通过（无错误）
+- npm run build: 构建成功（TypeScript 类型检查通过）
+
+### Notes:
+- ModelEssayView 在客户端缓存已生成的范文（Map 结构），避免重复 API 调用
+- 初始加载时 level 默认为 'good'（优秀），但不自动触发生成，需用户点击级别按钮
+
+## 2026-03-21 - Task 27: 批改结果页 - 评分和错误标注
+
+### What was done:
+- 添加 getCorrectionById 函数到 src/lib/db/corrections.ts（按 correction ID 查询）
+- 修改 src/app/upload/page.tsx：批改完成后将 flagged_errors 第一个易错点的 id 和 label 作为 URL 参数传递给批改结果页
+- 创建 src/components/correction/ErrorTooltip.tsx：点击展开/收起错误弹窗（原词、修正词、错误类型、解释）
+- 创建 src/components/correction/AnnotatedEssay.tsx：将原文按 error_annotations 的 start/end 偏移切割，错误词用红色虚线下划线标注，点击显示 ErrorTooltip；答题卡横线纸背景效果
+- 创建 src/app/corrections/[id]/page.tsx（服务端组件）：
+  - 按 correction ID 查询批改记录，再用 submission_id 调用 getSubmissionById 获取完整数据
+  - 顶部新易错点橙色横幅（若 URL 参数有 flagged_id/flagged_label）
+  - 总分大字号展示 + 三维度分数（内容/沟通/语言）用 Badge 组件
+  - 总体评语和改进建议卡片
+  - AnnotatedEssay 组件展示原文批注
+
+### Testing:
+- npm run lint：通过（无错误）
+- npm run build：成功构建（Next.js 16 Turbopack）
+- 浏览器测试：主页正常加载，未认证用户访问 /corrections/[id] 正确跳转到登录页
+
+### Notes:
+- corrections/[id] 中的 [id] 是 correction 的 UUID（非 submission ID）
+- 易错点新增标注通过 URL 参数传递（上传页跳转时注入），避免服务端额外查询
+- ErrorTooltip 点击外部自动关闭，多个标注同时只显示一个 tooltip
+
+## 2026-03-21 - Task 26: 上传页 UI 实现
+
+### What was done:
+- 创建 src/components/upload/ImageDropzone.tsx：
+  - 支持拖拽上传（dragover/drop 事件）
+  - 点击触发 input type=file（accept="image/*"，capture="environment" 支持手机相机）
+  - 拖拽状态时高亮边框样式
+- 创建 src/app/upload/page.tsx（客户端组件，状态机管理三步流程）：
+  - Step 'select'：显示 ImageDropzone，选中图片后显示预览图+文件信息，"开始识别"按钮
+  - select → confirming：调用 /api/upload 上传图片，再调用 /api/ocr 识别，期间显示"正在识别手写文字..."动画
+  - Step 'confirming'：左侧作文图片小预览，右侧可编辑 Textarea（OCR 文本），OCR 失败时显示"识别失败，请手动输入"提示，底部"重新拍照"和"确认并批改"按钮
+  - confirming → correcting：调用 /api/essays 创建记录，再调用 /api/correct 批改，显示轮播加载文案
+  - 批改完成后跳转 /corrections/[id]
+  - 所有操作失败时使用 Toast 提示错误
+
+### Testing:
+- npm run lint: 通过（无错误无警告）
+- npm run build: 成功（/upload 路由正常生成）
+- 浏览器测试：访问 /upload 被 middleware 正确重定向至登录页（鉴权保护正常）
+
+### Notes:
+- /upload 页面需要登录才能访问，这是预期行为
+- OCR 识别结果在 confirming 步骤可手动编辑，容错性好
+
+## 2026-03-21 - Task 25: 首页 UI 实现
+
+### What was done:
+- 重写 KPWritingAssistant-web/src/app/page.tsx 为服务端组件：
+  - 未登录用户：显示欢迎落地页（产品介绍 + 登录/注册按钮）
+  - 已登录用户：显示统计卡片、拍照批改按钮、最近批改列表
+- 创建 src/components/home/StatCard.tsx：展示单个统计数字（数字大字号 + 单位 + 标签）
+- 创建 src/components/home/RecentSubmissionItem.tsx：展示单条批改记录（标题/日期/箭头），点击跳转 /corrections/[id]
+- 首页已登录视图包含：
+  - 三卡片横排统计区域（已批改/亮点/易错点）
+  - 大圆形"拍照批改"主色按钮，跳转 /upload
+  - 最近批改列表（最多3条），底部"查看全部历史记录"链接
+  - 无批改记录时显示空状态引导（插图 + 提示文案 + "去批改第一篇"按钮）
+
+### Testing:
+- npm run lint: 通过（无错误）
+- npm run build: 成功（TypeScript 检查通过，静态页面生成正常）
+
+### Notes:
+- Supabase 未配置时 try/catch 捕获错误，默认展示落地页（未登录状态）
+
+## 2026-03-21 - Task 24: API Route - 统计数据
+
+### What was done:
+- 创建 KPWritingAssistant-web/src/app/api/stats/route.ts：
+  - GET /api/stats：验证登录
+  - 并行调用 getUserStats() 和 getRecentSubmissions()
+  - 返回 { corrections_count, highlights_count, error_points_count, flagged_error_count, recent_submissions }
+  - 错误时返回 500 和错误信息
+
+### Testing:
+- npm run lint 通过（无错误）
+- npm run build 成功（/api/stats 出现在路由表中）
+
+### Notes:
+- getUserStats 和 getRecentSubmissions 已在 src/lib/db/stats.ts 中实现，本任务只需创建 API 路由层
+
+## 2026-03-21 - Task 23: API Route - 字帖生成
+
+### What was done:
+- 创建 KPWritingAssistant-web/src/app/api/generate/copybook/route.ts：
+  - POST /api/generate/copybook：验证登录，接收 { model_essay_id, font_style? }
+  - 通过 model_essay → corrections → essay_submissions 链路验证用户所有权
+  - 调用 getCopybookByModelEssayId() 检查缓存，已有则直接返回
+  - 调用 generateCopybookPDF() 生成 PDF Buffer
+  - 使用 crypto.randomUUID() 生成临时 ID 作为上传路径，调用 uploadCopybookPDF()
+  - 调用 createCopybook() 保存记录，返回 { copybook }
+
+### Testing:
+- npm run lint：通过，无错误
+- npm run build：构建成功，/api/generate/copybook 路由出现在构建输出中
+
+### Notes:
+- 上传路径使用 crypto.randomUUID() 生成唯一 ID，避免与 DB 自增 ID 冲突
+- 所有权验证使用 Supabase JOIN 查询一次完成，避免多次往返
+
+## 2026-03-21 - Task 22: API Route - 易错点查询
+
+### What was done:
+- 创建 KPWritingAssistant-web/src/app/api/error-points/route.ts：
+  - GET /api/error-points：验证登录，读取 query 参数 flagged_only(boolean)，调用 getErrorPoints()，返回 { error_points }
+- 创建 KPWritingAssistant-web/src/app/api/error-points/[id]/route.ts：
+  - GET /api/error-points/:id：验证登录，调用 getErrorPointById()（内部验证所有权），返回 { error_point, instances }；不存在返回404
+
+### Testing:
+- npm run lint：通过，无错误
+- npm run build：构建成功，两个新路由出现在构建输出中
+
+### Notes:
+- ErrorPointDetail 继承自 ErrorPoint 并包含 instances 数组，通过解构分离返回
+- flagged_only 参数映射到 db 层的 flaggedOnly 选项
+
+## 2026-03-21 - Task 21: API Route - 亮点库 CRUD
+
+### What was done:
+- 创建 KPWritingAssistant-web/src/app/api/highlights/route.ts：
+  - GET /api/highlights：验证登录，读取 query 参数 search、type、page、limit，调用 getHighlights()，返回 { highlights, total }
+  - POST /api/highlights：验证登录，接收 { text, type }，验证 text 非空、type 合法（vocabulary/phrase/sentence），调用 addHighlightManually()，返回 { highlight }
+- 创建 KPWritingAssistant-web/src/app/api/highlights/[id]/route.ts：
+  - DELETE /api/highlights/:id：验证登录，先查询确认亮点存在（404）和所有权（403），调用 deleteHighlight()，成功返回 { success: true }
+
+### Testing:
+- npm run lint: 无错误
+- npm run build: 构建成功，/api/highlights 和 /api/highlights/[id] 均出现在路由表中
+
+### Notes:
+- DELETE 路由在调用 deleteHighlight() 前先做存在性和所有权检查，提供更清晰的 404/403 区分
+
+## 2026-03-21 - Task 20: API Route - 范文生成
+
+### What was done:
+- 创建 KPWritingAssistant-web/src/app/api/generate/model-essay/route.ts：
+  - POST /api/generate/model-essay：验证登录，接收 { correction_id, target_level }
+  - 验证 target_level 必须是 pass/good/excellent
+  - 通过 Supabase JOIN 查询 correction 关联的 essay_submissions 验证所有权
+  - 不存在返回404，不属于当前用户返回403
+  - 调用 getModelEssayByLevel() 检查缓存，已存在直接返回
+  - 获取用户亮点库（最多50条）用于注入 Prompt
+  - 调用 generateModelEssay() 生成范文内容
+  - 调用 createModelEssay() 保存范文记录
+  - 返回 { model_essay }
+
+### Testing:
+- npm run lint: 无错误
+- npm run build: 构建成功，新路由 /api/generate/model-essay 出现在路由表中
+
+### Notes:
+- 通过 Supabase JOIN (essay_submissions!inner) 一次查询完成所有权验证，效率更高
+- 亮点注入使用用户全局亮点库（非仅本次批改的亮点），让范文更个性化
+
+## 2026-03-21 - Task 19: API Route - AI 批改（核心）
+
+### What was done:
+- 创建 KPWritingAssistant-web/src/app/api/correct/route.ts：
+  - POST /api/correct：验证登录，接收 { submission_id }
+  - 查询 submission 并验证所有权（不存在或不属于当前用户返回403）
+  - 若 status='completed' 且已有 correction，直接返回（幂等）
+  - 调用 updateSubmissionStatus(id, 'processing')
+  - 调用 correctEssay() 获取批改结果
+  - 调用 createCorrection() 保存批改记录
+  - 调用 createHighlights() 批量保存亮点
+  - 调用 processErrorsFromCorrection() 更新易错点档案
+  - 调用 updateSubmissionStatus(id, 'completed')
+  - 返回 { correction, flagged_errors }
+  - 任何步骤失败时调用 updateSubmissionStatus(id, 'failed')，返回500
+
+### Testing:
+- npm run lint: 无错误
+- npm run build: 构建成功，/api/correct 路由正确生成
+
+### Notes:
+- ocr_text 为空时提前返回400，避免无效 LLM 调用
+- 幂等逻辑：已完成的批改直接返回 flagged_errors 为空数组
+
+## 2026-03-21 - Task 18: API Route - 作文提交 CRUD
+
+### What was done:
+- 创建 KPWritingAssistant-web/src/app/api/essays/route.ts：
+  - POST /api/essays：验证登录，接收 { ocr_text, original_image_path, title? }，调用 createSubmission()，返回 { submission }（201）
+  - GET /api/essays：验证登录，读取 query 参数 page（默认1）和 limit（默认10），调用 getSubmissions()，返回 { essays, total, page, limit }
+- 创建 KPWritingAssistant-web/src/app/api/essays/[id]/route.ts：
+  - GET /api/essays/:id：验证登录，调用 getSubmissionById()（内部已验证所有权），若返回 null 则 404，否则返回 { essay }（含 correction 和 model_essays）
+
+### Testing:
+- npm run lint: 无错误
+- npm run build: 构建成功，/api/essays 和 /api/essays/[id] 路由均正确生成
+
+### Notes:
+- params 使用 Promise<{ id: string }> 类型（Next.js 16 的新 API）
+- limit 做了合理的上限限制（最大100）
+
+## 2026-03-21 - Task 17: API Route - OCR 识别
+
+### What was done:
+- 创建 KPWritingAssistant-web/src/app/api/ocr/route.ts：
+  - POST /api/ocr 处理 OCR 识别请求
+  - 验证用户登录状态（未登录返回401）
+  - 接收请求体 { image_url: string }，验证 image_url 非空
+  - 从 image_url 下载图片并转为 base64
+  - 调用 src/lib/ocr/baidu.ts 的 recognizeHandwriting() 函数（task 7 已实现 Baidu OCR，task 描述中提及 tencent.ts 有误）
+  - 返回 { text: string; confidence: number }
+  - 错误处理：图片获取失败返回500，OCR 服务调用失败返回500并附详细错误信息
+
+### Testing:
+- npm run lint：无错误
+- npm run build：构建成功，/api/ocr 路由已注册
+
+### Notes:
+- Task 17 步骤中提到调用 src/lib/ocr/tencent.ts，但 Task 7 实际实现的是 Baidu OCR (baidu.ts)，故使用现有的 baidu.ts 模块
+
+## 2026-03-21 - Task 16: API Route - 文件上传
+
+### What was done:
+- 创建 KPWritingAssistant-web/src/app/api/upload/route.ts：
+  - POST /api/upload 处理图片上传到 Supabase Storage essay-images bucket
+  - 验证用户登录状态（未登录返回401）
+  - 验证文件类型（仅允许 image/jpeg、image/png、image/webp），不合法返回400
+  - 验证文件大小（最大10MB），超过返回413
+  - 存储路径格式：{userId}/{timestamp}.{ext}
+  - 返回 { storage_path, url }，url 为签名URL有效期1小时
+  - 错误处理：上传失败返回500
+
+### Testing:
+- npm run lint: 通过，无错误
+- npm run build: 构建成功，/api/upload 路由已注册
+
+### Notes:
+- 使用 Date.now() 生成文件名以避免冲突（而非 submissionId，因上传时尚未创建记录）
+- uploadEssayImage 工具函数需要 submissionId，此路由直接调用 supabase.storage 避免该依赖
+
+## 2026-03-21 - Task 15: 统计数据访问层
+
+### What was done:
+- 创建 KPWritingAssistant-web/src/lib/db/stats.ts：
+  - getUserStats(userId): 并行查询4个计数：corrections_count(status='completed')、highlights_count、error_points_count、flagged_error_count(is_flagged=true)
+  - getRecentSubmissions(userId, limit=3): 获取最近N条 status='completed' 的提交记录，按 created_at 倒序
+- UserStats 类型已在 src/types/database.ts 中由任务14前定义，无需修改
+
+### Testing:
+- npm run lint: 通过，无错误
+- npm run build: 构建成功（TypeScript 编译通过）
+
+### Notes:
+- getUserStats 使用 JOIN 查询 corrections 表时通过 essay_submissions!inner(user_id) 过滤所有权
+
+## 2026-03-21 - Task 14: 字帖数据访问层和 Storage 工具函数
+
+### What was done:
+- 创建 src/lib/db/copybooks.ts：
+  - createCopybook(userId, modelEssayId, pdfStoragePath, pdfUrl, fontStyle): 插入字帖记录
+  - getCopybookByModelEssayId(modelEssayId, userId): 查询字帖（含所有权验证），用于缓存检查
+- 创建 src/lib/storage/upload.ts：
+  - uploadEssayImage(userId, submissionId, file, ext): 上传到 essay-images bucket，返回 signed URL
+  - uploadCopybookPDF(userId, copybookId, pdfBuffer): 上传到公开 copybook-pdfs bucket，返回 public URL
+  - getSignedUrl(bucket, path, expiresIn?): 获取私有文件临时访问 URL
+
+### Testing:
+- ✅ npm run lint 无错误
+- ✅ npm run build 成功
+
+---
+
+## 2026-03-21 - Task 13: 易错点数据访问层
+
+### What was done:
+- 创建 src/lib/db/error-points.ts：
+  - upsertErrorPoint(userId, errorType, errorTypeLabel): select-then-update/insert 模式实现计数递增
+  - flagIfNeeded(errorPointId): 查询 occurrence_count，>= 2 时更新 is_flagged = true
+  - createErrorInstance(errorPointId, submissionId, data): 创建错误实例记录
+  - getErrorPoints(userId, options?): 按 occurrence_count 倒序，支持 flaggedOnly 过滤
+  - getErrorPointById(id, userId): JOIN error_instances（最多10条），验证所有权
+  - processErrorsFromCorrection(userId, submissionId, errorSummary, errorAnnotations): 遍历错误类型，
+    调用 upsertErrorPoint/flagIfNeeded/createErrorInstance，返回新触发 is_flagged 的易错点列表
+
+### Testing:
+- ✅ npm run lint 无错误
+- ✅ npm run build 成功
+
+---
+
+
+## 2026-03-21 - Task 12: 亮点库数据访问层
+
+### What was done:
+- 创建 src/lib/db/highlights.ts：
+  - createHighlights(userId, highlights, sourceSubmissionId?): 批量插入 highlights_library 记录
+  - getHighlights(userId, options?): 分页查询，支持 ILIKE 文本搜索和 type 过滤
+  - deleteHighlight(id, userId): 验证所有权后删除
+  - addHighlightManually(userId, text, type): 手动添加单条亮点
+
+### Testing:
+- ✅ npm run lint 无错误
+- ✅ npm run build 成功
+
+---
+
+
+## 2026-03-21 - Task 11: 批改和范文数据访问层
+
+### What was done:
+- 创建 src/lib/db/corrections.ts：
+  - createCorrection(submissionId, data): 插入批改记录（三维分数、错误标注、总评、改进建议）
+  - getCorrectionBySubmissionId(submissionId): 按 submission_id 查询批改
+  - updateCorrectionStatus(id, status): 更新批改状态
+  - createModelEssay(correctionId, level, content): 保存范文记录
+  - getModelEssaysByCorrectionId(correctionId): 获取所有范文
+  - getModelEssayByLevel(correctionId, level): 获取指定级别范文（用于缓存检查）
+
+### Testing:
+- ✅ npm run lint 无错误
+- ✅ npm run build 成功
+
+---
+
+## 2026-03-21 - Task 10: 作文提交数据访问层
+
+### What was done:
+- 创建 src/types/database.ts：定义所有数据库实体类型
+  - Submission、Correction、ModelEssay、Highlight、ErrorPoint、ErrorInstance、Copybook
+  - 复合类型：SubmissionDetail（含 correction 和 model_essays 嵌套）、ErrorPointDetail（含 instances）
+  - UserStats（统计数据类型，供 Task 15 使用）
+- 创建 src/lib/db/essays.ts：实现 essay_submissions 表 CRUD
+  - createSubmission(userId, data): 插入新提交记录
+  - getSubmissions(userId, options): 按 created_at 倒序分页查询
+  - getSubmissionById(submissionId, userId): JOIN corrections 和 model_essays，验证所有权
+  - updateSubmissionStatus(id, status): 更新提交状态
+
+### Testing:
+- ✅ npm run lint 通过
+- ✅ npm run build 成功（TypeScript 编译无错误）
+
+### Notes:
+- getSubmissionById 使用 PGRST116 错误码判断记录不存在（返回 null）
+- Supabase 嵌套查询语法：corrections(*,model_essays(*)) 返回一对一关系时以单对象返回
+
+## 2026-03-21 - Task 9: pdfkit 字帖 PDF 生成模块
+
+### What was done:
+- 字体文件已存在：src/assets/fonts/GochiHand-Regular.ttf（注：正确文件名含 'i'，与 task.json 中 GochHand 拼写略有差异）
+- 创建 src/types/pdf.ts：定义 CopybookOptions 类型 { fontStyle?: string }
+- 创建 src/lib/pdf/copybook.ts：
+  - 注册 Gochi Hand 字体（GochiHand-Regular.ttf）
+  - 实现 generateCopybookPDF(essayText, options?): Promise<Buffer>
+  - A4 规格(595.28×841.89pt)，边距上下40pt/左右60pt，右留白80pt
+  - 顶部标题 'PET Writing Practice'（14pt 居中）
+  - 每行先画灰色横线(#E0E0E0)，再在横线上方渲染文字（18pt，行高36pt）
+  - 超出 A4 高度自动 addPage() 并重复标题
+  - 返回 Buffer 供上传 Supabase Storage
+
+### Testing:
+- ✅ npm run lint 通过
+- ✅ npm run build 成功（修复了 Google Fonts 网络依赖问题：改用 next/font/local 加载本地 Geist 字体）
+
+### Notes:
+- 字体文件路径使用 path.join(process.cwd(), 'src/assets/fonts/GochiHand-Regular.ttf')
+- PDF 生成为纯服务端逻辑（Node.js Buffer），仅在 API Route 调用
+- Gochi Hand 字体从 https://github.com/google/fonts/raw/main/ofl/gochihand/GochiHand-Regular.ttf 下载，使用 SIL Open Font License（OFL），符合商用要求
+- 修复构建：layout.tsx 改用 next/font/local 引用 Next.js 内置 Geist 字体，避免在无网络构建环境下失败
+
+## 2026-03-21 - Task 8: LLM AI 批改模块封装（可配置化）
+
+### What was done:
+- src/lib/ai/llm.ts 已存在并实现完整功能：
+  - 使用 openai 包，baseURL/apiKey/model 从环境变量读取（LLM_BASE_URL、LLM_API_KEY、LLM_MODEL），默认 DashScope 通义千问
+  - correctEssay(text)：调用 LLM 批改作文，最多2次重试（间隔3秒），解析并验证 JSON 输出
+  - generateModelEssay(originalText, highlights, level)：按 pass/good/excellent 级别生成范文
+- src/lib/ai/prompts.ts 已存在：PET 考官角色提示词 + 范文生成提示词
+- src/types/ai.ts 已存在：CorrectionResult、ErrorAnnotation、Highlight、ErrorSummaryItem 类型定义
+
+### Testing:
+- ✅ npm run lint 通过
+- ✅ npm run build 成功
+
+## 2026-03-21 - Task 1: 项目基础配置
+
+### What was done:
+- 在 KPWritingAssistant-web/ 目录初始化 Next.js 16 项目（TypeScript + Tailwind CSS v4 + ESLint + App Router）
+- 安装所有依赖：
+  - @supabase/supabase-js, @supabase/ssr（Supabase 客户端）
+  - clsx, tailwind-merge（工具库）
+  - tencentcloud-sdk-nodejs（腾讯云 OCR）
+  - @anthropic-ai/sdk（Claude AI）
+  - pdfkit + @types/pdfkit（PDF 生成）
+- 创建 .env.local.example 模板文件，包含所有必需环境变量
+- 创建 src/lib/utils.ts，实现 cn()、formatDate()、formatScore() 函数
+- 更新 src/app/globals.css，使用 Tailwind v4 CSS-based 配置添加颜色 token（primary、neutral、success、warning、error）
+
+### Testing:
+- ✅ npm run build 成功
+- ✅ TypeScript 编译无错误
+
+### Notes:
+- 项目使用 Next.js 16.2.0，与 Next.js 14 有较大差异（Tailwind v4 无 tailwind.config.ts，改用 CSS @theme）
+- 颜色 token 通过 CSS 自定义属性 + @theme inline 定义，使用 --color-primary-xxx 形式
+- 全局 body 背景设为 --neutral-50（浅灰色）
+- 注意：AGENTS.md 提醒此版本 Next.js 有 breaking changes，需查阅 node_modules/next/dist/docs/
+
+---
+
+## 2026-03-21 - Task 4: 用户认证 - 登录和注册页面
+
+### What was done:
+- 创建 src/app/login/page.tsx 登录页（居中卡片，显示产品 Logo 和名称）
+- 创建 src/components/auth/LoginForm.tsx（邮箱+密码，signInWithPassword，成功跳转 /，失败显示中文错误）
+- 创建 src/app/register/page.tsx 注册页
+- 创建 src/components/auth/RegisterForm.tsx（密码≥8位验证、确认密码验证，成功跳转 /login）
+- 创建 src/components/auth/LogoutButton.tsx（signOut，成功跳转 /login）
+
+### Testing（MCP Playwright，端口3001）:
+- ✅ 登录页标题正确显示"KP作文宝"
+- ✅ 错误密码显示"邮箱或密码错误，请重试"
+- ✅ 注册密码不一致显示"两次输入的密码不一致"
+- ✅ 未登录访问 /history 正确重定向到 /login
+- ✅ 登录/注册页互相链接正常
+
+### Notes:
+- Supabase 项目需提前配置好 .env.local 才能运行
+- 路由保护通过 src/proxy.ts 实现（Next.js 16 约定）
+
+---
+
+## 2026-03-21 - Task 3: Supabase 客户端封装和认证中间件
+
+### What was done:
+- 创建 src/lib/supabase/server.ts：使用 @supabase/ssr createServerClient，从 await cookies() 读取 session
+- 创建 src/lib/supabase/client.ts：使用 createBrowserClient 供客户端组件使用
+- 创建 src/lib/supabase/middleware.ts：实现 updateSession() 函数，负责刷新 session 并处理路由保护
+- 创建 src/proxy.ts（Next.js 16 新约定，原 middleware.ts 已重命名为 proxy.ts）
+  - 保护路由：/upload, /corrections/:path*, /highlights, /error-points/:path*, /copybook/:path*, /history, /profile
+  - 未登录访问受保护路由 → 重定向到 /login
+  - 已登录访问 /login 或 /register → 重定向到 /
+
+### Testing:
+- ✅ npm run build 成功，无警告（解决了 middleware deprecation 警告）
+
+### Notes:
+- Next.js 16 将 middleware.ts 重命名为 proxy.ts，函数名从 middleware 改为 proxy
+- server.ts 中 cookies() 需要 await（Next.js 16 变化）
+- proxy.ts 的 matcher 排除了静态文件和图片，避免不必要的 session 检查
+
+---
+
+## 2026-03-21 - Task 2: Supabase 数据库 Schema
+
+### What was done:
+- 创建 supabase/migrations/001_initial_schema.sql，包含：
+  - essay_submissions 表：提交记录（图片路径、OCR文本、标题、状态）
+  - corrections 表：批改结果（三维分数、错误标注JSON、总评、改进建议）
+  - model_essays 表：范文（按 pass/good/excellent 级别）
+  - highlights_library 表：亮点库（词汇/短语/句子三类）
+  - error_points 表：错误类型统计（含 unique(user_id, error_type) 约束）
+  - error_instances 表：具体错误例句记录
+  - copybooks 表：字帖记录（含 pdf_storage_path 和 pdf_url）
+- 为所有表创建索引（user_id、status、外键字段等）
+- 为所有表启用 RLS，并添加完整的 SELECT/INSERT/UPDATE/DELETE 策略
+  - corrections/model_essays/error_instances 通过关联表链路验证所有权
+- 创建 Storage 桶：
+  - essay-images（private，用户只能访问自己文件夹）
+  - copybook-pdfs（public，任何人可读，仅所有者可写）
+- Storage policies 使用 storage.foldername(name)[1] 验证用户 ID
+
+### Testing:
+- ✅ SQL 文件语法正确（人工审查）
+- ✅ npm run build 构建成功
+
+### Notes:
+- SQL 文件需要在 Supabase SQL Editor 中手动执行（等待人工配置 Supabase 项目）
+- error_points 的 upsert 逻辑（ON CONFLICT）在应用层实现，schema 只提供 unique 约束
+- corrections 与 essay_submissions 是 1:1 关系（submission_id UNIQUE）
+- 此任务不需要 API 密钥，仅创建迁移文件，无法在本地自动验证执行结果
+
+---
+
+## 2026-03-21 - Task 5: 全局布局和导航组件
+
+### What was done:
+- 创建 src/components/providers/Providers.tsx：客户端 Context Provider 包裹组件（为后续 Context 预留）
+- 创建 src/components/layout/Header.tsx：顶部导航栏，显示 'KP作文宝'（左），用户邮箱首字母圆形头像（右），白色背景+底部1px分隔线
+- 创建 src/components/layout/BottomNav.tsx：底部 Tab 栏，四个 Tab：首页(/)、历史(/history)、亮点库(/highlights)、易错点(/error-points)，active Tab 主色高亮，iOS safe area 适配
+- 创建 src/components/layout/AppLayout.tsx：客户端包裹组件，使用 usePathname() 判断是否为认证页面，认证页面隐藏 Header 和 BottomNav
+- 更新 src/app/layout.tsx：服务端获取用户 email，集成 Providers + AppLayout，设置 html lang='en'
+
+### Testing:
+- ✅ npm run lint 无错误
+- ✅ npm run build 成功
+
+### Notes:
+- Next.js 16 App Router 中使用客户端 AppLayout 组件（含 usePathname）条件渲染 Header/BottomNav，避免路由 group 重构
+- layout.tsx 使用 try/catch 包裹 Supabase 调用，防止未配置环境变量时构建失败
+- BottomNav 使用固定定位 + pb-16 in main，确保内容不被遮挡
+
+---
+
+## 2026-03-21 - Task 6: 通用 UI 组件库
+
+### What was done:
+- 创建 src/components/ui/Spinner.tsx：CSS 动画旋转圆圈，支持 size(sm/md/lg) 和颜色参数
+- 创建 src/components/ui/Button.tsx：支持 variant(primary/secondary/ghost/danger)，size(sm/md/lg)，loading 状态（显示 Spinner），disabled 状态
+- 创建 src/components/ui/Card.tsx：白色背景，圆角16px(rounded-2xl)，box-shadow，内边距16px，支持 className
+- 创建 src/components/ui/Input.tsx：单行输入框，支持 label、error（红色边框+错误文字）、helperText、聚焦时主色边框
+- 创建 src/components/ui/Textarea.tsx：多行输入，支持 rows 参数，右下角字数统计（当前字数/maxLength）
+- 创建 src/components/ui/Toast.tsx：ToastProvider + useToast() hook，固定在页面底部居中，success/error/warning 三种类型，2.5秒自动消失
+- 创建 src/components/ui/Skeleton.tsx：灰色 animate-pulse 占位块，支持 width、height、rounded 参数
+- 创建 src/components/ui/Badge.tsx：圆角标签，支持 color(blue/green/orange/red/gray)
+- 创建 src/app/error.tsx：全局错误边界，显示错误信息和'重试'按钮
+- 创建 src/app/not-found.tsx：404 页面，显示大号404+说明文字+'返回首页'按钮
+- 更新 src/components/providers/Providers.tsx：集成 ToastProvider
+
+### Testing:
+- ✅ npm run lint 无错误
+- ✅ npm run build 成功，TypeScript 编译无错误
+
+### Notes:
+- Toast 使用 Context 模式，ToastProvider 已集成到 Providers.tsx（全局可用）
+- Spinner 组件使用内联 style 设置边框颜色，兼容动态颜色参数
+
+---
+
+## 2026-03-21 - Task 7: 百度 OCR API 封装
+
+### What was done:
+- 创建 src/types/ocr.ts：定义 OcrResult 类型 { text: string; confidence: number }
+- 创建 src/lib/ocr/baidu.ts：
+  - getAccessToken()：调用百度 OAuth token 端点，内存缓存（含60秒 buffer 防过期）
+  - recognizeHandwriting(imageBase64: string): Promise<OcrResult>：调用百度手写文字识别接口，将 words_result 数组合并为完整文本（换行符分隔），计算平均置信度
+  - 错误处理：API 密钥未配置、HTTP 错误、百度 API 错误均抛出用户友好的错误信息
+
+### Testing:
+- ✅ npm run lint 无错误（无 warnings）
+- ✅ npm run build 构建成功
+- ⚠️ 功能无法在本地完整测试（需要真实的百度 OCR API 密钥）
+
+### Notes:
+- 环境变量：BAIDU_OCR_API_KEY 和 BAIDU_OCR_SECRET_KEY，从百度 AI 开放平台获取
+- Token 缓存机制避免每次调用都重新获取
+- 若 words_result 为空，返回 { text: '', confidence: 0 }
+
+---
+
+## 2026-03-21 - Task 8: LLM AI 批改模块封装（可配置化）
+
+### What was done:
+- 创建 src/types/ai.ts，定义 CorrectionResult、ErrorAnnotation、Highlight、ErrorSummaryItem、CorrectionScores 等类型
+- 创建 src/lib/ai/prompts.ts，编写 PET 批改系统提示（PET_CORRECTION_SYSTEM_PROMPT）和范文生成提示（MODEL_ESSAY_SYSTEM_PROMPT + buildModelEssayPrompt()）
+- 创建 src/lib/ai/llm.ts，使用 openai 包初始化客户端，baseURL/apiKey/model 全部从环境变量读取
+  - 默认值：LLM_BASE_URL=DashScope，LLM_MODEL=qwen-plus
+  - 实现 correctEssay() 函数，支持最多2次重试（间隔3秒），解析并验证 JSON 输出
+  - 实现 generateModelEssay() 函数，根据目标级别（pass/good/excellent）生成范文
+
+### Testing:
+- ✅ npm run lint 通过（无 ESLint 错误）
+- ✅ npm run build 成功（TypeScript 编译无错误）
+
+### Notes:
+- 使用 openai 包而非 @anthropic-ai/sdk，原因是 DashScope 提供 OpenAI-compatible API
+- 环境变量：LLM_BASE_URL、LLM_API_KEY、LLM_MODEL（可热切换任意 OpenAI-compatible 提供商）
+- PET 批改返回结构包含字符偏移量（start/end），供前端高亮标注使用
+- error_annotations severity 字段区分 minor/major/critical
+
+---
+
+## 2026-03-21 - Task 38: 字体资源集成
+
+### What was done:
+- 字体文件 GochiHand-Regular.ttf 已存在于 src/assets/fonts/（37KB，Gochi Hand Regular by Huerta Tipográfica）
+- copybook.ts 已通过 FONT_PATH 引用并注册字体（doc.registerFont('GochiHand', FONT_PATH)），PDF 生成使用该字体
+- 在 src/lib/pdf/copybook.ts 顶部添加 SIL Open Font License (OFL) 1.1 授权说明注释
+- 在 src/app/copybook/[id]/page.tsx 通过 next/font/local 引入 GochiHand-Regular.ttf，生成 CSS 变量 --font-gochi-hand
+- 字帖预览页 font info 区域新增手写体示例文字，通过 style={{ fontFamily: 'var(--font-gochi-hand)' }} 展示字体效果
+
+### Testing:
+- ✅ npm run lint 通过（无 ESLint 错误）
+- ✅ npm run build 成功（Next.js 16.2.0 Turbopack，TypeScript 编译无错误）
+
+### Notes:
+- 使用 next/font/local 而非 next/font/google，原因是字体文件已内嵌项目，避免构建时依赖 Google Fonts 网络访问
+- 字体授权：SIL OFL 1.1，允许个人和商业使用，符合商用要求

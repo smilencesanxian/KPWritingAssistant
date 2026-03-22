@@ -1,0 +1,34 @@
+
+
+
+
+
+
+
+
+下面这些内容主要记录与Claude交流的一些关键信息，不用作为项目相关文件上传代码仓
+
+这个项目主要想尝试一下如何让claude能够自动化的按流程开发项目
+
+====plan 模式让Claude生成task.json====
+我想要开发一个程序，你先参考PRD文档了解项目背景和需求方案，然后根据这个重新生成项目的架构设计文档和任务分解文档，输出格式参考architecture-demo.md和task-demo.json
+PRD路径：/mnt/d/ClaudeCodes/auto-coding-agent-demo/KPWritingAssistant-web/docs/product/KP作文宝小程序PRD.md
+输出架构：architecture.md
+输出任务拆分：task.json
+
+说明：后续开发需要依赖你输出的这个架构设计文档和任务拆分来进行详细的开发落地，所以需要将整个项目的落地计划拆分的很完整且可落地
+
+========
+
+修改不生效解决方案                                                                                                             
+                                                                                                                         
+                                                                                                                         
+  1. Kill 旧 dev server                                                                                                  
+  2. 清空 .next/dev/ 缓存（强制完整重编译）                                                                            
+  3. 重新启动 dev server                                                                               
+  现在新代码已生效。后续每次修改代码如果发现没热更新，执行：                                                             
+  # 在 KPWritingAssistant-web/ 目录下                                                                                  
+  rm -rf .next/dev && npm run dev -- --port 3001                                                                       
+                                                                                                                       
+  另外别忘了还需要去 Supabase Dashboard 执行那条迁移 SQL，添加 template_id 和 mode                                     
+  两列，否则生成字帖时数据库操作会报错。 

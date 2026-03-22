@@ -1,0 +1,601 @@
+{
+  "project": "KP作文宝",
+  "description": "面向PET备考家庭的AI写作教练+智能字帖生成器+个性化错题本，通过批改-积累-练习的闭环帮助孩子提升写作能力和卷面分",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "项目基础配置",
+      "description": "在 KPWritingAssistant-web/ 目录下初始化 Next.js 项目，安装所有依赖，配置环境变量模板和工具函数",
+      "steps": [
+        "在 KPWritingAssistant-web/ 目录执行 npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias '@/*'",
+        "安装 Supabase 客户端: npm install @supabase/supabase-js @supabase/ssr",
+        "安装工具库: npm install clsx tailwind-merge",
+        "安装腾讯云OCR SDK: npm install tencentcloud-sdk-nodejs",
+        "安装 Anthropic SDK: npm install @anthropic-ai/sdk",
+        "安装 PDF生成: npm install pdfkit && npm install --save-dev @types/pdfkit",
+        "创建 .env.local.example 模板文件，包含 NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, ANTHROPIC_API_KEY, TENCENT_SECRET_ID, TENCENT_SECRET_KEY, TENCENT_OCR_REGION",
+        "创建 src/lib/utils.ts，实现 cn()（合并 Tailwind class）、formatDate()（格式化日期为'2026年3月20日'）、formatScore()（格式化分数如'21/30'）",
+        "更新 tailwind.config.ts，在 theme.extend.colors 中定义颜色 token：primary(蓝色系)、neutral、success(绿色)、warning(橙色)、error(红色)",
+        "运行 npm run build 确认项目基础配置无误"
+      ],
+      "passes": true
+    },
+    {
+      "id": 2,
+      "title": "Supabase 数据库 Schema",
+      "description": "创建完整的数据库表结构，包含所有 MVP 所需的表、字段、索引、RLS 策略和 Storage 桶",
+      "steps": [
+        "创建 supabase/migrations/001_initial_schema.sql",
+        "创建 essay_submissions 表：id(uuid PK default gen_random_uuid()), user_id(uuid references auth.users not null), original_image_path(text), ocr_text(text), title(text), status(text default 'pending'), created_at(timestamptz default now())",
+        "创建 corrections 表：id(uuid PK), submission_id(uuid references essay_submissions unique not null), content_score(int2), communication_score(int2), language_score(int2), total_score(int2), error_annotations(jsonb default '[]'), overall_comment(text), improvement_suggestions(text), status(text default 'pending'), created_at(timestamptz default now())",
+        "创建 model_essays 表：id(uuid PK), correction_id(uuid references corrections not null), target_level(text check(target_level in ('pass','good','excellent'))), content(text), created_at(timestamptz default now())",
+        "创建 highlights_library 表：id(uuid PK), user_id(uuid references auth.users not null), text(text not null), type(text check(type in ('vocabulary','phrase','sentence'))), source_submission_id(uuid references essay_submissions), created_at(timestamptz default now())",
+        "创建 error_points 表：id(uuid PK), user_id(uuid references auth.users not null), error_type(text not null), error_type_label(text not null), occurrence_count(int default 1), is_flagged(boolean default false), first_seen_at(timestamptz default now()), last_seen_at(timestamptz default now()); 创建 unique(user_id, error_type) 约束",
+        "创建 error_instances 表：id(uuid PK), error_point_id(uuid references error_points not null), submission_id(uuid references essay_submissions not null), original_sentence(text), corrected_sentence(text), explanation(text), created_at(timestamptz default now())",
+        "创建 copybooks 表：id(uuid PK), user_id(uuid references auth.users not null), model_essay_id(uuid references model_essays not null), font_style(text default 'gochi-hand'), pdf_storage_path(text), pdf_url(text), created_at(timestamptz default now())",
+        "为所有表启用 Row Level Security(RLS)，每张表添加 policy：用户只能 SELECT/INSERT/UPDATE/DELETE 自己(user_id = auth.uid())的数据",
+        "在 SQL 中使用 INSERT INTO storage.buckets 创建两个 Storage 桶：essay-images(public=false) 和 copybook-pdfs(public=true)，并设置对应的 storage.policies"
+      ],
+      "passes": true
+    },
+    {
+      "id": 3,
+      "title": "Supabase 客户端封装和认证中间件",
+      "description": "创建服务端和客户端 Supabase 客户端，配置路由保护中间件",
+      "steps": [
+        "创建 src/lib/supabase/server.ts，使用 @supabase/ssr 的 createServerClient，从 cookies() 读取 session",
+        "创建 src/lib/supabase/client.ts，使用 createBrowserClient，供客户端组件使用",
+        "创建 src/lib/supabase/middleware.ts，实现 updateSession() 函数处理 session 刷新",
+        "创建 src/middleware.ts，集成 Supabase 中间件；配置 matcher 保护路由：/upload, /corrections/:path*, /highlights, /error-points/:path*, /copybook/:path*, /history, /profile；未登录时重定向到 /login；已登录访问 /login 或 /register 时重定向到 /"
+      ],
+      "passes": true
+    },
+    {
+      "id": 4,
+      "title": "用户认证 - 登录和注册页面",
+      "description": "实现邮箱/密码登录、注册和退出登录功能",
+      "steps": [
+        "创建 src/app/login/page.tsx 登录页，居中卡片布局，顶部显示产品 Logo 和名称",
+        "创建 src/components/auth/LoginForm.tsx，包含邮箱输入框、密码输入框、登录按钮；使用 Supabase Auth signInWithPassword；成功后跳转 /；失败显示错误信息",
+        "创建 src/app/register/page.tsx 注册页",
+        "创建 src/components/auth/RegisterForm.tsx，包含邮箱、密码（最少8位验证）、确认密码字段；使用 Supabase Auth signUp；成功后跳转 /login 并提示'注册成功，请登录'",
+        "在登录页底部添加'还没有账号？立即注册'链接，在注册页添加'已有账号？去登录'链接",
+        "创建 src/components/auth/LogoutButton.tsx，调用 Supabase Auth signOut，成功后跳转 /login"
+      ],
+      "passes": true
+    },
+    {
+      "id": 5,
+      "title": "全局布局和导航组件",
+      "description": "创建应用全局布局，包含顶部导航栏、底部导航 Tab 栏和页面容器",
+      "steps": [
+        "创建 src/components/layout/Header.tsx，显示左侧产品名 'KP作文宝'，右侧显示用户邮箱首字母圆形头像；页面背景白色，底部1px分隔线",
+        "创建 src/components/layout/BottomNav.tsx，四个 Tab：首页(/)、历史(/history)、亮点库(/highlights)、易错点(/error-points)；当前激活 Tab 使用主色高亮图标和文字；固定在页面底部，添加 iOS safe area 适配(padding-bottom: env(safe-area-inset-bottom))",
+        "更新 src/app/layout.tsx，集成 Header（认证页面不显示）、BottomNav（认证页面不显示）、全局 Providers；设置 html lang='en'",
+        "创建 src/components/providers/Providers.tsx 包裹所有客户端 Context Provider",
+        "在 src/app/globals.css 中定义 CSS 自定义属性（Design Token）：--primary-50 到 --primary-900 蓝色系、--neutral 系、--success、--warning、--error；设置全局 body 背景为浅灰 --neutral-50"
+      ],
+      "passes": true
+    },
+    {
+      "id": 6,
+      "title": "通用 UI 组件库",
+      "description": "创建整个应用共用的基础 UI 组件，确保设计一致性",
+      "steps": [
+        "创建 src/components/ui/Button.tsx：支持 variant(primary/secondary/ghost/danger)，size(sm/md/lg)，loading 状态（显示 Spinner + 禁用点击），disabled 状态；primary 使用主色背景白色文字",
+        "创建 src/components/ui/Card.tsx：白色背景，圆角16px，阴影 0 2px 8px rgba(0,0,0,0.08)，内边距16px；支持 className 覆盖",
+        "创建 src/components/ui/Input.tsx：单行输入框；支持 label、error 状态（红色边框+错误文字）、helperText；聚焦时主色边框",
+        "创建 src/components/ui/Textarea.tsx：多行输入，支持 rows 参数，右下角显示字数统计（当前字数/最大字数）",
+        "创建 src/components/ui/Toast.tsx：固定在页面底部居中；支持 success/error/warning 三种类型；2.5秒后自动消失；提供 useToast() hook 供组件调用",
+        "创建 src/components/ui/Spinner.tsx：CSS 动画旋转圆圈，支持 size(sm/md/lg) 和颜色参数",
+        "创建 src/components/ui/Skeleton.tsx：灰色闪光占位块，支持 width、height、rounded 参数，用于骨架屏",
+        "创建 src/components/ui/Badge.tsx：圆角标签，支持 color(blue/green/orange/red/gray)，用于分数展示和状态标签",
+        "创建 src/app/error.tsx 全局错误边界页面，显示错误信息和'重试'按钮",
+        "创建 src/app/not-found.tsx 404页面"
+      ],
+      "passes": true
+    },
+    {
+      "id": 7,
+      "title": "百度 OCR API 封装",
+      "description": "封装百度手写英文 OCR API，实现图片文字识别功能",
+      "steps": [
+        "创建 src/lib/ocr/baidu.ts",
+        "使用百度 OCR REST API，从环境变量读取 BAIDU_OCR_API_KEY、BAIDU_OCR_SECRET_KEY",
+        "实现 getAccessToken() 函数，调用 https://aip.baidubce.com/oauth/2.0/token 获取 access_token（缓存复用）",
+        "实现 recognizeHandwriting(imageBase64: string): Promise<OcrResult> 函数，调用百度手写文字识别接口（/rest/2.0/ocr/v1/handwriting），传入图片 base64",
+        "解析响应：将 words_result 数组中各行 words 按顺序合并，用换行符连接为完整文本字符串",
+        "实现错误处理：捕获 API 错误并抛出包含用户友好信息的错误（如'图片识别失败，请检查图片清晰度后重试'）",
+        "创建 src/types/ocr.ts，定义 OcrResult 类型：{ text: string; confidence: number }"
+      ],
+      "passes": true
+    },
+    {
+      "id": 8,
+      "title": "LLM AI 批改模块封装（可配置化）",
+      "description": "封装 LLM API（默认 DashScope 通义千问，支持配置化切换任意 OpenAI-compatible 提供商），实现 PET 作文批改和范文生成功能",
+      "steps": [
+        "创建 src/lib/ai/llm.ts，使用 openai 包初始化客户端，baseURL/apiKey/model 全部从环境变量读取（LLM_BASE_URL、LLM_API_KEY、LLM_MODEL），默认值为 DashScope 通义千问配置",
+        "创建 src/lib/ai/prompts.ts，编写 PET 批改系统提示：角色为专业PET考官，要求严格按JSON格式输出，包含 scores({content,communication,language,total})、overall_comment、improvement_suggestions、error_annotations数组（含start/end字符偏移）、highlights数组、error_summary数组",
+        "实现 correctEssay(text: string): Promise<CorrectionResult> 函数，调用配置的 LLM_MODEL，max_tokens=4096，解析并验证 JSON 输出结构；实现最多2次重试（间隔3秒）",
+        "编写范文生成 Prompt：根据目标级别（pass/good/excellent）生成范文，保留原文亮点，级别越高使用越高级的词汇和复杂句式",
+        "实现 generateModelEssay(originalText: string, highlights: string[], level: 'pass'|'good'|'excellent'): Promise<string> 函数",
+        "创建 src/types/ai.ts，定义 CorrectionResult、ErrorAnnotation({ start, end, original, corrected, error_type, explanation, severity })、Highlight({ text, type, reason })、ErrorSummaryItem({ error_type, error_type_label, count }) 等类型"
+      ],
+      "passes": true
+    },
+    {
+      "id": 9,
+      "title": "pdfkit 字帖 PDF 生成模块",
+      "description": "封装 pdfkit 实现 PET 答题卡格式字帖 PDF 生成",
+      "steps": [
+        "下载 Gochi Hand Regular 字体文件（.ttf）并放置到 src/assets/fonts/GochHand-Regular.ttf",
+        "创建 src/lib/pdf/copybook.ts",
+        "实现 generateCopybookPDF(essayText: string, options?: CopybookOptions): Promise<Buffer> 函数",
+        "PDF 规格：A4页面(595.28x841.89pt)，边距上下40pt/左右60pt，注册并使用 Gochi Hand 字体，字号18pt，行高36pt",
+        "绘制逻辑：顶部标题'PET Writing Practice'(加粗，字号14pt，居中)，下方每行先画灰色横线(#E0E0E0，宽度=页面宽-左边距-右留白80pt)，再在横线上方渲染该行文字，右侧保留80pt空白区域，超出A4高度自动 addPage() 并重复标题",
+        "返回 Buffer 供调用方上传到 Supabase Storage",
+        "创建 src/types/pdf.ts，定义 CopybookOptions 类型：{ fontStyle?: string }"
+      ],
+      "passes": true
+    },
+    {
+      "id": 10,
+      "title": "作文提交数据访问层",
+      "description": "创建 essay_submissions 表的 CRUD 操作函数",
+      "steps": [
+        "创建 src/lib/db/essays.ts",
+        "实现 createSubmission(userId: string, data: CreateSubmissionInput): Promise<Submission>，插入 essay_submissions 记录",
+        "实现 getSubmissions(userId: string, options?: { page?: number; limit?: number }): Promise<{ essays: Submission[]; total: number }>，按 created_at 倒序分页查询",
+        "实现 getSubmissionById(submissionId: string, userId: string): Promise<SubmissionDetail | null>，JOIN corrections 和 model_essays，验证所有权",
+        "实现 updateSubmissionStatus(id: string, status: string): Promise<void>",
+        "创建 src/types/database.ts，定义所有数据库实体类型：Submission、Correction、ModelEssay、Highlight、ErrorPoint、ErrorInstance、Copybook"
+      ],
+      "passes": true
+    },
+    {
+      "id": 11,
+      "title": "批改和范文数据访问层",
+      "description": "创建 corrections 和 model_essays 表的操作函数",
+      "steps": [
+        "创建 src/lib/db/corrections.ts",
+        "实现 createCorrection(submissionId: string, data: CreateCorrectionInput): Promise<Correction>，保存批改结果",
+        "实现 getCorrectionBySubmissionId(submissionId: string): Promise<Correction | null>",
+        "实现 updateCorrectionStatus(id: string, status: string): Promise<void>",
+        "实现 createModelEssay(correctionId: string, level: string, content: string): Promise<ModelEssay>",
+        "实现 getModelEssaysByCorrectionId(correctionId: string): Promise<ModelEssay[]>",
+        "实现 getModelEssayByLevel(correctionId: string, level: string): Promise<ModelEssay | null>，用于检查是否已存在该级别范文"
+      ],
+      "passes": true
+    },
+    {
+      "id": 12,
+      "title": "亮点库数据访问层",
+      "description": "创建 highlights_library 表的 CRUD 操作函数",
+      "steps": [
+        "创建 src/lib/db/highlights.ts",
+        "实现 createHighlights(userId: string, highlights: CreateHighlightInput[], sourceSubmissionId?: string): Promise<Highlight[]>，批量插入",
+        "实现 getHighlights(userId: string, options?: { search?: string; type?: string; page?: number; limit?: number }): Promise<{ highlights: Highlight[]; total: number }>，支持 ILIKE 文本搜索和 type 过滤",
+        "实现 deleteHighlight(id: string, userId: string): Promise<void>，验证所有权后删除",
+        "实现 addHighlightManually(userId: string, text: string, type: string): Promise<Highlight>"
+      ],
+      "passes": true
+    },
+    {
+      "id": 13,
+      "title": "易错点数据访问层",
+      "description": "创建 error_points 和 error_instances 表的操作函数，包含自动标记逻辑",
+      "steps": [
+        "创建 src/lib/db/error-points.ts",
+        "实现 upsertErrorPoint(userId: string, errorType: string, errorTypeLabel: string): Promise<ErrorPoint>，使用 ON CONFLICT(user_id, error_type) DO UPDATE SET occurrence_count = occurrence_count + 1, last_seen_at = now()",
+        "实现 flagIfNeeded(errorPointId: string): Promise<void>，查询当前 occurrence_count，若 >= 2 则更新 is_flagged = true",
+        "实现 createErrorInstance(errorPointId: string, submissionId: string, data: CreateErrorInstanceInput): Promise<ErrorInstance>",
+        "实现 getErrorPoints(userId: string, options?: { flaggedOnly?: boolean }): Promise<ErrorPoint[]>，按 occurrence_count 倒序",
+        "实现 getErrorPointById(id: string, userId: string): Promise<ErrorPointDetail | null>，JOIN error_instances（最多显示10条），验证所有权",
+        "实现 processErrorsFromCorrection(userId: string, submissionId: string, errorSummary: ErrorSummaryItem[], errorAnnotations: ErrorAnnotation[]): Promise<ErrorPoint[]>，遍历错误类型，调用 upsertErrorPoint、flagIfNeeded、createErrorInstance，返回被触发 is_flagged 的易错点列表（用于首页提示）"
+      ],
+      "passes": true
+    },
+    {
+      "id": 14,
+      "title": "字帖数据访问层和 Storage 工具函数",
+      "description": "创建字帖记录 CRUD 和 Supabase Storage 文件操作工具",
+      "steps": [
+        "创建 src/lib/db/copybooks.ts",
+        "实现 createCopybook(userId: string, modelEssayId: string, pdfStoragePath: string, pdfUrl: string, fontStyle: string): Promise<Copybook>",
+        "实现 getCopybookByModelEssayId(modelEssayId: string, userId: string): Promise<Copybook | null>，用于缓存检查",
+        "创建 src/lib/storage/upload.ts",
+        "实现 uploadEssayImage(userId: string, submissionId: string, file: File | Buffer, ext: string): Promise<{ path: string; url: string }>，上传到 essay-images bucket，路径为 {userId}/{submissionId}.{ext}",
+        "实现 uploadCopybookPDF(userId: string, copybookId: string, pdfBuffer: Buffer): Promise<{ path: string; url: string }>，上传到 copybook-pdfs bucket（公开），路径为 {userId}/{copybookId}.pdf",
+        "实现 getSignedUrl(bucket: string, path: string, expiresIn?: number): Promise<string>，获取私有文件临时访问 URL（用于 essay-images bucket）"
+      ],
+      "passes": true
+    },
+    {
+      "id": 15,
+      "title": "统计数据访问层",
+      "description": "创建首页统计数据查询函数",
+      "steps": [
+        "创建 src/lib/db/stats.ts",
+        "实现 getUserStats(userId: string): Promise<UserStats>，通过并行查询返回：corrections_count（status='completed'的批改数）、highlights_count（亮点总数）、error_points_count（易错点总数）、flagged_error_count（is_flagged=true的数量）",
+        "实现 getRecentSubmissions(userId: string, limit?: number): Promise<Submission[]>，获取最近N条（默认3条）status='completed'的提交记录，按 created_at 倒序",
+        "在 src/types/database.ts 中补充 UserStats 类型定义"
+      ],
+      "passes": true
+    },
+    {
+      "id": 16,
+      "title": "API Route - 文件上传",
+      "description": "实现图片上传到 Supabase Storage 的 API 端点",
+      "steps": [
+        "创建 src/app/api/upload/route.ts",
+        "验证用户登录状态（未登录返回401）",
+        "接收 FormData 中的 file 字段，验证文件类型（仅允许 image/jpeg、image/png、image/webp），验证文件大小（最大10MB）",
+        "从文件名提取扩展名，生成存储路径 {userId}/{Date.now()}.{ext}",
+        "将文件 Buffer 上传到 Supabase Storage essay-images bucket",
+        "返回 { storage_path: string; url: string }（url 为 signed URL，有效期1小时）",
+        "错误处理：文件类型不支持返回400，文件过大返回413，上传失败返回500"
+      ],
+      "passes": true
+    },
+    {
+      "id": 17,
+      "title": "API Route - OCR 识别",
+      "description": "实现调用腾讯云 OCR 识别的 API 端点",
+      "steps": [
+        "创建 src/app/api/ocr/route.ts",
+        "验证用户登录状态（未登录返回401）",
+        "接收请求体 { image_url: string }，验证 image_url 非空",
+        "调用 src/lib/ocr/tencent.ts 的 recognizeHandwriting() 函数",
+        "返回 { text: string; confidence: number }",
+        "错误处理：OCR 服务调用失败时返回 500 和详细错误信息，前端据此引导用户手动输入"
+      ],
+      "passes": true
+    },
+    {
+      "id": 18,
+      "title": "API Route - 作文提交 CRUD",
+      "description": "实现作文记录的创建和查询 API 端点",
+      "steps": [
+        "创建 src/app/api/essays/route.ts",
+        "POST /api/essays：验证登录，接收 { ocr_text, original_image_path, title? }，调用 createSubmission()，返回 { submission }",
+        "GET /api/essays：验证登录，读取 query 参数 page（默认1）和 limit（默认10），调用 getSubmissions()，返回 { essays, total, page, limit }",
+        "创建 src/app/api/essays/[id]/route.ts",
+        "GET /api/essays/:id：验证登录，调用 getSubmissionById()（内部已验证所有权），若返回 null 则 404，否则返回 { essay }（含 correction 和 model_essays）"
+      ],
+      "passes": true
+    },
+    {
+      "id": 19,
+      "title": "API Route - AI 批改（核心）",
+      "description": "实现调用 Claude 批改作文、保存结果、自动处理亮点和错误追踪的核心 API",
+      "steps": [
+        "创建 src/app/api/correct/route.ts",
+        "验证登录，接收 { submission_id }，查询 submission 并验证所有权（不属于当前用户返回403）",
+        "检查 submission.status，若已是 'completed' 则直接返回已有 correction 数据（幂等）",
+        "调用 updateSubmissionStatus(id, 'processing')",
+        "调用 correctEssay(submission.ocr_text) 获取批改结果",
+        "调用 createCorrection() 保存批改记录",
+        "调用 createHighlights() 批量保存本次提取的亮点到 highlights_library",
+        "调用 processErrorsFromCorrection() 更新易错点档案，获取新触发的 flagged_errors 列表",
+        "调用 updateSubmissionStatus(id, 'completed')",
+        "返回 { correction, flagged_errors }（flagged_errors 用于前端展示易错点提醒）",
+        "任何步骤失败时调用 updateSubmissionStatus(id, 'failed')，返回 500"
+      ],
+      "passes": true
+    },
+    {
+      "id": 20,
+      "title": "API Route - 范文生成",
+      "description": "实现按目标级别生成范文的 API 端点",
+      "steps": [
+        "创建 src/app/api/generate/model-essay/route.ts",
+        "验证登录，接收 { correction_id, target_level }，验证 target_level 必须是 pass/good/excellent",
+        "通过 correction_id 查询 correction，再通过 submission_id 查询 submission，验证所有权",
+        "调用 getModelEssayByLevel() 检查是否已存在该级别范文，若存在直接返回（缓存）",
+        "获取该 correction 的所有 highlights 用于注入 Prompt",
+        "调用 generateModelEssay() 生成范文内容",
+        "调用 createModelEssay() 保存范文记录",
+        "返回 { model_essay }"
+      ],
+      "passes": true
+    },
+    {
+      "id": 21,
+      "title": "API Route - 亮点库 CRUD",
+      "description": "实现亮点库的查询、手动添加和删除 API 端点",
+      "steps": [
+        "创建 src/app/api/highlights/route.ts",
+        "GET /api/highlights：验证登录，读取 query 参数 search、type、page、limit，调用 getHighlights()，返回 { highlights, total }",
+        "POST /api/highlights：验证登录，接收 { text, type }，验证 text 非空、type 合法，调用 addHighlightManually()，返回 { highlight }",
+        "创建 src/app/api/highlights/[id]/route.ts",
+        "DELETE /api/highlights/:id：验证登录，调用 deleteHighlight()（内部验证所有权），成功返回 { success: true }，不存在或无权限返回404/403"
+      ],
+      "passes": true
+    },
+    {
+      "id": 22,
+      "title": "API Route - 易错点查询",
+      "description": "实现易错点列表和详情查询 API 端点",
+      "steps": [
+        "创建 src/app/api/error-points/route.ts",
+        "GET /api/error-points：验证登录，读取 query 参数 flagged_only(boolean)，调用 getErrorPoints()，返回 { error_points }",
+        "创建 src/app/api/error-points/[id]/route.ts",
+        "GET /api/error-points/:id：验证登录，调用 getErrorPointById()（内部验证所有权），返回 { error_point, instances }；不存在返回404"
+      ],
+      "passes": true
+    },
+    {
+      "id": 23,
+      "title": "API Route - 字帖生成",
+      "description": "实现生成字帖 PDF 并上传的 API 端点",
+      "steps": [
+        "创建 src/app/api/generate/copybook/route.ts",
+        "验证登录，接收 { model_essay_id, font_style? }（font_style 默认 'gochi-hand'）",
+        "通过 model_essay_id → correction_id → submission_id → user_id 链路验证所有权",
+        "调用 getCopybookByModelEssayId() 检查是否已有字帖记录，若有直接返回（避免重复生成）",
+        "调用 generateCopybookPDF() 生成 PDF Buffer",
+        "生成新的 copybook id，调用 uploadCopybookPDF() 上传到 Supabase Storage",
+        "调用 createCopybook() 保存字帖记录",
+        "返回 { copybook }（含 pdf_url）"
+      ],
+      "passes": true
+    },
+    {
+      "id": 24,
+      "title": "API Route - 统计数据",
+      "description": "实现首页统计数据查询 API 端点",
+      "steps": [
+        "创建 src/app/api/stats/route.ts",
+        "验证登录",
+        "并行调用 getUserStats() 和 getRecentSubmissions()",
+        "返回 { corrections_count, highlights_count, error_points_count, flagged_error_count, recent_submissions }"
+      ],
+      "passes": true
+    },
+    {
+      "id": 25,
+      "title": "首页 UI 实现",
+      "description": "实现首页：用户统计展示、核心操作按钮和最近批改历史",
+      "steps": [
+        "创建 src/app/page.tsx，服务端组件，获取当前用户；未登录则显示欢迎落地页（产品介绍 + 登录/注册按钮）；已登录显示主内容",
+        "顶部统计区域：三个卡片横排（已批改 N 篇、N 个亮点、N 个易错点），数字使用大字号 Display 样式，调用 /api/stats",
+        "中间核心操作：大号圆形'拍照批改'按钮（使用主色背景），点击跳转 /upload",
+        "最近批改列表：调用 /api/stats 中的 recent_submissions，展示最多3条记录（标题/日期/分数）；底部'查看全部历史记录'链接跳转 /history",
+        "无批改记录时显示引导空状态：插图 + '还没有批改记录' + '去批改第一篇' 按钮",
+        "创建 src/components/home/StatCard.tsx 统计卡片组件",
+        "创建 src/components/home/RecentSubmissionItem.tsx 最近批改列表项组件"
+      ],
+      "passes": true
+    },
+    {
+      "id": 26,
+      "title": "上传页 UI 实现",
+      "description": "实现图片上传+OCR识别+文本确认的三步流程页面",
+      "steps": [
+        "创建 src/app/upload/page.tsx，客户端组件，用状态机管理步骤：step='select'|'confirming'|'correcting'",
+        "Step 'select'：拖拽上传区域（虚线边框，居中图标和提示文案），点击选择文件按钮（触发 input type=file accept=image/*），图片选中后显示预览图和文件信息；移动端 input 添加 capture=environment 支持直接调用相机",
+        "Step 'select' → 'confirming'：点击'开始识别'后，调用 /api/upload 上传图片，再调用 /api/ocr 识别，识别中显示'正在识别手写文字...'加载动画",
+        "Step 'confirming'：左侧显示作文图片预览（小图），右侧显示可编辑的 Textarea（OCR 文本），底部显示'重新拍照'和'确认并批改'按钮；OCR 失败时 Textarea 为空并显示'识别失败，请手动输入作文内容'提示",
+        "Step 'confirming' → 'correcting'：点击'确认并批改'后，调用 /api/essays 创建记录，再调用 /api/correct 发起批改，显示批改加载动画（轮播文案：'正在分析作文内容...' → '正在检查语法和词汇...' → '正在提取亮点...' → '即将完成...'）",
+        "批改完成后跳转 /corrections/[id]",
+        "创建 src/components/upload/ImageDropzone.tsx 图片拖拽上传组件",
+        "每步操作失败时用 Toast 组件提示错误信息"
+      ],
+      "passes": true
+    },
+    {
+      "id": 27,
+      "title": "批改结果页 - 评分和错误标注",
+      "description": "实现批改结果页的评分展示区域和原文错误高亮标注",
+      "steps": [
+        "创建 src/app/corrections/[id]/page.tsx，服务端获取数据（调用 getSubmissionById），客户端处理交互",
+        "顶部评分区：总分大字号展示（如'21分'）并附'满分30分'小字；下方三列显示三个维度分数（内容/沟通/语言），每列含维度名称和分数，使用 Badge 组件",
+        "总体评语和改进建议展示卡片",
+        "原文展示区（WritingBox 样式，仿答题卡横线纸背景）：解析 error_annotations，将原文分割为文本片段和错误片段；错误词用红色虚线下划线标注",
+        "创建 src/components/correction/AnnotatedEssay.tsx，接收 text 和 annotations 数组，将文本按 start/end 偏移切割并渲染为带标注的 span；错误 span 点击时展示 ErrorTooltip",
+        "创建 src/components/correction/ErrorTooltip.tsx，展示错误信息弹窗：原词、修正词、错误类型标签、详细解释；移动端点击展开/收起（非hover）",
+        "若本次批改新触发了易错点（flagged_errors 非空），在页面顶部显示橙色横幅提示：'检测到新易错点：[类型名]，点击查看'，点击跳转 /error-points/[id]"
+      ],
+      "passes": true
+    },
+    {
+      "id": 28,
+      "title": "批改结果页 - 亮点展示和范文生成",
+      "description": "实现批改结果页的亮点展示、范文级别选择和范文内容区域",
+      "steps": [
+        "在 /corrections/[id] 页面添加亮点区域：列表展示本次批改提取的 highlights，每项显示文本和类型标签（词汇/短语/句子），按钮显示'已加入亮点库'（MVP中批改时已自动加入，此处仅展示）",
+        "创建 src/components/correction/HighlightsList.tsx 亮点列表组件",
+        "范文级别选择器：三个等宽按钮（合格/优秀/卓越），默认选中'优秀'，选中态使用主色背景白色文字，非选中态灰色边框",
+        "级别切换时：若已有该级别范文（从 model_essays 中查找）则直接展示；若无则调用 POST /api/generate/model-essay，期间显示加载动画（'正在生成范文...'）",
+        "范文区域：白色卡片内展示范文文本（等宽字体，行高1.8），文本可选中和复制",
+        "范文区域底部：'生成字帖' 按钮，点击调用 /api/generate/copybook（传入 model_essay_id），完成后跳转 /copybook/[copybookId]",
+        "创建 src/components/correction/LevelSelector.tsx 范文级别选择器组件",
+        "创建 src/components/correction/ModelEssayView.tsx 范文展示组件"
+      ],
+      "passes": true
+    },
+    {
+      "id": 29,
+      "title": "字帖预览和下载页",
+      "description": "实现字帖生成状态、PDF 预览和下载功能",
+      "steps": [
+        "创建 src/app/copybook/[id]/page.tsx（[id] 为 copybook id），服务端加载字帖记录，若不存在则404",
+        "若 pdf_url 存在：直接展示预览（iframe 嵌入 PDF，高度600px）和下载按钮",
+        "创建 src/components/copybook/CopybookPreview.tsx，用 iframe 展示 pdf_url（copybook-pdfs 桶公开可访问），移动端降级显示'点击查看PDF'链接",
+        "底部操作区：'下载PDF' 按钮（a 标签 href=pdf_url download 属性），'返回批改结果' 链接",
+        "字体说明文案：'当前字体：默认手写体（Gochi Hand）'，下方'更多字体即将推出'（V2.0占位）",
+        "底部提示：'建议使用 A4 纸打印，保持右侧空白供批注使用'",
+        "页面 SEO：title 设为 'KP作文宝 - 字帖下载'"
+      ],
+      "passes": true
+    },
+    {
+      "id": 30,
+      "title": "亮点库页面",
+      "description": "实现亮点库的列表展示、搜索、类型筛选、手动添加和删除",
+      "steps": [
+        "创建 src/app/highlights/page.tsx，客户端组件",
+        "顶部搜索框（带搜索图标），输入时 debounce 500ms 后调用 /api/highlights?search=...；类型筛选 Tab 栏：全部/词汇/短语/句子，切换时调用 API 重新获取",
+        "列表展示亮点：每项一行，左侧显示类型图标，中间显示亮点文本，右侧删除按钮（垃圾桶图标）",
+        "删除时弹出确认 Toast（'确认删除此亮点？' + 确认/取消按钮），确认后调用 DELETE /api/highlights/:id，乐观更新列表（立即从列表移除）",
+        "右下角固定'+ 手动添加'圆形按钮，点击展开底部抽屉弹窗（Modal）：文本输入框（必填）、类型下拉选择（词汇/短语/句子）、确认添加按钮",
+        "空状态：插图 + '还没有收集到亮点' + '批改作文后亮点会自动加入'",
+        "底部触底加载更多（infinite scroll，每次加载20条）",
+        "创建 src/components/highlights/HighlightItem.tsx 亮点列表项组件",
+        "创建 src/components/highlights/AddHighlightModal.tsx 手动添加弹窗组件"
+      ],
+      "passes": true
+    },
+    {
+      "id": 31,
+      "title": "易错点列表页",
+      "description": "实现易错点列表展示页，支持全部/易错点筛选",
+      "steps": [
+        "创建 src/app/error-points/page.tsx，服务端+客户端混合",
+        "顶部筛选 Tab：'全部'（调用 /api/error-points）和'易错点'（调用 /api/error-points?flagged_only=true）",
+        "列表展示每个错误类型卡片：左侧错误类型图标（对应不同颜色），中间显示错误类型中文名（如'主谓一致'）和出现次数（如'出现3次'），右侧最后出现日期和箭头图标",
+        "is_flagged=true 的项目：左侧显示橙色警告图标，卡片左边框橙色高亮",
+        "点击卡片跳转 /error-points/[id]",
+        "空状态（无任何记录）：奖杯图标 + '棒极了！暂无错误记录' + '继续保持'",
+        "创建 src/components/error/ErrorPointCard.tsx 错误点卡片组件"
+      ],
+      "passes": true
+    },
+    {
+      "id": 32,
+      "title": "易错点详情页",
+      "description": "实现易错点详情：知识点讲解、错误例句列表和练习题",
+      "steps": [
+        "创建 src/app/error-points/[id]/page.tsx，服务端获取数据（调用 getErrorPointById）",
+        "顶部：错误类型名称（大标题）、出现次数徽章、最后出现时间；右上角'已掌握'按钮（灰色虚线，V2.0功能，MVP点击显示'即将上线'Toast）",
+        "知识点讲解卡片（浅蓝色背景）：根据 error_type 显示对应预设的知识点文本，包含规则说明和3个正确/错误对比例句",
+        "创建 src/lib/knowledge/error-explanations.ts，为每种 error_type 预设知识点文本和示例句子",
+        "你的错误记录：从 error_instances 展示该用户的错误例句列表，每项含：原始错误句（红色标注错误词）、修正后句子（绿色）、日期",
+        "练习题区域：根据 error_type 显示预设的3道填空题（可折叠），点击'查看答案'展开答案",
+        "底部按钮：'生成专项练习纸'（橙色，V2.0占位，点击显示'即将推出'Toast）",
+        "创建 src/components/error/ErrorInstanceItem.tsx 错误例句组件",
+        "创建 src/components/error/PracticeQuestion.tsx 练习题组件（可展开答案）"
+      ],
+      "passes": true
+    },
+    {
+      "id": 33,
+      "title": "历史记录页",
+      "description": "实现批改历史列表页，支持下拉刷新和无限滚动",
+      "steps": [
+        "创建 src/app/history/page.tsx，客户端组件",
+        "初始加载调用 /api/essays?page=1&limit=10，展示记录列表",
+        "每条记录展示：左侧文档图标（按总分颜色变化：高分绿、中分蓝、低分橙），中间显示作文标题（无则显示日期'3月20日的作文'）和批改时间，右侧总分标签（如'21/30'）",
+        "点击记录跳转 /corrections/[id]（submission id）",
+        "滚动到底部自动加载下一页（IntersectionObserver），底部显示加载指示器或'已加载全部'文字",
+        "下拉刷新支持（移动端）",
+        "空状态：空文档插图 + '暂无批改历史' + '去批改第一篇' 按钮（跳转 /upload）",
+        "创建 src/components/history/HistoryItem.tsx 历史记录列表项组件"
+      ],
+      "passes": true
+    },
+    {
+      "id": 34,
+      "title": "个人设置页",
+      "description": "实现个人信息展示、设置选项和退出登录",
+      "steps": [
+        "创建 src/app/profile/page.tsx",
+        "顶部用户信息区：圆形头像（取邮箱首字母，使用主色背景白色文字）、用户邮箱",
+        "设置列表：每项为一行（左侧图标+文字，右侧箭头或控件）：① 每周错题提醒（Toggle 开关，MVP点击显示'即将推出'Toast）② 字体管理（显示'当前：Gochi Hand'，不可点击）③ 意见反馈（显示邮箱 feedback@kpwriting.com）④ 关于我们（显示版本号 v1.0.0）",
+        "底部'退出登录'按钮（红色文字、次要样式、全宽），点击弹出确认 Toast，确认后调用 Supabase Auth signOut 并跳转 /login",
+        "创建 src/components/ui/Toggle.tsx，iOS 风格开关（圆形滑块+颜色过渡动画），支持 checked 和 onChange 属性",
+        "创建 src/components/profile/SettingItem.tsx 设置列表项组件"
+      ],
+      "passes": true
+    },
+    {
+      "id": 35,
+      "title": "Loading 状态和骨架屏",
+      "description": "为所有异步操作和页面添加加载状态指示",
+      "steps": [
+        "创建 src/app/loading.tsx 全局页面过渡加载组件（居中 Spinner）",
+        "创建 src/app/corrections/[id]/loading.tsx，骨架屏：顶部评分区三列骨架（宽度随机），原文区多行文字骨架，范文区多行文字骨架",
+        "创建 src/app/history/loading.tsx，5个历史记录卡片骨架",
+        "创建 src/app/highlights/loading.tsx，搜索框骨架 + 10个亮点列表项骨架",
+        "创建 src/app/error-points/loading.tsx，Tab骨架 + 6个错误点卡片骨架",
+        "上传页 OCR 识别加载：扫描线 CSS 动画覆盖在图片预览上，文字'正在识别手写文字...'",
+        "批改中加载动画：脑袋图标脉动动画 + 轮播进度文案（每2秒切换一条）"
+      ],
+      "passes": true
+    },
+    {
+      "id": 36,
+      "title": "错误处理和边界情况",
+      "description": "完善全局和页面级错误处理，统一错误响应格式",
+      "steps": [
+        "创建 src/app/corrections/[id]/error.tsx，批改详情页错误边界：显示'批改数据加载失败'和'重试'按钮",
+        "创建 src/app/history/error.tsx，历史页错误边界",
+        "统一所有 API 路由的错误响应格式：{ error: string; code?: string }",
+        "创建 src/lib/api-client.ts，封装客户端 fetch 函数：自动处理 401（清除 session 并跳转 /login）、统一捕获 500 错误（Toast 提示'服务器异常，请稍后重试'）、网络超时处理",
+        "批改 API 调用失败时（/api/correct 返回500）：页面显示错误状态卡片，提供'重新批改'按钮（重新调用 /api/correct）",
+        "OCR 失败后自动切换到手动输入模式：Textarea 变为可编辑状态，顶部显示黄色提示条'图片识别失败，请手动输入作文内容'"
+      ],
+      "passes": true
+    },
+    {
+      "id": 37,
+      "title": "响应式设计和移动端适配",
+      "description": "确保所有页面在移动端正确显示并提供良好的触控体验",
+      "steps": [
+        "检查所有页面在 375px（iPhone SE）和 428px（iPhone Pro Max）宽度下的布局，修复文本溢出、元素遮挡等问题",
+        "底部导航栏添加 iOS 安全区域适配：padding-bottom: max(env(safe-area-inset-bottom), 16px)",
+        "所有固定在底部的操作按钮（字帖下载、批改结果页操作区）添加安全区适配",
+        "批改结果页 ErrorTooltip 在移动端改为点击显示/隐藏弹窗（非 hover），弹窗定位确保不超出屏幕边缘",
+        "历史记录和亮点列表支持右滑显示删除按钮（使用 CSS transform 实现，touch 事件处理）",
+        "上传页：移动端 file input 添加 capture=environment 属性，优先调用后置摄像头",
+        "运行 npm run build 确认构建成功，使用 Chrome DevTools 移动端模式测试所有关键页面"
+      ],
+      "passes": true
+    },
+    {
+      "id": 38,
+      "title": "字体资源集成",
+      "description": "集成 Gochi Hand 开源手写字体，用于字帖 PDF 生成和页面展示",
+      "steps": [
+        "从 Google Fonts 下载 Gochi Hand Regular 字体文件（GochHand-Regular.ttf），放置到 KPWritingAssistant-web/src/assets/fonts/GochHand-Regular.ttf",
+        "更新 src/lib/pdf/copybook.ts，在 PDFDocument 中注册 Gochi Hand 字体：doc.registerFont('GochHand', path.join(process.cwd(), 'src/assets/fonts/GochHand-Regular.ttf'))，正文使用该字体",
+        "在 Next.js 前端通过 next/font/google 引入 Gochi Hand，在字帖预览页用 CSS 字体展示范文内容（给用户预览效果）",
+        "确认 Gochi Hand 字体使用 SIL Open Font License（OFL），符合商用要求，在代码注释中记录授权说明",
+        "生成测试 PDF：用一段英文测试内容调用 generateCopybookPDF()，检查字体是否正确嵌入 PDF，运行 npm run build 确认字体文件被正确处理"
+      ],
+      "passes": true
+    },
+    {
+      "id": 39,
+      "title": "端到端流程测试",
+      "description": "完整测试从用户注册到字帖下载的全部 MVP 功能",
+      "steps": [
+        "运行 npm run lint，修复所有 ESLint 错误",
+        "运行 npm run build，确认 TypeScript 编译成功、构建无错误",
+        "使用 MCP Playwright 工具测试完整 MVP 流程：注册 → 登录 → 首页 → 上传图片 → OCR识别 → 确认文本 → AI批改 → 查看评分和错误标注 → 查看亮点 → 选择范文级别'优秀' → 生成范文 → 生成字帖 → 预览PDF → 下载PDF",
+        "测试手动输入作文流程：OCR识别失败场景下手动输入文本并完成批改",
+        "测试亮点库功能：批改后查看亮点库（确认已自动加入），手动添加一个亮点，搜索亮点，删除一个亮点",
+        "测试易错点功能：第一次批改后查看易错点列表（occurrence_count=1，is_flagged=false）；第二次批改包含相同错误类型后确认 is_flagged 变为 true，页面顶部出现易错点提醒横幅；进入易错点详情页查看知识点和例句",
+        "测试历史记录：多次批改后查看历史列表，点击进入批改详情",
+        "截图关键页面，确认 UI 正确显示"
+      ],
+      "passes": true
+    },
+    {
+      "id": 40,
+      "title": "性能优化和最终打磨",
+      "description": "优化页面性能、完善用户体验细节，为生产环境做准备",
+      "steps": [
+        "批改结果页作文原图使用 Next.js Image 组件（自动 WebP 转换、lazy loading）",
+        "历史记录和亮点库长列表添加 IntersectionObserver 实现触底加载，替代一次性加载所有数据",
+        "首页统计数据添加 SWR 缓存（stale-while-revalidate 策略），避免每次进入首页都重新请求",
+        "字帖 PDF 生成已实现缓存检查（同一 model_essay_id 复用），确认逻辑正确无重复生成",
+        "为 /api/correct 和 /api/generate/model-essay 添加简单的速率限制检查：查询用户最近1分钟内的调用次数，超过3次返回429 Too Many Requests",
+        "运行最终 npm run build，检查 bundle 分析（使用 @next/bundle-analyzer），确认无异常大包",
+        "更新 README.md（位于 KPWritingAssistant-web/README.md）：记录项目运行方法、环境变量配置、Supabase 初始化步骤"
+      ],
+      "passes": true
+    }
+  ]
+}
