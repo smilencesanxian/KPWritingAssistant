@@ -32,10 +32,22 @@ export default function RegisterForm() {
     const { error } = await supabase.auth.signUp({ email, password });
 
     if (error) {
-      if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+      const errorMsg = error.message.toLowerCase();
+      if (
+        errorMsg.includes('already registered') ||
+        errorMsg.includes('already been registered') ||
+        errorMsg.includes('user already registered') ||
+        errorMsg.includes('email already') ||
+        errorMsg.includes('already exists') ||
+        error.code === 'user_already_exists'
+      ) {
         setError('该邮箱已注册，请直接登录');
+      } else if (errorMsg.includes('invalid email')) {
+        setError('邮箱格式不正确');
+      } else if (errorMsg.includes('password')) {
+        setError('密码不符合要求，请确保至少8位');
       } else {
-        setError('注册失败，请稍后重试');
+        setError('注册失败：' + error.message);
       }
       setLoading(false);
       return;
