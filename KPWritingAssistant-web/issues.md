@@ -258,7 +258,11 @@ lsof -ti:3001            # 返回空（WSL 下失效）
 - `src/lib/pdf/renderer.ts`（新增 fallback 逻辑）
 
 ### 状态
-⚠️ 部分修复（fallback 逻辑已上线，字体文件仍需完整下载后完全恢复）
+✅ 已完成（2026-03-22）
+- MaShanZheng：5.6MB 完整版已替换
+- ZCOOLQingKeHuangYou：原 1.7MB 截断，已重新下载完整版 7.9MB
+- ZhiMangXing：原 1.4MB 截断，已重新下载完整版 3.9MB
+- 所有 5 个字体（GochiHand / MaShanZheng / ZCOOLQingKeHuangYou / ZhiMangXing / Hengshui）均验证通过
 
 ---
 
