@@ -72,7 +72,6 @@ export default function ImageDropzone({ onFileSelect, disabled }: ImageDropzoneP
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={handleChange}
         disabled={disabled}

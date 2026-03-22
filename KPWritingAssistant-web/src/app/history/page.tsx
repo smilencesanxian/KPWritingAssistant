@@ -15,6 +15,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [manageMode, setManageMode] = useState(false);
 
   const loaderRef = useRef<HTMLDivElement | null>(null);
   const pageRef = useRef(page);
@@ -102,7 +103,21 @@ export default function HistoryPage() {
       )}
 
       {/* Header */}
-      <h1 className="text-lg font-semibold text-neutral-800 mb-4">批改历史</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg font-semibold text-neutral-800">批改历史</h1>
+        {items.length > 0 && (
+          <button
+            onClick={() => setManageMode((m) => !m)}
+            className={`text-sm font-medium px-3 py-1.5 rounded-full transition-colors ${
+              manageMode
+                ? 'bg-primary-600 text-white'
+                : 'text-primary-600 bg-primary-50 hover:bg-primary-100'
+            }`}
+          >
+            {manageMode ? '完成' : '管理'}
+          </button>
+        )}
+      </div>
 
       {/* List */}
       {items.length > 0 ? (
@@ -111,6 +126,7 @@ export default function HistoryPage() {
             <HistoryItem
               key={item.id}
               item={item}
+              manageMode={manageMode}
               onDelete={async (id) => {
                 setItems((prev) => prev.filter((i) => i.id !== id));
                 setTotal((t) => t - 1);

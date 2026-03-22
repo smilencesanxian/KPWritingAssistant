@@ -11,9 +11,28 @@ export async function createHighlights(
   highlights: CreateHighlightInput[],
   sourceSubmissionId?: string
 ): Promise<Highlight[]> {
+  if (highlights.length === 0) return [];
+
   const supabase = await createClient();
 
-  const rows = highlights.map((h) => ({
+  // Fetch existing highlight texts for this user to deduplicate
+  const { data: existing } = await supabase
+    .from('highlights_library')
+    .select('text')
+    .eq('user_id', userId);
+
+  const existingTexts = new Set(
+    (existing ?? []).map((h) => h.text.trim().toLowerCase())
+  );
+
+  // Filter out duplicates (case-insensitive)
+  const uniqueHighlights = highlights.filter(
+    (h) => !existingTexts.has(h.text.trim().toLowerCase())
+  );
+
+  if (uniqueHighlights.length === 0) return [];
+
+  const rows = uniqueHighlights.map((h) => ({
     user_id: userId,
     text: h.text,
     type: h.type,
@@ -111,11 +130,37 @@ export async function addHighlightManually(
 ): Promise<Highlight> {
   const supabase = await createClient();
 
+  // Check for existing highlight with the same text (case-insensitive)
+  const { data: existing } = await supabase
+    .from('highlights_library')
+    .select('*')
+    .eq('user_id', userId)
+    .ilike('text', text.trim())
+    .maybeSingle();
+
+  if (existing) {
+    // If type changed, update it; otherwise return existing
+    if (existing.type !== type) {
+      const { data: updated, error: updateError } = await supabase
+        .from('highlights_library')
+        .update({ type })
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        throw new Error(`Failed to update highlight: ${updateError.message}`);
+      }
+      return updated as Highlight;
+    }
+    return existing as Highlight;
+  }
+
   const { data, error } = await supabase
     .from('highlights_library')
     .insert({
       user_id: userId,
-      text,
+      text: text.trim(),
       type,
       source_submission_id: null,
     })

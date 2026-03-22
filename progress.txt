@@ -1,5 +1,27 @@
 # KP作文宝 - Progress Log
 
+## 2026-03-23 - Beta 测试优化：删除管理、亮点去重、安卓相册
+
+### What was done:
+1. **历史批改记录管理（Issue 13）**：
+   - 修复 `deleteSubmission`：按顺序手动级联删除 copybooks → model_essays → corrections → error_instances，并将 highlights 的 source_submission_id 置 null，最后删除 essay_submission
+   - 历史页新增「管理」按钮，点击后每条记录右侧显示红色 X 删除按钮；再次点击「完成」退出管理模式
+   - `HistoryItem` 新增 `manageMode` prop，管理模式下禁止导航与滑动手势，右侧改为删除按钮
+
+2. **亮点库去重（Issue 14）**：
+   - `createHighlights`：批量插入前先查询已有文本集合，过滤掉大小写不敏感的重复项
+   - `addHighlightManually`：ilike 查询已有相同文本；存在则更新 type（若不同）或直接返回，不重复插入
+
+3. **安卓相册选择（Issue 15）**：
+   - 移除 `ImageDropzone` 的 `capture="environment"` 属性，Android 浏览器将弹出选择器允许拍照或选相册
+
+### Testing:
+- `npm run lint`：0 errors（1 warning 为 e2e 测试文件，非本次改动）
+- `npm run build`：构建成功，所有路由正常
+
+### Notes:
+- 历史删除的级联是应用层处理的，若后续需要在 DB 层添加 CASCADE DELETE，可在 Supabase 执行：ALTER TABLE corrections DROP CONSTRAINT ...; ALTER TABLE corrections ADD CONSTRAINT ... FOREIGN KEY (submission_id) REFERENCES essay_submissions ON DELETE CASCADE; 以此类推其他表
+
 ## 2026-03-21 - Task 39: 端到端流程测试
 
 ### What was done:

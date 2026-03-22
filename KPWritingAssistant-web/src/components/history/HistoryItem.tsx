@@ -7,6 +7,7 @@ import { SubmissionWithScore } from '@/lib/db/essays';
 interface HistoryItemProps {
   item: SubmissionWithScore;
   onDelete?: (id: string) => void;
+  manageMode?: boolean;
 }
 
 function getScoreColor(score: number | null): { icon: string; badge: string } {
@@ -39,7 +40,7 @@ function formatCorrectionTime(dateStr: string): string {
 const DELETE_WIDTH = 72;
 const SNAP_THRESHOLD = 40;
 
-export default function HistoryItem({ item, onDelete }: HistoryItemProps) {
+export default function HistoryItem({ item, onDelete, manageMode }: HistoryItemProps) {
   const colors = getScoreColor(item.total_score);
   const title = item.title ?? formatDate(item.created_at);
   const href = item.correction_id ? `/corrections/${item.correction_id}` : '#';
@@ -92,8 +93,8 @@ export default function HistoryItem({ item, onDelete }: HistoryItemProps) {
 
   return (
     <div className="relative overflow-hidden border-b border-neutral-100 last:border-0">
-      {/* Delete button revealed by swipe */}
-      {onDelete && (
+      {/* Delete button revealed by swipe (non-manage mode) */}
+      {onDelete && !manageMode && (
         <div
           className="absolute right-0 top-0 bottom-0 flex items-center justify-center bg-red-500"
           style={{ width: DELETE_WIDTH }}
@@ -114,16 +115,20 @@ export default function HistoryItem({ item, onDelete }: HistoryItemProps) {
       {/* Swipeable row */}
       <div
         style={{
-          transform: `translateX(${offsetX}px)`,
+          transform: manageMode ? 'none' : `translateX(${offsetX}px)`,
           transition: isDragging ? 'none' : 'transform 0.2s ease',
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onTouchStart={manageMode ? undefined : handleTouchStart}
+        onTouchMove={manageMode ? undefined : handleTouchMove}
+        onTouchEnd={manageMode ? undefined : handleTouchEnd}
       >
         <Link
-          href={isOpen ? '#' : href}
+          href={manageMode ? '#' : (isOpen ? '#' : href)}
           onClick={(e) => {
+            if (manageMode) {
+              e.preventDefault();
+              return;
+            }
             if (isOpen) {
               e.preventDefault();
               handleClose();
@@ -149,21 +154,32 @@ export default function HistoryItem({ item, onDelete }: HistoryItemProps) {
             <p className="text-xs text-neutral-400 mt-0.5">{formatCorrectionTime(item.created_at)}</p>
           </div>
 
-          {/* Right: score badge */}
-          <div className="flex-shrink-0 flex items-center gap-1.5">
-            {item.total_score !== null ? (
-              <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${colors.badge}`}>
-                {item.total_score}/30
-              </span>
-            ) : (
-              <span className="text-xs text-neutral-400 px-2 py-1 rounded-lg bg-neutral-50">
-                批改中
-              </span>
-            )}
-            <svg className="w-4 h-4 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
+          {/* Right: score badge or delete button in manage mode */}
+          {manageMode && onDelete ? (
+            <button
+              onClick={(e) => { e.preventDefault(); onDelete(item.id); }}
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-red-100 text-red-500 active:bg-red-200"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          ) : (
+            <div className="flex-shrink-0 flex items-center gap-1.5">
+              {item.total_score !== null ? (
+                <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${colors.badge}`}>
+                  {item.total_score}/30
+                </span>
+              ) : (
+                <span className="text-xs text-neutral-400 px-2 py-1 rounded-lg bg-neutral-50">
+                  批改中
+                </span>
+              )}
+              <svg className="w-4 h-4 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
+          )}
         </Link>
       </div>
     </div>

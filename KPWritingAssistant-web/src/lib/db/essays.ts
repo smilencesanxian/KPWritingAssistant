@@ -119,6 +119,55 @@ export async function updateSubmissionStatus(
 export async function deleteSubmission(id: string, userId: string): Promise<void> {
   const supabase = await createClient();
 
+  // Verify ownership
+  const { data: submission } = await supabase
+    .from('essay_submissions')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single();
+
+  if (!submission) {
+    throw new Error('Submission not found or unauthorized');
+  }
+
+  // Cascade delete manually (FK constraints lack CASCADE DELETE)
+  // 1. Get correction id
+  const { data: correction } = await supabase
+    .from('corrections')
+    .select('id')
+    .eq('submission_id', id)
+    .maybeSingle();
+
+  if (correction) {
+    // 2. Get model essay ids
+    const { data: modelEssays } = await supabase
+      .from('model_essays')
+      .select('id')
+      .eq('correction_id', correction.id);
+
+    if (modelEssays && modelEssays.length > 0) {
+      const modelEssayIds = modelEssays.map((m) => m.id);
+      // 3. Delete copybooks for those model essays
+      await supabase.from('copybooks').delete().in('model_essay_id', modelEssayIds);
+      // 4. Delete model essays
+      await supabase.from('model_essays').delete().in('id', modelEssayIds);
+    }
+
+    // 5. Delete correction
+    await supabase.from('corrections').delete().eq('id', correction.id);
+  }
+
+  // 6. Delete error instances linked to this submission
+  await supabase.from('error_instances').delete().eq('submission_id', id);
+
+  // 7. Nullify highlights source reference (keep highlights, just remove link)
+  await supabase
+    .from('highlights_library')
+    .update({ source_submission_id: null })
+    .eq('source_submission_id', id);
+
+  // 8. Delete the submission
   const { error } = await supabase
     .from('essay_submissions')
     .delete()

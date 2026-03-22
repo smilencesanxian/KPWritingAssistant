@@ -308,6 +308,71 @@ PET 考试两篇写作合计 30 分（每篇 15 分），UI 正确显示总分 3
 
 ---
 
+## Issue 13: 历史批改记录无法删除
+
+### 问题描述
+Beta 测试反映历史批改记录无法删除（滑动删除后记录会重新出现）。
+
+### 根因分析
+`essay_submissions` 表的关联表（`corrections`、`model_essays`、`copybooks`、`error_instances`、`highlights_library`）外键约束均未设置 `ON DELETE CASCADE`，导致直接删除 `essay_submissions` 记录时触发 FK violation，API 返回错误，前端乐观更新回滚，记录重新出现。
+
+### 解决方案
+1. **应用层级联删除**：在 `deleteSubmission` 函数中按正确顺序手动删除关联记录：
+   - copybooks → model_essays → corrections
+   - error_instances
+   - 将 highlights_library.source_submission_id 置 null（保留亮点数据）
+   - 最后删除 essay_submission 本身
+2. **管理模式 UX 优化**：历史页增加「管理」按钮，点击后每条记录右侧显示红色删除按钮（X 图标），再次点击「完成」退出管理模式；保留原有向左滑动删除手势。
+
+### 相关文件
+- `src/lib/db/essays.ts`（deleteSubmission 函数）
+- `src/app/history/page.tsx`（管理模式 state + UI）
+- `src/components/history/HistoryItem.tsx`（manageMode prop + 删除按钮）
+
+### 状态
+✅ 已完成（2026-03-23）
+
+---
+
+## Issue 14: 亮点库重复内容问题
+
+### 问题描述
+同一个词/短语/句子在多次批改后会被重复添加到亮点库，导致列表出现大量重复条目。
+
+### 根因分析
+`createHighlights` 和 `addHighlightManually` 均直接执行 `.insert()`，未检查重复。
+
+### 解决方案
+- `createHighlights`：先查询该用户已有的亮点文本（小写）集合，过滤掉重复项后再批量插入
+- `addHighlightManually`：先用 `ilike` 查询是否已有相同文本；若已存在且 type 不同则更新 type，若完全一致则直接返回现有记录，否则插入新记录
+
+### 相关文件
+- `src/lib/db/highlights.ts`
+
+### 状态
+✅ 已完成（2026-03-23）
+
+---
+
+## Issue 15: 安卓手机只能拍照无法选择本地相册
+
+### 问题描述
+安卓手机浏览器打开上传页面，点击拍照批改后，只能拍照，无法选择本地已有的照片。
+
+### 根因分析
+`ImageDropzone.tsx` 的 `<input>` 元素设置了 `capture="environment"` 属性。该属性在 Android 上强制直接调起后置摄像头，屏蔽了选择本地文件的入口。
+
+### 解决方案
+移除 `capture="environment"` 属性。不设置 `capture` 时，Android 浏览器会弹出选择器，让用户选择拍照或从相册选择。
+
+### 相关文件
+- `src/components/upload/ImageDropzone.tsx`
+
+### 状态
+✅ 已完成（2026-03-23）
+
+---
+
 ## 待办事项
 
 ### 数据库迁移
