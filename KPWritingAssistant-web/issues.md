@@ -378,6 +378,52 @@ Beta 测试反映历史批改记录无法删除（滑动删除后记录会重新
 
 ---
 
+## Issue 16: 易错点无法删除
+
+### 问题描述
+易错点没有删除功能，用户无法管理已记录的易错点。
+
+### 解决方案
+1. **添加删除 API**：
+   - `error-points.ts` 新增 `deleteErrorPoint` 函数，先删除关联的 `error_instances`，再删除 `error_points`
+   - `/api/error-points/[id]/route.ts` 添加 DELETE 方法
+
+2. **管理模式 UI**：
+   - 易错点列表页增加「管理」按钮
+   - 管理模式显示红色删除按钮（X 图标）
+   - 支持向左滑动删除手势（同历史页面）
+
+### 相关文件
+- `src/lib/db/error-points.ts`
+- `src/app/api/error-points/[id]/route.ts`
+- `src/components/error/ErrorPointCard.tsx`
+- `src/app/error-points/page.tsx`
+
+### 状态
+✅ 已完成（2026-03-23）
+
+---
+
+## Issue 17: 滑动删除按钮显示不完整
+
+### 问题描述
+在手机端历史页面尝试滑动删除时，每次滑动删除按钮只露出一点点，要多次滑动才能看到完整的删除按钮。
+
+### 根因分析
+`SNAP_THRESHOLD = 40` 设置过大，用户需要滑动超过 40px 才能触发删除按钮完全展开，导致体验不佳。
+
+### 解决方案
+将 `SNAP_THRESHOLD` 从 40 降低到 24（约为删除按钮宽度的 1/3），使删除按钮更容易展开。
+
+### 相关文件
+- `src/components/history/HistoryItem.tsx`
+- `src/components/error/ErrorPointCard.tsx`
+
+### 状态
+✅ 已完成（2026-03-23）
+
+---
+
 ## 待办事项
 
 ### 数据库迁移

@@ -214,3 +214,39 @@ async function isAlreadyFlagged(userId: string, errorType: string): Promise<bool
 
   return data?.is_flagged === true;
 }
+
+export async function deleteErrorPoint(id: string, userId: string): Promise<void> {
+  const supabase = await createClient();
+
+  // Verify ownership
+  const { data: errorPoint } = await supabase
+    .from('error_points')
+    .select('id')
+    .eq('id', id)
+    .eq('user_id', userId)
+    .single();
+
+  if (!errorPoint) {
+    throw new Error('Error point not found or unauthorized');
+  }
+
+  // Cascade delete: error_instances first, then error_point
+  const { error: instancesError } = await supabase
+    .from('error_instances')
+    .delete()
+    .eq('error_point_id', id);
+
+  if (instancesError) {
+    throw new Error(`Failed to delete error instances: ${instancesError.message}`);
+  }
+
+  const { error } = await supabase
+    .from('error_points')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+
+  if (error) {
+    throw new Error(`Failed to delete error point: ${error.message}`);
+  }
+}

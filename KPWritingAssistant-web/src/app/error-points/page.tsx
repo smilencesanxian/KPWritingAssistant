@@ -15,6 +15,7 @@ export default function ErrorPointsPage() {
   const [errorPoints, setErrorPoints] = useState<ErrorPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState('');
+  const [manageMode, setManageMode] = useState(false);
 
   const fetchErrorPoints = useCallback(async (flaggedOnly: string) => {
     setLoading(true);
@@ -43,21 +44,35 @@ export default function ErrorPointsPage() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-4 pb-24">
-      {/* Filter tabs */}
-      <div className="flex gap-2 mb-4">
-        {FILTER_TABS.map((tab) => (
+      {/* Header with filter and manage button */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-2">
+          {FILTER_TABS.map((tab) => (
+            <button
+              key={tab.value}
+              onClick={() => setActiveFilter(tab.value)}
+              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                activeFilter === tab.value
+                  ? 'bg-primary-600 text-white'
+                  : 'bg-white text-neutral-500 border border-neutral-200 hover:border-primary-300'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        {errorPoints.length > 0 && (
           <button
-            key={tab.value}
-            onClick={() => setActiveFilter(tab.value)}
-            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              activeFilter === tab.value
+            onClick={() => setManageMode((m) => !m)}
+            className={`text-sm font-medium px-3 py-1.5 rounded-full transition-colors ${
+              manageMode
                 ? 'bg-primary-600 text-white'
-                : 'bg-white text-neutral-500 border border-neutral-200 hover:border-primary-300'
+                : 'text-primary-600 bg-primary-50 hover:bg-primary-100'
             }`}
           >
-            {tab.label}
+            {manageMode ? '完成' : '管理'}
           </button>
-        ))}
+        )}
       </div>
 
       {/* Loading */}
@@ -71,7 +86,20 @@ export default function ErrorPointsPage() {
       {!loading && errorPoints.length > 0 && (
         <div className="bg-white rounded-2xl overflow-hidden" style={{ boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
           {errorPoints.map((ep) => (
-            <ErrorPointCard key={ep.id} errorPoint={ep} onClick={handleCardClick} />
+            <ErrorPointCard
+              key={ep.id}
+              errorPoint={ep}
+              manageMode={manageMode}
+              onClick={handleCardClick}
+              onDelete={async (id) => {
+                setErrorPoints((prev) => prev.filter((p) => p.id !== id));
+                try {
+                  await fetch(`/api/error-points/${id}`, { method: 'DELETE' });
+                } catch {
+                  fetchErrorPoints(activeFilter);
+                }
+              }}
+            />
           ))}
         </div>
       )}

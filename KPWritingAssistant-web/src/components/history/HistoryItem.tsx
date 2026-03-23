@@ -38,7 +38,7 @@ function formatCorrectionTime(dateStr: string): string {
 }
 
 const DELETE_WIDTH = 72;
-const SNAP_THRESHOLD = 40;
+const SNAP_THRESHOLD = 24; // 降低阈值，更容易触发删除按钮展开
 
 export default function HistoryItem({ item, onDelete, manageMode }: HistoryItemProps) {
   const colors = getScoreColor(item.total_score);
