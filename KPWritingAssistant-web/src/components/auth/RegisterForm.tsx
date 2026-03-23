@@ -99,7 +99,6 @@ export default function RegisterForm() {
     }
     setLoading(false);
   }
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
