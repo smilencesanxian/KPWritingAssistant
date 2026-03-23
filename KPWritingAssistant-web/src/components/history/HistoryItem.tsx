@@ -12,8 +12,8 @@ interface HistoryItemProps {
 
 function getScoreColor(score: number | null): { icon: string; badge: string } {
   if (score === null) return { icon: 'text-neutral-400', badge: 'bg-neutral-100 text-neutral-500' };
-  if (score >= 24) return { icon: 'text-green-500', badge: 'bg-green-50 text-green-600' };
-  if (score >= 18) return { icon: 'text-blue-500', badge: 'bg-blue-50 text-blue-600' };
+  if (score >= 16) return { icon: 'text-green-500', badge: 'bg-green-50 text-green-600' };
+  if (score >= 12) return { icon: 'text-blue-500', badge: 'bg-blue-50 text-blue-600' };
   return { icon: 'text-orange-500', badge: 'bg-orange-50 text-orange-600' };
 }
 
@@ -168,7 +168,7 @@ export default function HistoryItem({ item, onDelete, manageMode }: HistoryItemP
             <div className="flex-shrink-0 flex items-center gap-1.5">
               {item.total_score !== null ? (
                 <span className={`text-xs font-semibold px-2 py-1 rounded-lg ${colors.badge}`}>
-                  {item.total_score}/30
+                  {item.total_score}/20
                 </span>
               ) : (
                 <span className="text-xs text-neutral-400 px-2 py-1 rounded-lg bg-neutral-50">

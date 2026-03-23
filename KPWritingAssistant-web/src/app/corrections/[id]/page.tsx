@@ -51,6 +51,7 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
     total_score,
     content_score,
     communication_score,
+    organization_score,
     language_score,
     overall_comment,
     improvement_suggestions,
@@ -90,9 +91,9 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
             {total_score ?? '--'}
             <span className="text-lg font-normal text-neutral-500 ml-1">分</span>
           </div>
-          <div className="text-sm text-neutral-400 mt-1">满分30分</div>
+          <div className="text-sm text-neutral-400 mt-1">满分20分</div>
         </div>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-2">
           <div className="text-center">
             <div className="text-xs text-neutral-500 mb-1.5">内容</div>
             <Badge color="blue">{content_score ?? '--'} 分</Badge>
@@ -100,6 +101,10 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
           <div className="text-center">
             <div className="text-xs text-neutral-500 mb-1.5">沟通</div>
             <Badge color="green">{communication_score ?? '--'} 分</Badge>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-neutral-500 mb-1.5">组织</div>
+            <Badge color="purple">{organization_score ?? '--'} 分</Badge>
           </div>
           <div className="text-center">
             <div className="text-xs text-neutral-500 mb-1.5">语言</div>

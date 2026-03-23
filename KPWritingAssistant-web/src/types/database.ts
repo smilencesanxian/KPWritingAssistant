@@ -13,6 +13,7 @@ export interface Correction {
   submission_id: string;
   content_score: number | null;
   communication_score: number | null;
+  organization_score: number | null;
   language_score: number | null;
   total_score: number | null;
   error_annotations: import('./ai').ErrorAnnotation[];

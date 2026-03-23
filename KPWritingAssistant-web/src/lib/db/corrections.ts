@@ -5,6 +5,7 @@ import type { ErrorAnnotation } from '@/types/ai';
 export interface CreateCorrectionInput {
   content_score: number;
   communication_score: number;
+  organization_score: number;
   language_score: number;
   total_score: number;
   error_annotations: ErrorAnnotation[];
@@ -24,6 +25,7 @@ export async function createCorrection(
       submission_id: submissionId,
       content_score: data.content_score,
       communication_score: data.communication_score,
+      organization_score: data.organization_score,
       language_score: data.language_score,
       total_score: data.total_score,
       error_annotations: data.error_annotations,

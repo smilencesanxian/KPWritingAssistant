@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
     const correction = await createCorrection(submission_id, {
       content_score: correctionResult.scores.content,
       communication_score: correctionResult.scores.communication,
+      organization_score: correctionResult.scores.organization,
       language_score: correctionResult.scores.language,
       total_score: correctionResult.scores.total,
       error_annotations: correctionResult.error_annotations,

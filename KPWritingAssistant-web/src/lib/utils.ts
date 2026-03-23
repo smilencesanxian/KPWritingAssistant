@@ -13,6 +13,6 @@ export function formatDate(date: string | Date): string {
   return `${year}年${month}月${day}日`;
 }
 
-export function formatScore(score: number, total: number = 30): string {
+export function formatScore(score: number, total: number = 20): string {
   return `${score}/${total}`;
 }

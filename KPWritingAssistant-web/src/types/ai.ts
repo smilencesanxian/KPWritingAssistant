@@ -23,6 +23,7 @@ export interface ErrorSummaryItem {
 export interface CorrectionScores {
   content: number;
   communication: number;
+  organization: number;
   language: number;
   total: number;
 }
