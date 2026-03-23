@@ -155,6 +155,16 @@ CREATE POLICY "Users can update own corrections"
     )
   );
 
+-- corrections DELETE policy (needed for cascade delete)
+CREATE POLICY "Users can delete own corrections"
+  ON corrections FOR DELETE
+  USING (
+    EXISTS (
+      SELECT 1 FROM essay_submissions s
+      WHERE s.id = corrections.submission_id AND s.user_id = auth.uid()
+    )
+  );
+
 -- model_essays policies (access via correction → submission ownership)
 CREATE POLICY "Users can select own model essays"
   ON model_essays FOR SELECT
@@ -169,6 +179,17 @@ CREATE POLICY "Users can select own model essays"
 CREATE POLICY "Users can insert own model essays"
   ON model_essays FOR INSERT
   WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM corrections c
+      JOIN essay_submissions s ON s.id = c.submission_id
+      WHERE c.id = model_essays.correction_id AND s.user_id = auth.uid()
+    )
+  );
+
+-- model_essays DELETE policy (needed for cascade delete)
+CREATE POLICY "Users can delete own model essays"
+  ON model_essays FOR DELETE
+  USING (
     EXISTS (
       SELECT 1 FROM corrections c
       JOIN essay_submissions s ON s.id = c.submission_id
@@ -223,6 +244,16 @@ CREATE POLICY "Users can select own error instances"
 CREATE POLICY "Users can insert own error instances"
   ON error_instances FOR INSERT
   WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM error_points ep
+      WHERE ep.id = error_instances.error_point_id AND ep.user_id = auth.uid()
+    )
+  );
+
+-- error_instances DELETE policy (needed for cascade delete)
+CREATE POLICY "Users can delete own error instances"
+  ON error_instances FOR DELETE
+  USING (
     EXISTS (
       SELECT 1 FROM error_points ep
       WHERE ep.id = error_instances.error_point_id AND ep.user_id = auth.uid()

@@ -323,11 +323,16 @@ Beta 测试反映历史批改记录无法删除（滑动删除后记录会重新
    - 将 highlights_library.source_submission_id 置 null（保留亮点数据）
    - 最后删除 essay_submission 本身
 2. **管理模式 UX 优化**：历史页增加「管理」按钮，点击后每条记录右侧显示红色删除按钮（X 图标），再次点击「完成」退出管理模式；保留原有向左滑动删除手势。
+3. **数据库 RLS 策略补充**：为级联删除涉及的表添加 DELETE 策略：
+   - `corrections` 表：通过 submission 所有权验证
+   - `model_essays` 表：通过 correction → submission 所有权验证
+   - `error_instances` 表：通过 error_point 所有权验证
 
 ### 相关文件
 - `src/lib/db/essays.ts`（deleteSubmission 函数）
 - `src/app/history/page.tsx`（管理模式 state + UI）
 - `src/components/history/HistoryItem.tsx`（manageMode prop + 删除按钮）
+- `supabase/migrations/001_initial_schema.sql`（新增 DELETE RLS 策略）
 
 ### 状态
 ✅ 已完成（2026-03-23）
