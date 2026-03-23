@@ -1,0 +1,146 @@
+{
+  "project": "KP作文宝 v1.1.0",
+  "description": "v1.1.0版本：功能增强与体验优化，专项练习、更多字体、家长模式等功能",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "专项练习纸生成（易错点）",
+      "description": "实现易错点详情页的'生成专项练习纸'功能",
+      "steps": [
+        "创建 src/lib/pdf/practice-sheet.ts，实现 generatePracticeSheetPDF(errorType: string, questions: PracticeQuestion[]): Promise<Buffer> 函数",
+        "PDF规格：A4页面，顶部标题'[错误类型] 专项练习'，下方展示3-5道针对该错误类型的练习题",
+        "练习题格式：题干 + 填空横线，右侧留白用于书写答案",
+        "底部添加'答案对照'区域（小字号，可剪下对照）",
+        "创建 API Route：POST /api/generate/practice-sheet，接收 { error_point_id }，查询 error_type 和预设练习题，生成PDF并上传到Storage",
+        "更新易错点详情页：'生成专项练习纸'按钮点击后调用API，生成完成后跳转预览页"
+      ],
+      "passes": false
+    },
+    {
+      "id": 2,
+      "title": "更多字体选择",
+      "description": "增加多种手写字体供用户选择",
+      "steps": [
+        "添加2-3种新字体：衡水体（已存在）、意大利斜体、圆体等",
+        "下载字体文件（确保开源可商用），放置到 src/assets/fonts/",
+        "更新 copybook.ts 支持多字体，根据 fontStyle 参数注册不同字体",
+        "创建 src/app/settings/font/page.tsx 字体选择页，展示字体预览和选择",
+        "更新字帖生成API：接收 font_style 参数，传递给 PDF 生成函数",
+        "更新字帖预览页：显示当前使用的字体名称"
+      ],
+      "passes": false
+    },
+    {
+      "id": 3,
+      "title": "批改历史管理增强",
+      "description": "支持删除批改历史、编辑作文标题",
+      "steps": [
+        "添加数据库删除策略：corrections表添加 ON DELETE CASCADE 到关联表",
+        "创建 API：DELETE /api/essays/[id]，验证所有权后删除 submission 及相关记录（correction、highlights、error_instances）",
+        "创建 API：PATCH /api/essays/[id]，接收 { title }，更新作文标题",
+        "更新历史列表页：左滑显示删除按钮，点击弹出确认对话框",
+        "更新批改详情页：标题区域可点击编辑，弹出输入框修改",
+        "删除后跳转回历史页，显示 Toast '已删除'"
+      ],
+      "passes": false
+    },
+    {
+      "id": 4,
+      "title": "每周错题提醒功能",
+      "description": "实现设置页中的错题提醒开关功能",
+      "steps": [
+        "添加 user_preferences 表：user_id(PK), weekly_reminder(boolean), reminder_day(int 1-7), created_at, updated_at",
+        "创建 API：GET /api/user/preferences 获取用户偏好，POST /api/user/preferences 更新偏好",
+        "更新设置页：Toggle 开关实际保存到数据库，选择提醒日期（周一到周日）",
+        "创建 Edge Function：weekly-reminder，每周定时查询 user_preferences 中开启提醒的用户",
+        "Edge Function 逻辑：查询用户本周新增的错误点，生成摘要，通过 Supabase Auth 邮件或第三方服务发送",
+        "在设置页显示下次提醒时间"
+      ],
+      "passes": false
+    },
+    {
+      "id": 5,
+      "title": "家长/教师模式切换",
+      "description": "增加家长视角，可查看孩子学习数据",
+      "steps": [
+        "添加 user_roles 字段到 profiles 表：parent | student（默认student）",
+        "创建家长绑定功能：学生生成绑定码，家长输入绑定码关联账户",
+        "创建 src/app/parent-dashboard/page.tsx 家长仪表盘",
+        "家长视图展示：绑定孩子的批改统计、易错点分布、最近练习情况",
+        "家长可查看但不可修改孩子的数据，可下载孩子的练习纸",
+        "设置页添加'切换到家长模式'入口（如果已绑定）"
+      ],
+      "passes": false
+    },
+    {
+      "id": 6,
+      "title": "数据导出功能",
+      "description": "支持导出学习数据和作文记录",
+      "steps": [
+        "创建 API：GET /api/export/essays，返回用户所有作文数据（含批改结果）的JSON",
+        "创建 API：GET /api/export/highlights，返回亮点库CSV格式",
+        "创建 API：GET /api/export/error-points，返回易错点统计CSV",
+        "设置页添加'数据导出'区域，提供三个导出按钮",
+        "支持导出为PDF报告：汇总学习进度、进步曲线、常用亮点等",
+        "导出功能添加速率限制（每天最多3次）"
+      ],
+      "passes": false
+    },
+    {
+      "id": 7,
+      "title": "作文分享功能",
+      "description": "支持分享批改结果和范文到社交媒体",
+      "steps": [
+        "创建分享图生成功能：使用 HTML5 Canvas 或服务端生成分享卡片图片",
+        "分享卡片包含：分数（圆形徽章）、评语摘要、产品二维码",
+        "创建 API：POST /api/share/generate-card，生成分享图片URL（临时，有效期7天）",
+        "批改结果页添加'分享成绩'按钮，点击生成分享图",
+        "支持原生分享API（移动端）或复制图片（桌面端）",
+        "范文页添加'分享范文'功能，生成范文分享卡片"
+      ],
+      "passes": false
+    },
+    {
+      "id": 8,
+      "title": "PET写作题库",
+      "description": "内置PET真题和模拟题供练习",
+      "steps": [
+        "创建 question_bank 表：id, type(part1/part2), question_text, reference_images, difficulty, year(可选), created_at",
+        "添加10道PET Part1真题和10道Part2真题到题库",
+        "创建 src/app/practice/page.tsx 题库练习页，按类型和难度筛选题目",
+        "题目详情页展示题目描述、参考图片、写作要求",
+        "'开始练习'按钮跳转到上传页，自动填充题目信息",
+        "首页添加'题库练习'入口"
+      ],
+      "passes": false
+    },
+    {
+      "id": 9,
+      "title": "学习进度统计",
+      "description": "更详细的学习数据可视化",
+      "steps": [
+        "创建 src/app/stats/page.tsx 学习统计页",
+        "展示图表：近30天批改次数趋势、三维度平均分变化曲线、易错点分布饼图",
+        "使用轻量级图表库（如 chart.js 或 recharts）",
+        "创建 API：GET /api/stats/detailed，返回时间序列数据",
+        "统计指标：累计练习天数、连续练习天数、平均分数、进步幅度",
+        "页面底部添加'导出完整报告'按钮"
+      ],
+      "passes": false
+    },
+    {
+      "id": 10,
+      "title": "用户体验优化",
+      "description": "v1.1.0版本的整体体验打磨",
+      "steps": [
+        "批改加载页面添加取消按钮，可中断批改过程",
+        "OCR识别失败时提供'重新拍照'和'手动输入'两个明确选项",
+        "范文字体使用对应字帖字体，给用户更真实的预览",
+        "添加页面切换动画，提升流畅感",
+        "优化移动端长列表性能，添加虚拟滚动",
+        "更新 README.md 添加v1.1.0新功能说明"
+      ],
+      "passes": false
+    }
+  ]
+}
