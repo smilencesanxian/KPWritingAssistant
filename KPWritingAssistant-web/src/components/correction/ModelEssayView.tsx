@@ -57,6 +57,7 @@ export default function ModelEssayView({ correctionId, initialEssays }: ModelEss
   const [templateId, setTemplateId] = useState<string>('pet');
   const [copybookMode, setCopybookMode] = useState<CopybookMode>('tracing');
   const [fontStyle, setFontStyle] = useState<string>('hengshui');
+  const [fontSize, setFontSize] = useState<number>(18); // 默认字体大小18pt
   const [tracingOpacity, setTracingOpacity] = useState<number>(30);
 
   // Auto-fetch excellent essay on mount if not already available
@@ -106,6 +107,7 @@ export default function ModelEssayView({ correctionId, initialEssays }: ModelEss
           template_id: templateId,
           mode: copybookMode,
           font_style: fontStyle,
+          font_size: fontSize,
           tracing_opacity: copybookMode === 'tracing' ? tracingOpacity : 100,
         }),
       });
@@ -121,7 +123,7 @@ export default function ModelEssayView({ correctionId, initialEssays }: ModelEss
       setError(err instanceof Error ? err.message : '生成字帖失败，请重试');
       setCopybookLoading(false);
     }
-  }, [essay, router, templateId, copybookMode, fontStyle, tracingOpacity]);
+  }, [essay, router, templateId, copybookMode, fontStyle, fontSize, tracingOpacity]);
 
   return (
     <div className="space-y-3">
@@ -186,6 +188,22 @@ export default function ModelEssayView({ correctionId, initialEssays }: ModelEss
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Font size slider */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-neutral-600 shrink-0 w-14">字号</label>
+              <input
+                type="range"
+                min={12}
+                max={22}
+                step={1}
+                value={fontSize}
+                onChange={(e) => setFontSize(Number(e.target.value))}
+                disabled={copybookLoading}
+                className="flex-1 h-1.5 accent-primary-600 disabled:opacity-50"
+              />
+              <span className="text-xs text-neutral-500 w-10 text-right">{fontSize}pt</span>
             </div>
 
             {/* Mode toggle */}

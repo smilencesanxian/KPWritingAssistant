@@ -112,10 +112,14 @@ function drawAnswerContainer(
   tracingColor: string,
   startY: number,
   answerAreaX: number,
-  answerAreaWidth: number
+  answerAreaWidth: number,
+  customFontSize?: number
 ): number {
-  const { linesPerPage, lineHeight, headerText, headerBgColor, headerFontSize, contentFontSize } =
+  const { linesPerPage, lineHeight, headerText, headerBgColor, headerFontSize, defaultFontSize } =
     template;
+
+  // Use custom font size if provided, otherwise use template default
+  const contentFontSize = customFontSize ?? defaultFontSize;
 
   const headerHeight = 28;
   const containerHeight = headerHeight + linesPerPage * lineHeight;
@@ -161,8 +165,11 @@ function drawAnswerContainer(
     }
 
     // Tracing mode: render essay text on each line (with gray color for tracing)
+    // Position text near the bottom line (baseline) for natural handwriting appearance
     if (mode === 'tracing' && pageLines[i]) {
-      const textY = lineY + (lineHeight - contentFontSize) / 2 - 1;
+      // Position text near the bottom line (closer to the baseline)
+      // Adding a small offset (2pt) from the bottom line for better visual
+      const textY = lineY + lineHeight - contentFontSize - 2;
       doc
         .fontSize(contentFontSize)
         .font(resolveFontName(fontStyle))
@@ -243,32 +250,44 @@ function drawBarcode(doc: PDFKit.PDFDocument, pageWidth: number, pageHeight: num
 }
 
 /**
- * Wraps essay text into lines using PDFKit's actual font metrics for accuracy.
- * Strips paragraph breaks and wraps purely by pixel width to maximise line fill.
+ * Wraps essay text into lines targeting ~10 words per line for better tracing experience.
+ * Strips paragraph breaks and wraps based on word count to control line density.
  */
 function wrapTextWithFontMetrics(
   doc: PDFKit.PDFDocument,
   text: string,
   maxWidth: number,
   fontSize: number,
-  fontName: string
+  fontName: string,
+  targetWordsPerLine: number = 10
 ): string[] {
   doc.fontSize(fontSize).font(fontName);
   // Flatten paragraph breaks into spaces so lines fill as much as possible
   const words = text.replace(/\n+/g, ' ').split(/\s+/).filter(Boolean);
   const lines: string[] = [];
-  let currentLine = '';
+  let currentLine: string[] = [];
 
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    if (doc.widthOfString(testLine) > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    currentLine.push(word);
+
+    // Check if we've reached target word count or if adding another word would exceed width
+    const testLine = currentLine.join(' ');
+    const nextWord = words[i + 1];
+    const wouldExceedWidth = nextWord && doc.widthOfString(testLine + ' ' + nextWord) > maxWidth;
+    const reachedTargetCount = currentLine.length >= targetWordsPerLine;
+
+    if (wouldExceedWidth || reachedTargetCount || i === words.length - 1) {
+      lines.push(testLine);
+      currentLine = [];
     }
   }
-  if (currentLine) lines.push(currentLine);
+
+  // Handle any remaining words
+  if (currentLine.length > 0) {
+    lines.push(currentLine.join(' '));
+  }
+
   return lines;
 }
 
@@ -286,7 +305,8 @@ export async function renderCopybookPDF(
   template: CopybookTemplate,
   mode: CopybookMode,
   fontStyle: string = 'gochi-hand',
-  tracingOpacity: number = 30
+  tracingOpacity: number = 30,
+  customFontSize?: number
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 0, autoFirstPage: true });
@@ -302,7 +322,9 @@ export async function renderCopybookPDF(
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const { pageWidth, pageHeight, linesPerPage, contentFontSize } = template;
+    const { pageWidth, pageHeight, linesPerPage, defaultFontSize } = template;
+    // Use custom font size if provided, otherwise use template default
+    const contentFontSize = customFontSize ?? defaultFontSize;
     const answerAreaWidth = mmToPt(template.answerAreaWidthMm);
     const answerAreaX = (pageWidth - answerAreaWidth) / 2;
 
@@ -319,7 +341,7 @@ export async function renderCopybookPDF(
     const tracingColor = mode === 'tracing' ? opacityToTracingColor(tracingOpacity) : '#1a1a1a';
     const usableWidth = answerAreaWidth - 12; // minus left/right padding
     const allLines = mode === 'tracing'
-      ? wrapTextWithFontMetrics(doc, essayText, usableWidth, contentFontSize, fontName)
+      ? wrapTextWithFontMetrics(doc, essayText, usableWidth, contentFontSize, fontName, 10)
       : [];
 
     const pageCount = mode === 'tracing' ? Math.max(1, Math.ceil(allLines.length / linesPerPage)) : 1;
@@ -349,7 +371,8 @@ export async function renderCopybookPDF(
         tracingColor,
         containerStartY,
         answerAreaX,
-        answerAreaWidth
+        answerAreaWidth,
+        customFontSize
       );
 
       if (template.showExaminerTable) {

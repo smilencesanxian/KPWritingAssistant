@@ -12,7 +12,11 @@ export const petTemplate: CopybookTemplate = {
   headerText: 'Question 1',
   headerBgColor: '#b8b8b8',
   headerFontSize: 14,
-  contentFontSize: 15,
+  contentFontSize: 18, // 默认字体从15增加到18
+  // 字体大小可配置范围
+  minFontSize: 12,
+  maxFontSize: 22,
+  defaultFontSize: 18,
   topInstructions: [
     'You must write within the grey lines.',
     'Write your answer for Part 1 below. Do not write on the barcodes.',

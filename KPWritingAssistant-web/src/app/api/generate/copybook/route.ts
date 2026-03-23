@@ -32,6 +32,7 @@ export async function POST(request: NextRequest) {
     mode = 'tracing',
     font_style = 'gochi-hand',
     tracing_opacity = 30,
+    font_size,
   } = body as Record<string, unknown>;
 
   if (!model_essay_id || typeof model_essay_id !== 'string') {
@@ -46,6 +47,10 @@ export async function POST(request: NextRequest) {
   const tracingOpacity = typeof tracing_opacity === 'number'
     ? Math.max(0, Math.min(100, Math.round(tracing_opacity)))
     : 30;
+  // Parse font size if provided
+  const fontSize = typeof font_size === 'number'
+    ? Math.max(10, Math.min(30, Math.round(font_size)))
+    : undefined;
 
   // Validate template_id against registered templates
   const validTemplateIds = getAllTemplates().map((t) => t.id);
@@ -80,7 +85,7 @@ export async function POST(request: NextRequest) {
 
   // Generate PDF buffer
   const essayContent = (modelEssayData as { content: string }).content;
-  const pdfBuffer = await generateCopybookPDF(essayContent, templateId, copybookMode, fontStyle, tracingOpacity);
+  const pdfBuffer = await generateCopybookPDF(essayContent, templateId, copybookMode, fontStyle, tracingOpacity, fontSize);
 
   // Upload PDF
   const tempId = crypto.randomUUID();

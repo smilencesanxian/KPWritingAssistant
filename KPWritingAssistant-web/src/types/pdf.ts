@@ -21,6 +21,10 @@ export interface CopybookTemplate {
   headerFontSize: number;
   // Content font
   contentFontSize: number;
+  // Font size options (min, max, default in points)
+  minFontSize: number;
+  maxFontSize: number;
+  defaultFontSize: number;
   // Top instructions text lines
   topInstructions: string[];
   // Decorative elements

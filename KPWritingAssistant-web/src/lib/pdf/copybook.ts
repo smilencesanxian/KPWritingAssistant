@@ -7,8 +7,9 @@ export async function generateCopybookPDF(
   templateId: string = DEFAULT_TEMPLATE_ID,
   mode: CopybookMode = 'tracing',
   fontStyle: string = 'hengshui',
-  tracingOpacity: number = 30
+  tracingOpacity: number = 30,
+  fontSize?: number
 ): Promise<Buffer> {
   const template = getTemplate(templateId);
-  return renderCopybookPDF(essayText, template, mode, fontStyle, tracingOpacity);
+  return renderCopybookPDF(essayText, template, mode, fontStyle, tracingOpacity, fontSize);
 }

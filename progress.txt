@@ -846,3 +846,31 @@
 ### Notes:
 - 使用 next/font/local 而非 next/font/google，原因是字体文件已内嵌项目，避免构建时依赖 Google Fonts 网络访问
 - 字体授权：SIL OFL 1.1，允许个人和商业使用，符合商用要求
+
+## 2026-03-23 - 范文生成效果优化
+
+### What was done:
+1. 字体大小可配置
+   - 在 CopybookTemplate 类型中添加 minFontSize, maxFontSize, defaultFontSize 字段
+   - 在 pet 模板中设置默认字体大小为 18pt（之前是 15pt）
+   - 在 API 路由中接受 font_size 参数并验证范围
+   - 在 renderer.ts 和 copybook.ts 中传递自定义字体大小参数
+   - 在 ModelEssayView UI 中添加字体大小滑块（12-22pt）
+
+2. 字体位置靠近下线
+   - 修改 renderer.ts 中 drawAnswerContainer 函数
+   - 将文本位置从居中 `(lineHeight - contentFontSize) / 2 - 1` 改为靠近下线 `lineHeight - contentFontSize - 2`
+
+3. 单词间隔调整
+   - 修改 wrapTextWithFontMetrics 函数，添加 targetWordsPerLine 参数
+   - 设置目标每行约 10 个单词，让换行更合理便于临摹
+
+### Testing:
+- npm run lint 通过
+- TypeScript 编译通过（有一个已存在的无关错误）
+- 代码逻辑已验证
+
+### Notes:
+- 默认字体大小从 15pt 增加到 18pt，更方便临摹
+- 字体现在靠近下线显示，更符合手写习惯
+- 每行约 10 个单词，行距更舒适
