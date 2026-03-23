@@ -1,7 +1,14 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { updateSession } from '@/lib/supabase/middleware';
 
 export async function proxy(request: NextRequest) {
+  // E2E test bypass: allow access to all routes when bypass cookie is present
+  if (
+    process.env.E2E_BYPASS_AUTH === 'true' &&
+    request.cookies.has('x-e2e-user-id')
+  ) {
+    return NextResponse.next({ request });
+  }
   return await updateSession(request);
 }
 

@@ -60,14 +60,58 @@ export default function UploadPage() {
     setPreviewUrl(url);
   }
 
+  async function compressImage(original: File): Promise<File> {
+    const MAX_DIMENSION = 1920;
+    const QUALITY = 0.85;
+    const TARGET_TYPE = 'image/jpeg';
+
+    return new Promise((resolve) => {
+      const img = new window.Image();
+      const url = URL.createObjectURL(original);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIMENSION) / width);
+            width = MAX_DIMENSION;
+          } else {
+            width = Math.round((width * MAX_DIMENSION) / height);
+            height = MAX_DIMENSION;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) { resolve(original); return; }
+            const compressed = new File([blob], original.name.replace(/\.[^.]+$/, '.jpg'), {
+              type: TARGET_TYPE,
+              lastModified: Date.now(),
+            });
+            resolve(compressed);
+          },
+          TARGET_TYPE,
+          QUALITY
+        );
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); resolve(original); };
+      img.src = url;
+    });
+  }
+
   async function handleStartRecognize() {
     if (!file) return;
     setRecognizing(true);
 
     try {
-      // Step 1: Upload image
+      // Step 1: Compress then upload image
+      const compressed = await compressImage(file);
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', compressed);
       const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
       if (!uploadRes.ok) {
         const { error } = await uploadRes.json();
