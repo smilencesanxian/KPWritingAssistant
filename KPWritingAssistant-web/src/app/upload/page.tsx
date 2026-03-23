@@ -61,8 +61,14 @@ export default function UploadPage() {
   }
 
   async function compressImage(original: File): Promise<File> {
+    // 小于 500KB 的图片直接上传，保持最佳质量
+    const MAX_SIZE_DIRECT = 500 * 1024;
+    if (original.size <= MAX_SIZE_DIRECT) {
+      return original;
+    }
+
     const MAX_DIMENSION = 1920;
-    const QUALITY = 0.85;
+    const QUALITY = 0.9;
     const TARGET_TYPE = 'image/jpeg';
 
     return new Promise((resolve) => {
