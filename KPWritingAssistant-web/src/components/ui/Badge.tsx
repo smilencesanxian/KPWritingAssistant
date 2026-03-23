@@ -1,7 +1,7 @@
 import { HTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
 
-type BadgeColor = 'blue' | 'green' | 'orange' | 'red' | 'gray';
+type BadgeColor = 'blue' | 'green' | 'orange' | 'red' | 'gray' | 'purple';
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   color?: BadgeColor;
@@ -14,6 +14,7 @@ const colorClasses: Record<BadgeColor, string> = {
   orange: 'bg-orange-100 text-orange-700',
   red: 'bg-red-100 text-red-700',
   gray: 'bg-neutral-100 text-neutral-600',
+  purple: 'bg-purple-100 text-purple-700',
 };
 
 export default function Badge({ color = 'blue', children, className, ...props }: BadgeProps) {
