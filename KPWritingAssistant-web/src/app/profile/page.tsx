@@ -114,7 +114,7 @@ export default function ProfilePage() {
               </svg>
             }
             label="关于我们"
-            rightContent={<span className="text-xs text-neutral-400">v1.0.0</span>}
+            rightContent={<span className="text-xs text-neutral-400">v1.1.0</span>}
             clickable={false}
           />
         </div>
