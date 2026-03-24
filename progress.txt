@@ -1,5 +1,36 @@
 # KP作文宝 - Progress Log
 
+## 2026-03-25 - v1.2.0 Task 3 完成：更新数据访问层
+
+### What was done:
+- **更新 src/lib/db/essays.ts：**
+  - CreateSubmissionInput 新增题型相关字段
+  - createSubmission() 支持保存新字段
+- **更新 src/lib/db/corrections.ts：**
+  - getCorrectionById 和 getCorrectionBySubmissionId 返回 exam_part 字段
+- **更新 src/lib/db/highlights.ts：**
+  - CreateHighlightInput 新增 source 和 recommended_phrase_id 字段
+- **新建 src/lib/db/model-essays.ts：**
+  - updateModelEssay() 更新用户编辑内容
+  - getUserPreferenceNotes() 获取用户偏好备注
+- **新建 src/lib/db/recommended-phrases.ts：**
+  - getRecommendedPhrases() 获取推荐句式列表
+  - collectPhrase() 收藏到亮点库
+  - isCollected() 检查是否已收藏
+- **新建 src/lib/db/writing-guide.ts：**
+  - getWritingGuideTree() 获取写作导览树
+  - upsertUserNode() 创建/更新用户节点
+  - getUserPhrasesByTopic() 获取话题下的亮点
+
+### Testing:
+- `npm run build`：构建成功
+- `npm run lint`：0 errors（2个无关警告）
+- 所有6个DB文件存在且类型正确
+
+### Notes:
+- Task 3 标记为完成，Phase 1 全部完成
+- **暂停**，等待用户指示继续 Task 4
+
 ## 2026-03-25 - v1.2.0 Task 2 完成：更新 types/database.ts
 
 ### What was done:
@@ -912,3 +943,24 @@
 - 默认字体大小从 15pt 增加到 18pt，更方便临摹
 - 字体现在靠近下线显示，更符合手写习惯
 - 每行约 10 个单词，行距更舒适
+
+## 2026-03-25 - Task 2: 更新 types/database.ts 类型定义
+
+### What was done:
+- 验证并确认所有新增类型定义已正确实现：
+  - Submission 接口新增 5 个 v1.2.0 字段（exam_part, question_type, question_image_path, question_ocr_text, essay_topic）
+  - EditHistoryItem 类型已定义（timestamp, original, edited, note?）
+  - ModelEssay 接口新增 4 个 v1.2.0 字段（user_edited_content, is_user_edited, edit_history, user_preference_notes）
+  - Highlight 接口新增 2 个 v1.2.0 字段（source, recommended_phrase_id）
+  - RecommendedPhrase 新接口已定义（v1.2.0 推荐句式表）
+  - WritingGuideNode 新接口已定义（v1.2.0 写作导览节点表）
+
+### Testing:
+- ✅ npm run build - TypeScript 编译成功，无类型错误
+- ✅ npm run lint - 无 lint 错误（2个警告与本次修改无关）
+- ✅ test-engineer SubAgent 验证通过，返回 [PASS] 结论
+
+### Notes:
+- 类型定义文件已在之前完成，本次主要是验证和确认
+- 所有新增字段和类型与数据库迁移 004 + 005 保持一致
+- 为后续 Task 3（数据访问层更新）提供了类型基础

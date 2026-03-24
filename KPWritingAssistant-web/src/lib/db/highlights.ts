@@ -4,6 +4,8 @@ import type { Highlight } from '@/types/database';
 export interface CreateHighlightInput {
   text: string;
   type: 'vocabulary' | 'phrase' | 'sentence';
+  source?: 'user' | 'system';
+  recommended_phrase_id?: string;
 }
 
 export async function createHighlights(
@@ -37,6 +39,8 @@ export async function createHighlights(
     text: h.text,
     type: h.type,
     source_submission_id: sourceSubmissionId ?? null,
+    source: h.source ?? 'user',
+    recommended_phrase_id: h.recommended_phrase_id ?? null,
   }));
 
   const { data, error } = await supabase

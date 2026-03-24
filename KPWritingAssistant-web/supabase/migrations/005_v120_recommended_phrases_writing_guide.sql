@@ -49,10 +49,19 @@ CREATE INDEX IF NOT EXISTS idx_writing_guide_source ON writing_guide_nodes (sour
 -- ------------------------------------------------------------
 -- Add foreign key constraint for highlights_library.recommended_phrase_id
 -- ------------------------------------------------------------
-ALTER TABLE highlights_library
-ADD CONSTRAINT IF NOT EXISTS highlights_library_recommended_phrase_id_fkey
-FOREIGN KEY (recommended_phrase_id) REFERENCES recommended_phrases(id)
-ON DELETE SET NULL;
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_name = 'highlights_library_recommended_phrase_id_fkey'
+    AND table_name = 'highlights_library'
+  ) THEN
+    ALTER TABLE highlights_library
+    ADD CONSTRAINT highlights_library_recommended_phrase_id_fkey
+    FOREIGN KEY (recommended_phrase_id) REFERENCES recommended_phrases(id)
+    ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- ------------------------------------------------------------
 -- Row Level Security for recommended_phrases

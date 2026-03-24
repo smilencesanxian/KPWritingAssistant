@@ -5,6 +5,12 @@ export interface CreateSubmissionInput {
   ocr_text?: string;
   original_image_path?: string;
   title?: string;
+  // v1.2.0 新增字段
+  exam_part?: 'part1' | 'part2' | null;
+  question_type?: 'q1' | 'q2' | null;
+  question_image_path?: string | null;
+  question_ocr_text?: string | null;
+  essay_topic?: string | null;
 }
 
 export interface SubmissionWithScore extends Submission {
@@ -25,6 +31,12 @@ export async function createSubmission(
       ocr_text: data.ocr_text ?? null,
       original_image_path: data.original_image_path ?? null,
       title: data.title ?? null,
+      // v1.2.0 新增字段
+      exam_part: data.exam_part ?? null,
+      question_type: data.question_type ?? null,
+      question_image_path: data.question_image_path ?? null,
+      question_ocr_text: data.question_ocr_text ?? null,
+      essay_topic: data.essay_topic ?? null,
     })
     .select()
     .single();

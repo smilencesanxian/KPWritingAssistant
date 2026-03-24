@@ -75,12 +75,15 @@ export async function getCorrectionById(id: string): Promise<Correction | null> 
 
 export async function getCorrectionBySubmissionId(
   submissionId: string
-): Promise<Correction | null> {
+): Promise<(Correction & { exam_part?: string | null }) | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from('corrections')
-    .select('*')
+    .select(`
+      *,
+      essay_submissions(exam_part)
+    `)
     .eq('submission_id', submissionId)
     .single();
 
@@ -91,7 +94,19 @@ export async function getCorrectionBySubmissionId(
     throw new Error(`Failed to get correction: ${error.message}`);
   }
 
-  return data as Correction;
+  // Transform nested data to flat structure
+  const result = data as Record<string, unknown>;
+  const examPart = result.essay_submissions && typeof result.essay_submissions === 'object'
+    ? (result.essay_submissions as { exam_part?: string | null }).exam_part
+    : null;
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { essay_submissions, ...correctionData } = result;
+
+  return {
+    ...(correctionData as unknown as Correction),
+    exam_part: examPart,
+  };
 }
 
 export async function updateCorrectionStatus(

@@ -86,7 +86,7 @@
       "feature_ids": ["F1", "F2", "F3", "F4"],
       "priority": "P0",
       "phase": 1,
-      "passes": false,
+      "passes": true,
       "description": "更新现有 DB 层文件并创建新的 DB 访问模块",
       "steps": [
         "更新 src/lib/db/essays.ts：createEssay() 接收并保存 exam_part/question_type/question_image_path/question_ocr_text/essay_topic；getEssayById() 返回包含这些新字段",
