@@ -1,5 +1,37 @@
 # KP作文宝 - Progress Log
 
+## 2026-03-25 - Task 11 完成：B6 字帖布局优化（字体大小、单词位置、行宽利用）
+
+### What was done:
+- **分析当前实现：**
+  - 字体大小：PET模板已设置 defaultFontSize: 18，满足要求
+  - 文字Y坐标：当前实现基线在下划线上方2pt处，符合要求
+  - 行宽利用：需要实现字间距拉伸填满行末
+
+- **修改 src/lib/pdf/renderer.ts：**
+  - 新增 calculateWordSpacing() 函数：计算每行需要拉伸的字间距
+    - 计算文字实际宽度与可用宽度的差值
+    - 将差值平均分配到单词间隙
+    - 返回 characterSpacing 值供 PDFKit 使用
+  - 修改 drawAnswerContainer() 函数：
+    - 在渲染每行文字前调用 calculateWordSpacing()
+    - 使用 PDFKit 的 characterSpacing 选项应用字间距
+    - 保持原有基线位置计算逻辑
+
+### Testing:
+- `npm run build`：构建成功
+- `npm run lint`：0 errors（3个无关警告）
+- 单元测试：15/15 通过（renderer.test.ts）
+- 修复测试文件中的类型错误（any 和 Function 类型）
+
+### Notes:
+- 字帖字体大小保持18pt（已在PET模板中配置）
+- 单词基线位置保持不变（lineY + lineHeight - contentFontSize - 2）
+- 行宽利用通过 characterSpacing 实现，每行文字会拉伸填满可用宽度
+- 仅最后一行（行尾）不做拉伸（PDFKit默认行为）
+
+---
+
 ## 2026-03-25 - Task 8 完成：B3 原文批注界面重设计（AnnotatedEssay 重构）
 
 ### What was done:

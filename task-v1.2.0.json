@@ -279,7 +279,7 @@
       "feature_ids": ["B6"],
       "priority": "P1",
       "phase": 4,
-      "passes": false,
+      "passes": true,
       "description": "修复字帖PDF布局：字体加大、单词落在横线上方、每行约10词、右侧不留白",
       "steps": [
         "打开 src/lib/pdf/renderer.ts，分析当前的字体大小设置、文字Y坐标计算和行宽分配逻辑",

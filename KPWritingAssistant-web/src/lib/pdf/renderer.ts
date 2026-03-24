@@ -103,6 +103,29 @@ function drawTopInstructions(
   return y;
 }
 
+function calculateWordSpacing(
+  doc: PDFKit.PDFDocument,
+  line: string,
+  availableWidth: number,
+  fontSize: number,
+  fontName: string
+): number {
+  if (!line || line.length === 0) return 0;
+
+  doc.fontSize(fontSize).font(fontName);
+  const textWidth = doc.widthOfString(line);
+  const spaceCount = line.split(' ').length - 1;
+
+  // If no spaces or already wider than available, no justification
+  if (spaceCount <= 0 || textWidth >= availableWidth) {
+    return 0;
+  }
+
+  // Calculate extra space to distribute among word gaps
+  const extraSpace = availableWidth - textWidth;
+  return extraSpace / spaceCount;
+}
+
 function drawAnswerContainer(
   doc: PDFKit.PDFDocument,
   template: CopybookTemplate,
@@ -170,13 +193,26 @@ function drawAnswerContainer(
       // Position text near the bottom line (closer to the baseline)
       // Adding a small offset (2pt) from the bottom line for better visual
       const textY = lineY + lineHeight - contentFontSize - 2;
+      const textX = answerAreaX + 6;
+      const availableWidth = answerAreaWidth - 12;
+
+      // Calculate word spacing to fill the line (justify)
+      const wordSpacing = calculateWordSpacing(
+        doc,
+        pageLines[i],
+        availableWidth,
+        contentFontSize,
+        resolveFontName(fontStyle)
+      );
+
       doc
         .fontSize(contentFontSize)
         .font(resolveFontName(fontStyle))
         .fillColor(tracingColor)
-        .text(pageLines[i], answerAreaX + 6, textY, {
-          width: answerAreaWidth - 12,
+        .text(pageLines[i], textX, textY, {
+          width: availableWidth,
           lineBreak: false,
+          characterSpacing: wordSpacing,
         });
     }
   }
