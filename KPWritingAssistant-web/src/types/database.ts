@@ -91,6 +91,7 @@ export interface Copybook {
   mode: string;
   pdf_storage_path: string | null;
   pdf_url: string | null;
+  download_file_name: string | null;
   created_at: string;
 }
 

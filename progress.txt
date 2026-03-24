@@ -1167,3 +1167,26 @@
 - Regenerate uses user's collected highlights and preference history
 - UI components follow existing design system (Button, Card, etc.)
 - Rate limiting applied to regenerate API to prevent abuse
+
+## 2026-03-25 - Task: B4 - 修复字帖PDF命名格式
+
+### What was done:
+- 更新了 Copybook 类型，添加 download_file_name 字段
+- 更新了 createCopybook 函数以接受和存储 downloadFileName 参数
+- 创建了 generateCopybookFileName 工具函数，生成格式为 "PET PartX 范文 [主题] [日期].pdf" 的文件名
+- 修改了 /api/generate/copybook 路由，查询时获取 exam_part 和 essay_topic，生成并存储下载文件名
+- 创建了新的下载 API 路由 /api/copybooks/[id]/download，返回带有 Content-Disposition 头的 PDF
+- 更新了字帖页面，使用新的下载 API 替代直接 PDF URL 链接
+- 创建了 copybook.test.ts 单元测试文件，覆盖文件名生成的各种场景
+
+### Testing:
+- 所有 65 个单元测试通过
+- npm run build 构建成功
+- npm run lint 通过（0 错误，3 个 pre-existing 警告）
+- 测试 Agent 返回 [PASS] 结论
+
+### Notes:
+- 下载文件名格式: "PET Part1 范文 露营旅行 2026-03-25.pdf"
+- essay_topic 为空时降级为 "作文"
+- 支持中文文件名正确显示（通过 Content-Disposition: filename*=UTF-8''）
+- 避免使用 date-fns 依赖，改用原生 JavaScript 日期格式化

@@ -80,8 +80,7 @@ export default async function CopybookPage({ params }: PageProps) {
       <div className="flex flex-col gap-3 pt-2">
         {copybook.pdf_url && (
           <a
-            href={copybook.pdf_url}
-            download
+            href={`/api/copybooks/${copybook.id}/download`}
             className="block w-full text-center bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl transition-colors"
           >
             下载 PDF

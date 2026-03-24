@@ -6,6 +6,7 @@ import { getAllTemplates } from '@/lib/pdf/templates';
 import { DEFAULT_TEMPLATE_ID } from '@/lib/pdf/templates';
 import { NextRequest } from 'next/server';
 import type { CopybookMode } from '@/types/pdf';
+import { generateCopybookFileName } from '@/lib/utils/copybook';
 
 const VALID_MODES: CopybookMode[] = ['tracing', 'dictation'];
 
@@ -59,9 +60,10 @@ export async function POST(request: NextRequest) {
   }
 
   // Verify ownership chain: model_essay → correction → submission → user_id
+  // Also get exam_part and essay_topic for filename generation
   const { data: modelEssayData, error: modelEssayError } = await supabase
     .from('model_essays')
-    .select('*, corrections!inner(id, essay_submissions!inner(user_id))')
+    .select('*, corrections!inner(id, essay_submissions!inner(user_id, exam_part, essay_topic))')
     .eq('id', model_essay_id)
     .single();
 
@@ -69,7 +71,14 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: '范文记录不存在' }, { status: 404 });
   }
 
-  const correction = modelEssayData.corrections as { id: string; essay_submissions: { user_id: string } };
+  const correction = modelEssayData.corrections as {
+    id: string;
+    essay_submissions: {
+      user_id: string;
+      exam_part: string | null;
+      essay_topic: string | null;
+    };
+  };
   if (correction.essay_submissions.user_id !== user.id) {
     return Response.json({ error: '无权访问此范文记录' }, { status: 403 });
   }
@@ -91,7 +100,13 @@ export async function POST(request: NextRequest) {
   const tempId = crypto.randomUUID();
   const { path: pdfStoragePath, url: pdfUrl } = await uploadCopybookPDF(user.id, tempId, pdfBuffer);
 
-  // Save copybook record
+  // Generate download filename based on exam_part and essay_topic
+  const downloadFileName = generateCopybookFileName(
+    correction.essay_submissions.exam_part,
+    correction.essay_submissions.essay_topic
+  );
+
+  // Save copybook record with download filename
   const copybook = await createCopybook(
     user.id,
     model_essay_id,
@@ -99,7 +114,8 @@ export async function POST(request: NextRequest) {
     pdfUrl,
     cacheKey,
     templateId,
-    copybookMode
+    copybookMode,
+    downloadFileName
   );
 
   return Response.json({ copybook });

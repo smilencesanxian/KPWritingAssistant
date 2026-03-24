@@ -12,7 +12,8 @@ export async function createCopybook(
   pdfUrl: string,
   fontStyle: string,
   templateId: string,
-  mode: string
+  mode: string,
+  downloadFileName?: string
 ): Promise<Copybook> {
   const supabase = await createClient();
 
@@ -26,6 +27,7 @@ export async function createCopybook(
       font_style: fontStyle,
       template_id: templateId,
       mode,
+      download_file_name: downloadFileName || null,
     })
     .select()
     .single();

@@ -257,7 +257,7 @@
       "feature_ids": ["B4"],
       "priority": "P1",
       "phase": 4,
-      "passes": false,
+      "passes": true,
       "description": "将字帖PDF文件名从UUID改为'PET [partX] 范文 [主题] [生成日期].pdf'格式",
       "steps": [
         "打开 src/app/api/generate/copybook/route.ts",
