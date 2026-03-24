@@ -36,3 +36,11 @@ export interface CorrectionResult {
   highlights: Highlight[];
   error_summary: ErrorSummaryItem[];
 }
+
+export interface DetectTypeResult {
+  exam_part: 'part1' | 'part2';
+  question_type: 'q1' | 'q2' | null;
+  essay_type_label: string;
+  topic: string;
+  confidence: 'high' | 'medium' | 'low';
+}

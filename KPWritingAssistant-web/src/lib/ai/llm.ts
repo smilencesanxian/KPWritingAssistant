@@ -1,10 +1,11 @@
 import OpenAI from 'openai';
-import type { CorrectionResult } from '@/types/ai';
+import type { CorrectionResult, DetectTypeResult } from '@/types/ai';
 import {
   PET_CORRECTION_SYSTEM_PROMPT,
   MODEL_ESSAY_SYSTEM_PROMPT,
   buildCorrectionUserPrompt,
   buildModelEssayPrompt,
+  buildDetectTypePrompt,
 } from './prompts';
 
 const LLM_BASE_URL =
@@ -100,4 +101,64 @@ export async function generateModelEssay(
   }
 
   return content.trim();
+}
+
+export async function detectEssayType(
+  essayOcrText: string,
+  questionOcrText?: string
+): Promise<DetectTypeResult> {
+  const client = createLLMClient();
+
+  try {
+    const { system, user } = buildDetectTypePrompt(questionOcrText || '', essayOcrText);
+
+    const response = await client.chat.completions.create({
+      model: LLM_MODEL,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+      max_tokens: 512,
+      temperature: 0.3,
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      throw new Error('Empty response from LLM');
+    }
+
+    // Parse JSON response
+    let result: Partial<DetectTypeResult>;
+    try {
+      result = JSON.parse(content) as Partial<DetectTypeResult>;
+    } catch {
+      // If JSON parsing fails, return default values
+      return getDefaultDetectTypeResult();
+    }
+
+    // Validate and set defaults for missing fields
+    const validatedResult: DetectTypeResult = {
+      exam_part: result.exam_part === 'part2' ? 'part2' : 'part1',
+      question_type: result.question_type === 'q2' ? 'q2' : result.question_type === 'q1' ? 'q1' : null,
+      essay_type_label: result.essay_type_label || (result.exam_part === 'part2' ? '文章' : '邮件'),
+      topic: result.topic || '未知主题',
+      confidence: result.confidence || 'low',
+    };
+
+    return validatedResult;
+  } catch (err) {
+    console.error('Detect type failed:', err);
+    // Return default values on error
+    return getDefaultDetectTypeResult();
+  }
+}
+
+function getDefaultDetectTypeResult(): DetectTypeResult {
+  return {
+    exam_part: 'part1',
+    question_type: null,
+    essay_type_label: '邮件',
+    topic: '未知主题',
+    confidence: 'low',
+  };
 }

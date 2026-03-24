@@ -132,7 +132,7 @@
       "feature_ids": ["F1"],
       "priority": "P0",
       "phase": 2,
-      "passes": false,
+      "passes": true,
       "description": "创建题型自动识别API，通过LLM分析题目和作文文本，识别 Part1/Part2-Q1/Part2-Q2",
       "steps": [
         "在 src/config/prompts.json 中新增 detect_type 提示词配置：system prompt 说明任务是分析PET作文题型；user prompt 模板包含题目OCR文本和作文OCR文本占位符；要求LLM返回JSON格式：{exam_part: 'part1'|'part2', question_type: 'q1'|'q2'|null, essay_type_label: string, topic: string, confidence: 'high'|'medium'|'low'}",

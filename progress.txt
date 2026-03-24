@@ -992,3 +992,26 @@
 - 处理顺序很重要：必须先过滤'第X张'再过滤'X张'，否则'第3张'会变成'第'
 - 当前实现会在过滤后清理多余空格，例如'这是第3张图片' → '这是图片'（中间无多余空格）
 - 已收藏的推荐句式如为空时不注入prompt，避免影响生成质量
+
+## 2026-03-25 - Task 5: F1 题型识别API /api/detect-type
+
+### What was done:
+- Verified prompts.json has detectType configuration (systemPrompt + userPromptTemplate)
+- Verified prompts.ts has buildDetectTypePrompt() function
+- Verified llm.ts has detectEssayType() function with:
+  - LLM call using buildDetectTypePrompt
+  - JSON parsing with error fallback
+  - Validation and default values for missing fields
+  - Default to part1 on low confidence/errors
+- Verified route.ts has POST handler for /api/detect-type
+- Verified types/ai.ts has DetectTypeResult interface
+
+### Testing:
+- npm run lint: 0 errors (2 unrelated warnings)
+- npm run build: Success, /api/detect-type route registered
+
+### Notes:
+- API accepts {question_ocr_text?: string, essay_ocr_text: string}
+- Returns {exam_part, question_type, essay_type_label, topic, confidence}
+- Low confidence results default to part1
+

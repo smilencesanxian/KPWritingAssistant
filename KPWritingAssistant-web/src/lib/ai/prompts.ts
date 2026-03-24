@@ -19,6 +19,10 @@ interface PromptsConfig {
   ocr: {
     userPrompt: string;
   };
+  detectType: {
+    systemPrompt: string;
+    userPromptTemplate: string;
+  };
 }
 
 function loadPromptsConfig(): PromptsConfig {
@@ -35,6 +39,8 @@ export const PET_CORRECTION_SYSTEM_PROMPT = config.correction.systemPrompt;
 export const MODEL_ESSAY_SYSTEM_PROMPT = config.modelEssay.systemPrompt;
 
 export const OCR_USER_PROMPT = config.ocr.userPrompt;
+
+export const DETECT_TYPE_SYSTEM_PROMPT = config.detectType.systemPrompt;
 
 export function buildCorrectionUserPrompt(text: string): string {
   return config.correction.userPromptTemplate.replace('{{text}}', text);
@@ -59,4 +65,23 @@ export function buildModelEssayPrompt(
     .replace('{{originalText}}', originalText)
     .replace('{{highlightsSection}}', highlightsSection)
     .replace('{{levelDescription}}', levelDescription);
+}
+
+export function buildDetectTypePrompt(
+  questionOcrText: string,
+  essayOcrText: string
+): { system: string; user: string } {
+  const questionSection = questionOcrText
+    ? `【题目内容】\n${questionOcrText}`
+    : '';
+  const essaySection = `【作文内容】\n${essayOcrText}`;
+
+  const userPrompt = config.detectType.userPromptTemplate
+    .replace('{{questionSection}}', questionSection)
+    .replace('{{essaySection}}', essaySection);
+
+  return {
+    system: config.detectType.systemPrompt,
+    user: userPrompt,
+  };
 }
