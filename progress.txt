@@ -1049,3 +1049,33 @@
 - All data-testid attributes added for E2E testing
 - State machine properly handles all transitions
 - API calls updated with all new v1.2.0 fields
+
+## 2026-03-25 - Task 7: B5 - Fix Email Model Essay Format (prompts.json)
+
+### What was done:
+- Updated src/config/prompts.json modelEssay.systemPrompt with:
+  1. **Email Format Requirements**: Added strict formatting rules for email genre
+     - Dear/Hi [Name], must be followed by a line break
+     - Body paragraphs must be separated by an empty line
+     - Best wishes,/Yours, must be followed by a line break
+     - Signature must be on a separate line
+  2. **Negative Examples**: Added examples to avoid
+     - "I don't have anything I dislike too much" (logically unnatural double negative)
+     - "I enjoy nothing more than" (exaggerated expression)
+     - Incomplete greetings or closings
+  3. **Logic Correction Instructions**: Added guidance for handling logical issues
+     - Point out illogical expressions during correction
+     - Actively fix logical problems when generating model essays
+     - Avoid mechanically copying unnatural expressions from original text
+
+- Verified src/lib/ai/prompts.ts correctly exports MODEL_ESSAY_SYSTEM_PROMPT from config
+
+### Testing:
+- Unit tests: 4 passed (prompts.json structure, email format keywords, negative examples, logic instructions)
+- Build test: npm run build successful
+- Lint test: npm run lint passed (0 errors, 3 unrelated warnings)
+
+### Notes:
+- The system prompt now enforces proper email formatting for PET Part 1 essays
+- Negative examples help avoid common unnatural expressions students use
+- Logic correction instructions ensure model essays are natural and well-written

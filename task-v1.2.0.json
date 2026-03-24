@@ -183,7 +183,7 @@
       "feature_ids": ["B5"],
       "priority": "P1",
       "phase": 3,
-      "passes": false,
+      "passes": true,
       "description": "改进范文生成提示词，确保邮件格式正确（换行符）并避免逻辑不自然的表达",
       "steps": [
         "打开 src/config/prompts.json，找到 model_essay 相关的 system prompt",
