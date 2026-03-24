@@ -33,40 +33,137 @@ Selection criteria (in order of priority):
 2. Consider dependencies - fundamental features should be done first
 3. Pick the highest-priority incomplete task
 
+
+## 测试驱动开发工作流（TDD - Test Driven Development）
+
+**重要：本项目强制使用测试 SubAgent 保证代码质量。所有开发任务必须遵循以下TDD流程：**
+
+### 标准开发流程
+
+#### 第一步：任务开始前（测试设计）- 强制
+在开始任何开发任务前，**必须**先调用测试 Agent 设计测试用例：
+
+```
+调用 test-engineer SubAgent，提示内容：
+"即将开始开发任务：[任务描述]
+请根据以下需求设计测试用例：
+[详细需求描述，包括功能点、输入输出、边界条件等]"
+```
+
+**要求：**
+- 使用 `Agent` 工具，设置 `subagent_type: "test-engineer"`
+- 等待测试 Agent 返回测试用例设计报告后，再开始编码
+- 测试用例设计报告应包括：测试范围、测试场景、边界情况、预期结果
+
+#### 第二步：功能实现
+根据测试用例的要求实现功能：
+- 确保代码能满足所有测试场景
+- 遵循代码规范和项目结构
+- 编写可测试的代码
+
+#### 第三步：任务完成后（测试执行）- 强制
+功能实现完成后，**必须**调用测试 Agent 执行测试：
+
+```
+调用 test-engineer SubAgent，提示内容：
+"开发任务已完成，请执行所有相关测试并报告结果。
+涉及的文件：[修改的文件列表]
+功能描述：[简要说明实现的功能]"
+```
+
+#### 第四步：问题修复循环
+如果测试 Agent 报告有失败的测试：
+1. 根据报告中的具体问题进行修复
+2. 再次调用测试 Agent 重新执行测试
+3. 重复直到所有测试通过
+
+#### 第五步：任务完成判定
+**只有当测试 Agent 返回 `[PASS]` 结论时，任务才算真正完成。**
+
+---
+
+### 测试执行方式
+
+根据项目情况，测试 SubAgent 可能执行以下测试类型：
+
+1. **单元测试**：使用 Jest/Vitest 测试函数和组件
+2. **集成测试**：测试多个模块协作
+3. **E2E测试**：使用 Playwright 进行浏览器自动化测试
+4. **构建测试**：运行 `npm run build` 验证构建成功
+5. **Lint测试**：运行 `npm run lint` 检查代码规范
+
+**项目测试命令：**
+```bash
+# 运行单元测试
+npm test
+
+# 运行特定测试文件
+npx jest src/xxx.test.ts
+
+# 生产构建验证
+npm run build
+
+# 代码规范检查
+npm run lint
+```
+
+---
+
+### 人工测试要求（UI相关修改）
+
+对于大幅度页面修改（新建页面、重写组件、修改核心交互），除了SubAgent测试外：
+- **必须在浏览器中测试！** 使用 MCP Playwright 工具
+- 验证页面能正确加载和渲染
+- 验证表单提交、按钮点击等交互功能
+- 截图确认 UI 正确显示
+
+---
+
+### TDD检查清单
+
+- [ ] 任务开始前调用 test-engineer SubAgent 设计测试用例
+- [ ] 根据测试用例要求实现功能
+- [ ] 实现完成后调用 test-engineer SubAgent 执行测试
+- [ ] 所有测试通过（获得 `[PASS]` 结论）
+- [ ] UI修改在浏览器中验证通过（如适用）
+- [ ] `npm run lint` 无错误
+- [ ] `npm run build` 构建成功
+- [ ] 更新 progress.txt
+- [ ] task.json 标记 passes: true
+- [ ] 所有更改在同一个 commit 中提交
+
 ### Step 3: Implement the Task
 
-- Read the task description and steps carefully
-- Implement the functionality to satisfy all steps
-- Follow existing code patterns and conventions
+根据测试用例要求实现功能：
+- 阅读任务描述和步骤
+- 确保代码满足所有测试场景
+- 遵循现有代码模式和规范
 
-### Step 4: Test Thoroughly
+### Step 4: Execute Tests via SubAgent
 
-After implementation, verify ALL steps in the task:
+**功能实现完成后，必须调用 test-engineer SubAgent 执行测试：**
 
-**强制测试要求（Testing Requirements - MANDATORY）：**
+```
+调用 test-engineer SubAgent：
+"开发任务已完成，请执行所有相关测试并报告结果。
+涉及的文件：[文件列表]
+功能描述：[功能说明]"
+```
 
-1. **大幅度页面修改**（新建页面、重写组件、修改核心交互）：
-   - **必须在浏览器中测试！** 使用 MCP Playwright 工具
-   - 验证页面能正确加载和渲染
-   - 验证表单提交、按钮点击等交互功能
-   - 截图确认 UI 正确显示
+**测试验证清单：**
+- [ ] 测试 Agent 返回 `[PASS]` 结论
+- [ ] `npm run lint` 无错误
+- [ ] `npm run build` 构建成功
 
-2. **小幅度代码修改**（修复 bug、调整样式、添加辅助函数）：
-   - 可以使用单元测试或 lint/build 验证
-   - 如有疑虑，仍建议浏览器测试
+### Step 5: Manual Testing (UI Changes)
 
-3. **所有修改必须通过**：
-   - `npm run lint` 无错误
-   - `npm run build` 构建成功
-   - 浏览器/单元测试验证功能正常
+对于大幅度页面修改（新建页面、重写组件、修改核心交互）：
+- **必须在浏览器中测试！** 使用 MCP Playwright 工具
+- 验证页面能正确加载和渲染
+- 验证表单提交、按钮点击等交互功能
+- 截图确认 UI 正确显示
 
-**测试清单：**
-- [ ] 代码没有 TypeScript 错误
-- [ ] lint 通过
-- [ ] build 成功
-- [ ] 功能在浏览器中正常工作（对于 UI 相关修改）
-
-### Step 5: Update Progress
+### Step 6: Update Progress
 
 Write your work to `progress.txt`:
 
@@ -83,7 +180,7 @@ Write your work to `progress.txt`:
 - [any relevant notes for future agents]
 ```
 
-### Step 6: Commit Changes (包含 task.json 更新)
+### Step 7: Commit Changes (包含 task.json 更新)
 
 **IMPORTANT: 所有更改必须在同一个 commit 中提交，包括 task.json 的更新！**
 
