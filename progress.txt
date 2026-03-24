@@ -1,5 +1,24 @@
 # KP作文宝 - Progress Log
 
+## 2026-03-24 - v1.2.0 Task 1 完成：DB迁移004 + 005
+
+### What was done:
+- **迁移文件已存在并验证通过：**
+  - `004_v120_exam_part_model_edit.sql` - essay_submissions/model_essays/highlights_library 字段扩展
+  - `005_v120_recommended_phrases_writing_guide.sql` - 创建 recommended_phrases 和 writing_guide_nodes 表，添加RLS策略
+  - `seed/recommended_phrases.sql` - 32条初始推荐句式数据
+
+### Testing:
+- SQL文件存在性验证：通过
+- 迁移004内容完整性：通过（所有字段、约束、索引正确）
+- 迁移005内容完整性：通过（表结构、外键、RLS策略正确）
+- 种子数据验证：通过（32条 >= 20条要求）
+- `npm run build`：构建成功
+- `npm run lint`：0 errors（2个无关警告）
+
+### Notes:
+- Task 1 标记为完成，继续 Task 2
+
 ## 2026-03-23 - v1.0.0 正式发布 & v1.1.0 开发启动
 
 ### What was done:

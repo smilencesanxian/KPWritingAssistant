@@ -26,7 +26,7 @@ This will:
 
 ### Step 2: Select Next Task
 
-Read `task.json` and select ONE task to work on.
+Read `task-v1.2.0.json` and select ONE task to work on.
 
 Selection criteria (in order of priority):
 1. Choose a task where `passes: false`
@@ -185,7 +185,7 @@ Write your work to `progress.txt`:
 **IMPORTANT: 所有更改必须在同一个 commit 中提交，包括 task.json 的更新！**
 
 流程：
-1. 更新 `task.json`，将任务的 `passes` 从 `false` 改为 `true`
+1. 更新 `task-v1.2.0.json`，将任务的 `passes` 从 `false` 改为 `true`
 2. 更新 `progress.txt` 记录工作内容
 3. 一次性提交所有更改：
 
@@ -264,7 +264,7 @@ git commit -m "[task description] - completed"
 ```
 /
 ├── CLAUDE.md          # This file - workflow instructions
-├── task.json          # Task definitions (source of truth)
+├── task-v1.2.0.json   # Task definitions (source of truth) for v1.2.0
 ├── progress.txt       # Progress log from each session
 ├── init.sh            # Initialization script
 └── hello-nextjs/      # Next.js application

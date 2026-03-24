@@ -4,10 +4,11 @@
 # run-automation.sh - Automated Task Runner
 # =============================================================================
 # This script runs Claude Code multiple times in a loop to automatically
-# complete tasks defined in task.json
+# complete tasks defined in task-v1.2.0.json
 #
-# Usage: ./run-automation.sh <number_of_runs>
+# Usage: ./run-automation.sh <number_of_runs> [--llm <kimi|official>]
 # Example: ./run-automation.sh 5
+# Example: ./run-automation.sh 5 --llm official
 # =============================================================================
 
 set -e
@@ -19,24 +20,44 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+NC='\033[0m'
+
+# LLM Configuration
+LLM_TYPE="kimi"  # default to kimi
+
+# Claude Code Config paths
+CLAUDE_CONFIG_DIR="$HOME/.claude"
+OFFICIAL_TOKEN_FILE="$CLAUDE_CONFIG_DIR/credentials.official.json"
+KIMI_TOKEN_FILE="$CLAUDE_CONFIG_DIR/credentials.kimi.json"
+ACTIVE_TOKEN_FILE="$CLAUDE_CONFIG_DIR/.credentials.json"
+
+# API Keys (Kimi)
+KIMI_API_KEY="sk-kimi-IbgKnhIbTN9e5cQGcvh6mtH1YRNziYCQ8LNgS8TEZesOvJvpHRbjsoIvaC9usiuc"
+
+# Proxy settings (for official)
+PROXY_URL="http://127.0.0.1:33210"
+
+# Log cleanup configuration (customizable)
+MAX_LOG_FILES="${MAX_LOG_FILES:-20}"      # Maximum number of log files to keep (default: 20)
+MAX_LOG_SIZE="${MAX_LOG_SIZE:-2097152}"   # Maximum size per log file in bytes (default: 2MB = 2097152)
 
 # Lock file (unique per project directory)
 LOCK_FILE="/tmp/run-automation-$(cd "$(dirname "$0")" && pwd | tr '/' '_').lock"
 
 # Background job PID (used by cleanup)
 BG_PID=""
+WATCHDOG_PID=""
 
 acquire_lock() {
     if [ -f "$LOCK_FILE" ]; then
         local existing_pid
         existing_pid=$(cat "$LOCK_FILE" 2>/dev/null)
         if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
-            echo -e "${RED}[ERROR]${NC} 另一个实例正在运行（PID: $existing_pid），请等待其完成后再试。"
-            echo -e "${YELLOW}[INFO]${NC} 如需强制终止，请执行: kill $existing_pid"
+            echo -e "${RED}[ERROR]${NC} Another instance is running (PID: $existing_pid), please wait."
+            echo -e "${YELLOW}[INFO]${NC} To force stop: kill $existing_pid"
             exit 1
         else
-            echo -e "${YELLOW}[WARNING]${NC} 发现残留锁文件（PID: $existing_pid 已不存在），清理后继续..."
+            echo -e "${YELLOW}[WARNING]${NC} Stale lock file found (PID: $existing_pid no longer exists), cleaning up..."
             rm -f "$LOCK_FILE"
         fi
     fi
@@ -47,28 +68,101 @@ release_lock() {
     rm -f "$LOCK_FILE"
 }
 
-cleanup() {
-    release_lock
-    if [ -n "$BG_PID" ]; then
-        kill "$BG_PID" 2>/dev/null || true
-        sleep 1
-        kill -9 "$BG_PID" 2>/dev/null || true
+# Function to clean up old log files
+# Keeps only the most recent MAX_LOG_FILES files
+cleanup_logs() {
+    local log_dir="$1"
+
+    if [ ! -d "$log_dir" ]; then
+        return 0
+    fi
+
+    # Count total log files (including .raw and numbered log files)
+    local total_files
+    total_files=$(find "$log_dir" -maxdepth 1 -type f \( -name "run-*.log" -o -name "run-*.log.*" \) 2>/dev/null | wc -l)
+
+    if [ "$total_files" -eq 0 ]; then
+        return 0
+    fi
+
+    # If exceeding max files, remove oldest ones
+    if [ "$total_files" -gt "$MAX_LOG_FILES" ]; then
+        local files_to_remove=$((total_files - MAX_LOG_FILES))
+        echo -e "${YELLOW}[WARNING]${NC} Log files ($total_files) exceed limit ($MAX_LOG_FILES), removing $files_to_remove oldest..."
+
+        # Get oldest files (sorted by modification time) and remove them
+        find "$log_dir" -maxdepth 1 -type f \( -name "run-*.log" -o -name "run-*.log.*" \) \
+            -printf '%T@ %p\n' 2>/dev/null | \
+            sort -n | \
+            head -n "$files_to_remove" | \
+            cut -d' ' -f2- | \
+            while read -r file; do
+                rm -f "$file"
+                echo -e "${BLUE}[INFO]${NC} Removed old log: $(basename "$file")"
+            done
     fi
 }
 
-# Ctrl+C / kill: 立即触发 cleanup（因为 claude 是后台运行，wait 可被中断）
-trap 'cleanup; exit 130' INT TERM
-# 正常退出也释放锁
-trap 'release_lock' EXIT
+cleanup() {
+    local exit_code=$?
+    if [ -n "$WATCHDOG_PID" ] && kill -0 "$WATCHDOG_PID" 2>/dev/null; then
+        kill "$WATCHDOG_PID" 2>/dev/null || true
+        wait "$WATCHDOG_PID" 2>/dev/null || true
+    fi
+    if [ -n "$BG_PID" ] && kill -0 "$BG_PID" 2>/dev/null; then
+        kill "$BG_PID" 2>/dev/null || true
+        sleep 1
+        kill -9 "$BG_PID" 2>/dev/null || true
+        wait "$BG_PID" 2>/dev/null || true
+    fi
+    release_lock
+    exit $exit_code
+}
 
-acquire_lock
+trap cleanup INT TERM EXIT
 
-# Log file
-LOG_DIR="./automation-logs"
-mkdir -p "$LOG_DIR"
-LOG_FILE="$LOG_DIR/automation-$(date +%Y%m%d_%H%M%S).log"
+# Function to setup environment for different LLM types
+setup_llm_environment() {
+    local llm_type=$1
 
-# Function to log messages
+    # Ensure config directory exists
+    if [ ! -d "$CLAUDE_CONFIG_DIR" ]; then
+        mkdir -p "$CLAUDE_CONFIG_DIR" && chmod 755 "$CLAUDE_CONFIG_DIR"
+    fi
+
+    case "$llm_type" in
+        official)
+            echo -e "${BLUE}[INFO]${NC} Setting up Claude Official environment..."
+            # Create/restore official token
+            if [ -f "$OFFICIAL_TOKEN_FILE" ]; then
+                cp "$OFFICIAL_TOKEN_FILE" "$ACTIVE_TOKEN_FILE" -f
+            fi
+            # Set official API environment
+            export https_proxy="$PROXY_URL"
+            export ANTHROPIC_BASE_URL="https://api.anthropic.com"
+            export ANTHROPIC_AUTH_TOKEN=""
+            ;;
+        kimi)
+            echo -e "${BLUE}[INFO]${NC} Setting up Kimi environment..."
+            # Create kimi token file if not exists
+            if [ ! -f "$KIMI_TOKEN_FILE" ]; then
+                > "$KIMI_TOKEN_FILE" && chmod 644 "$KIMI_TOKEN_FILE"
+            fi
+            # Use empty kimi token
+            cp "$KIMI_TOKEN_FILE" "$ACTIVE_TOKEN_FILE" -f
+            # Set kimi API environment
+            unset https_proxy
+            export ANTHROPIC_BASE_URL="https://api.kimi.com/coding/"
+            export ANTHROPIC_AUTH_TOKEN="$KIMI_API_KEY"
+            ;;
+        *)
+            echo -e "${RED}[ERROR]${NC} Unknown LLM type: $llm_type"
+            echo "Supported types: kimi, official"
+            exit 1
+            ;;
+    esac
+}
+
 log() {
     local level=$1
     local message=$2
@@ -76,42 +170,31 @@ log() {
     echo -e "${timestamp} [${level}] ${message}" >> "$LOG_FILE"
 
     case $level in
-        INFO)
-            echo -e "${BLUE}[INFO]${NC} ${message}"
-            ;;
-        SUCCESS)
-            echo -e "${GREEN}[SUCCESS]${NC} ${message}"
-            ;;
-        WARNING)
-            echo -e "${YELLOW}[WARNING]${NC} ${message}"
-            ;;
-        ERROR)
-            echo -e "${RED}[ERROR]${NC} ${message}"
-            ;;
-        PROGRESS)
-            echo -e "${CYAN}[PROGRESS]${NC} ${message}"
-            ;;
+        INFO) echo -e "${BLUE}[INFO]${NC} ${message}" ;;
+        SUCCESS) echo -e "${GREEN}[SUCCESS]${NC} ${message}" ;;
+        WARNING) echo -e "${YELLOW}[WARNING]${NC} ${message}" ;;
+        ERROR) echo -e "${RED}[ERROR]${NC} ${message}" ;;
+        PROGRESS) echo -e "${CYAN}[PROGRESS]${NC} ${message}" ;;
     esac
 }
 
-# Function to count remaining tasks
 count_remaining_tasks() {
-    if [ -f "task.json" ]; then
-        local count=$(grep -c '"passes": false' task.json 2>/dev/null || echo "0")
+    if [ -f "task-v1.2.0.json" ]; then
+        local count=$(grep -c '"passes": false' task-v1.2.0.json 2>/dev/null || echo "0")
         echo "$count"
     else
         echo "0"
     fi
 }
 
-# Check if number argument is provided
+# Parse arguments
 if [ -z "$1" ]; then
-    echo "Usage: $0 <number_of_runs>"
+    echo "Usage: $0 <number_of_runs> [--llm <kimi|official>]"
     echo "Example: $0 5"
+    echo "Example: $0 5 --llm official"
     exit 1
 fi
 
-# Validate input is a number
 if ! [[ "$1" =~ ^[0-9]+$ ]]; then
     echo "Error: Argument must be a positive integer"
     exit 1
@@ -119,7 +202,31 @@ fi
 
 TOTAL_RUNS=$1
 
-# Banner
+# Parse optional --llm argument
+if [ -n "$2" ] && [ "$2" = "--llm" ] && [ -n "$3" ]; then
+    LLM_TYPE="$3"
+fi
+
+# Validate LLM type
+if [ "$LLM_TYPE" != "kimi" ] && [ "$LLM_TYPE" != "official" ]; then
+    echo "Error: Invalid LLM type '$LLM_TYPE'"
+    echo "Supported types: kimi, official"
+    exit 1
+fi
+
+acquire_lock
+
+# Setup environment for selected LLM
+setup_llm_environment "$LLM_TYPE"
+
+LOG_DIR="./automation-logs"
+mkdir -p "$LOG_DIR"
+
+# Clean up old log files before starting
+cleanup_logs "$LOG_DIR"
+
+LOG_FILE="$LOG_DIR/automation-$(date +%Y%m%d_%H%M%S).log"
+
 echo ""
 echo "========================================"
 echo "  Claude Code Automation Runner"
@@ -127,23 +234,33 @@ echo "========================================"
 echo ""
 
 log "INFO" "Starting automation with $TOTAL_RUNS runs"
+log "INFO" "LLM Type: $LLM_TYPE"
+log "INFO" "ANTHROPIC_BASE_URL: $ANTHROPIC_BASE_URL"
 log "INFO" "Log file: $LOG_FILE"
 
-# Check if task.json exists
-if [ ! -f "task.json" ]; then
-    log "ERROR" "task.json not found! Please run this script from the project root."
+if [ ! -f "task-v1.2.0.json" ]; then
+    log "ERROR" "task-v1.2.0.json not found! Please run this script from the project root."
     exit 1
 fi
 
-# Initial task count
 INITIAL_TASKS=$(count_remaining_tasks)
 log "INFO" "Tasks remaining at start: $INITIAL_TASKS"
 
-# Main loop
+if ! command -v claude &> /dev/null; then
+    log "ERROR" "claude command not found. Please install Claude Code CLI."
+    exit 1
+fi
+
+log "INFO" "Checking Claude Code..."
+if ! claude --version &>/dev/null; then
+    log "ERROR" "Claude Code CLI not responding. Please check installation."
+    exit 1
+fi
+
 for ((run=1; run<=TOTAL_RUNS; run++)); do
     echo ""
     echo "========================================"
-    log "PROGRESS" "Run $run of $TOTAL_RUNS"
+    log "PROGRESS" "Run $run of $TOTAL_RUNS (LLM: $LLM_TYPE)"
     echo "========================================"
 
     REMAINING=$(count_remaining_tasks)
@@ -162,44 +279,317 @@ for ((run=1; run<=TOTAL_RUNS; run++)); do
     log "INFO" "Starting Claude Code session..."
     log "INFO" "Run log: $RUN_LOG"
 
-    PROMPT="Please follow the workflow in CLAUDE.md:
-1. Read task.json and select the next task with passes: false
+    PROMPT_FILE=$(mktemp)
+    cat > "$PROMPT_FILE" << 'EOF'
+Please follow the workflow in CLAUDE.md:
+1. Read task-v1.2.0.json and select the next task with passes: false
 2. Implement the task following all steps
 3. Test thoroughly (run npm run lint and npm run build in hello-nextjs/)
 4. Update progress.txt with your work
-5. Commit all changes including task.json update in a single commit
+5. Commit all changes including task-v1.2.0.json update in a single commit
 
-Start by reading task.json to find your task.
-Please complete only one task in this session, and stop once you are done or if you encounter an unresolvable issue."
+To read task-v1.2.0.json efficiently (it may be large):
+- First use Grep to find tasks with "passes": false
+- Then use Read with offset and limit to read specific task details
+- Do not read the entire file at once (max 10000 tokens per read)
 
-    # 用临时文件保存 claude 真实退出码
+Start by using Grep to find the next incomplete task.
+Please complete only one task in this session, and stop once you are done or if you encounter an unresolvable issue.
+EOF
+
     EXIT_CODE_FILE=$(mktemp)
+    WATCHDOG_TRIGGERED_FILE=$(mktemp)
 
-    # 后台运行 pipeline，使得 Ctrl+C 可以立即通过 trap 响应
-    # timeout 2小时超时
-    {
-        timeout 7200 claude -p "$PROMPT" \
+    (
+        sleep 3600
+        echo "1" > "$WATCHDOG_TRIGGERED_FILE"
+        if [ -n "$BG_PID" ] && kill -0 "$BG_PID" 2>/dev/null; then
+            kill "$BG_PID" 2>/dev/null || true
+        fi
+    ) &
+    WATCHDOG_PID=$!
+
+    # Create JSON processor script - outputs human readable format with rolling logs
+    JSON_PROCESSOR=$(mktemp)
+    cat > "$JSON_PROCESSOR" << 'PROCESSOR_EOF'
+#!/usr/bin/env python3
+import sys
+import json
+import os
+from datetime import datetime
+
+if len(sys.argv) < 2:
+    print("Usage: processor.py <log_file>", file=sys.stderr)
+    sys.exit(1)
+
+# Get max log size from env (default 2MB = 2097152 bytes)
+MAX_LOG_SIZE = int(os.environ.get('MAX_LOG_SIZE', 2097152))
+# Start rolling at 90% of max to avoid going over
+ROLL_THRESHOLD = int(MAX_LOG_SIZE * 0.9)
+
+base_log_file = sys.argv[1]
+base_raw_file = base_log_file + ".raw"
+
+class RollingLogWriter:
+    """Handles rolling log files when size limit is reached."""
+    def __init__(self, base_path, mode='w', encoding='utf-8'):
+        self.base_path = base_path
+        self.mode = mode
+        self.encoding = encoding
+        self.current_file = base_path
+        self.roll_number = 0
+        self._open()
+
+    def _open(self):
+        self.file = open(self.current_file, self.mode, encoding=self.encoding)
+        self.current_size = os.path.getsize(self.current_file) if os.path.exists(self.current_file) else 0
+
+    def _roll(self):
+        """Close current file and create a new numbered file."""
+        self.file.flush()
+        self.file.close()
+        self.roll_number += 1
+        self.current_file = f"{self.base_path}.{self.roll_number}"
+        self._open()
+        ts = datetime.now().strftime("%H:%M:%S")
+        self.file.write(f"[{ts}] --- Log continued from {self.base_path}" +
+                       (f".{self.roll_number - 1}" if self.roll_number > 1 else "") + " ---\n\n")
+        self.current_size = os.path.getsize(self.current_file)
+
+    def write(self, data):
+        data_bytes = data.encode(self.encoding)
+        new_size = self.current_size + len(data_bytes)
+        # Roll if approaching limit (but don't roll empty files)
+        if new_size > ROLL_THRESHOLD and self.current_size > 0:
+            self._roll()
+            data_bytes = data.encode(self.encoding)
+            new_size = self.current_size + len(data_bytes)
+        self.file.write(data)
+        self.current_size = new_size
+
+    def flush(self):
+        self.file.flush()
+
+    def close(self):
+        self.file.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
+def process_event(event, log_writer, ts):
+    """Process a single event and write to log."""
+    # assistant event: Claude's response + tool calls
+    if event.get("type") == "assistant":
+        msg = event.get("message", {})
+        content = msg.get("content", [])
+        for block in content:
+            if block.get("type") == "text" and block.get("text"):
+                text = block["text"].strip()
+                # Skip text that looks like tool call syntax
+                if text.startswith("functions.") and ("{" in text or "}" in text):
+                    continue
+                log_writer.write(f"[{ts}][Claude]\n")
+                log_writer.write(text)
+                log_writer.write("\n\n")
+            elif block.get("type") == "tool_use":
+                name = block.get("name", "")
+                input_data = block.get("input", {})
+                try:
+                    input_json = json.dumps(input_data, ensure_ascii=False, separators=(',', ':'))
+                except:
+                    input_json = str(input_data)
+                log_writer.write(f"[{ts}][Tool: {name}]\n")
+                log_writer.write(input_json)
+                log_writer.write("\n\n")
+        log_writer.flush()
+
+    # user event: tool results
+    elif event.get("type") == "user":
+        msg = event.get("message", {})
+        content = msg.get("content", [])
+        for block in content:
+            if block.get("type") == "tool_result":
+                result_content = block.get("content", "")
+                result_text = ""
+                if isinstance(result_content, str):
+                    result_text = result_content
+                elif isinstance(result_content, list):
+                    for item in result_content:
+                        if isinstance(item, dict) and item.get("type") == "text":
+                            result_text += item.get("text", "")
+                if result_text:
+                    log_writer.write(f"[{ts}][Tool Result]\n")
+                    log_writer.write(result_text.strip())
+                    log_writer.write("\n\n")
+                    log_writer.flush()
+
+    # result event: session summary
+    elif event.get("type") == "result":
+        log_writer.write(f"[{ts}][Session End]\n")
+        if "cost_usd" in event:
+            log_writer.write(f"Cost:     ${event['cost_usd']}\n")
+        if "duration_ms" in event:
+            duration_s = int(event["duration_ms"] / 1000)
+            log_writer.write(f"Duration: {duration_s}s\n")
+        log_writer.write("\n")
+        log_writer.flush()
+
+def main():
+    # Track if we need to add newline before next output
+    need_newline = False
+    # Track current block type to handle partial content
+    current_block_type = None
+    # Track which messages we've already output (to avoid duplicates)
+    seen_message_ids = set()
+
+    with RollingLogWriter(base_log_file) as log_writer, \
+         RollingLogWriter(base_raw_file) as raw_writer:
+
+        try:
+            for line in sys.stdin:
+                # Save raw JSON line
+                raw_writer.write(line)
+                raw_writer.flush()
+
+                # Console: real-time text display from assistant events
+                try:
+                    event = json.loads(line)
+                    event_type = event.get("type")
+
+                    # Handle assistant events (complete messages)
+                    if event_type == "assistant":
+                        msg = event.get("message", {})
+                        msg_id = msg.get("id")
+
+                        # Skip if we've seen this message before
+                        if msg_id in seen_message_ids:
+                            continue
+                        seen_message_ids.add(msg_id)
+
+                        content = msg.get("content", [])
+                        for block in content:
+                            block_type = block.get("type")
+
+                            if block_type == "text":
+                                text = block.get("text", "")
+                                if text:
+                                    # Filter out tool call syntax just in case
+                                    if not (text.strip().startswith("functions.") and ("{" in text or "}" in text)):
+                                        sys.stdout.write(text)
+                                        sys.stdout.flush()
+                                        need_newline = True
+
+                            elif block_type == "tool_use":
+                                # Don't show tool calls in console
+                                pass
+
+                        # Add newline after assistant message if we output text
+                        if need_newline:
+                            sys.stdout.write("\n")
+                            sys.stdout.flush()
+                            need_newline = False
+
+                    # Handle result event (session end)
+                    elif event_type == "result":
+                        if need_newline:
+                            sys.stdout.write("\n")
+                            sys.stdout.flush()
+                            need_newline = False
+
+                except json.JSONDecodeError:
+                    pass
+
+                # Log: human readable content
+                ts = datetime.now().strftime("%H:%M:%S")
+
+                try:
+                    event = json.loads(line)
+                    process_event(event, log_writer, ts)
+
+                except json.JSONDecodeError:
+                    # Non-JSON (stderr): console + log
+                    sys.stdout.write(line)
+                    sys.stdout.flush()
+                    log_writer.write(f"[{ts}] {line}")
+                    log_writer.flush()
+                except Exception as e:
+                    # Other errors
+                    log_writer.write(f"[{ts}] Error processing line: {e}\n")
+                    log_writer.flush()
+
+        except KeyboardInterrupt:
+            # Handle Ctrl+C gracefully
+            ts = datetime.now().strftime("%H:%M:%S")
+            log_writer.write(f"[{ts}] [Interrupted by user]\n")
+            log_writer.flush()
+            sys.exit(0)
+        except BrokenPipeError:
+            # Handle pipe break (e.g., when claude process is killed)
+            sys.exit(0)
+
+if __name__ == "__main__":
+    main()
+PROCESSOR_EOF
+    chmod +x "$JSON_PROCESSOR"
+
+    # Run claude with JSON output and process in real-time
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+    export MAX_LOG_SIZE="$MAX_LOG_SIZE"
+
+    # Run in subshell with pipefail to capture claude's exit code
+    (
+        set -o pipefail
+        export MAX_LOG_SIZE="$MAX_LOG_SIZE"
+        claude -p "$(cat "$PROMPT_FILE")" \
             --dangerously-skip-permissions \
-            --allowed-tools "Bash Edit Read Write Glob Grep TodoWrite TodoRead WebSearch WebFetch mcp__playwright__*"
+            --allowed-tools "Bash Edit Read Write Glob Grep TodoWrite TodoRead WebSearch WebFetch mcp__playwright__*" \
+            --output-format stream-json \
+            --verbose 2>&1 | "$JSON_PROCESSOR" "$RUN_LOG"
         echo $? > "$EXIT_CODE_FILE"
-    } 2>&1 | tee "$RUN_LOG" &
-
+    ) &
     BG_PID=$!
 
-    # wait 可被 Ctrl+C 中断，立即触发 trap
-    wait "$BG_PID" || true
-
-    CLAUDE_EXIT=$(cat "$EXIT_CODE_FILE" 2>/dev/null || echo "1")
-    rm -f "$EXIT_CODE_FILE"
+    # Wait for completion
+    wait "$BG_PID" 2>/dev/null || true
     BG_PID=""
+
+    WATCHDOG_TRIGGERED=$(cat "$WATCHDOG_TRIGGERED_FILE" 2>/dev/null || echo "0")
+
+    rm -f "$PROMPT_FILE" "$JSON_PROCESSOR"
+
+    if [ -n "$WATCHDOG_PID" ] && kill -0 "$WATCHDOG_PID" 2>/dev/null; then
+        kill "$WATCHDOG_PID" 2>/dev/null || true
+        wait "$WATCHDOG_PID" 2>/dev/null || true
+    fi
+    WATCHDOG_PID=""
+
+    # Read exit code from file
+    CLAUDE_EXIT=$(cat "$EXIT_CODE_FILE" 2>/dev/null || echo "1")
+    rm -f "$EXIT_CODE_FILE" "$WATCHDOG_TRIGGERED_FILE"
+
+    if [ -n "$WATCHDOG_PID" ] && kill -0 "$WATCHDOG_PID" 2>/dev/null; then
+        kill "$WATCHDOG_PID" 2>/dev/null || true
+        wait "$WATCHDOG_PID" 2>/dev/null || true
+    fi
+    WATCHDOG_PID=""
 
     RUN_END=$(date +%s)
     RUN_DURATION=$((RUN_END - RUN_START))
 
-    if [ "$CLAUDE_EXIT" -eq 124 ]; then
-        log "ERROR" "Run $run TIMED OUT after 2 hours. Stopping all subsequent runs."
+    if [ "$WATCHDOG_TRIGGERED" = "1" ]; then
+        log "ERROR" "Run $run TIMED OUT after 60 minutes. Stopping all subsequent runs."
         exit 1
-    elif [ "$CLAUDE_EXIT" -eq 0 ]; then
+    fi
+
+    case "$CLAUDE_EXIT" in
+        ''|*[!0-9]*) CLAUDE_EXIT=1 ;;
+    esac
+
+    if [ "$CLAUDE_EXIT" -eq 0 ]; then
         log "SUCCESS" "Run $run completed in ${RUN_DURATION} seconds"
     else
         log "WARNING" "Run $run finished with exit code $CLAUDE_EXIT after ${RUN_DURATION} seconds"
@@ -226,7 +616,6 @@ Please complete only one task in this session, and stop once you are done or if 
     fi
 done
 
-# Final summary
 echo ""
 echo "========================================"
 log "SUCCESS" "Automation completed!"
@@ -237,6 +626,7 @@ TOTAL_COMPLETED=$((INITIAL_TASKS - FINAL_REMAINING))
 
 log "INFO" "Summary:"
 log "INFO" "  - Total runs: $TOTAL_RUNS"
+log "INFO" "  - LLM Type: $LLM_TYPE"
 log "INFO" "  - Tasks completed: $TOTAL_COMPLETED"
 log "INFO" "  - Tasks remaining: $FINAL_REMAINING"
 log "INFO" "  - Log file: $LOG_FILE"
