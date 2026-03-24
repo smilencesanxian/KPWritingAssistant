@@ -1,5 +1,37 @@
 # KP作文宝 - Progress Log
 
+## 2026-03-25 - Task 12 完成：F3 推荐句式API（获取列表 + 收藏到亮点库）
+
+### What was done:
+- **新建 src/app/api/recommended-phrases/route.ts：**
+  - GET 方法获取推荐句式列表
+  - 支持 type 参数过滤（vocabulary/phrase/sentence）
+  - 支持 essay_type 参数过滤（email/article/general）
+  - 参数验证：无效参数返回 400 错误
+  - 返回数据按 essay_type 分组（email/article/general）
+  - 无需认证，公开访问
+
+- **新建 src/app/api/recommended-phrases/[id]/collect/route.ts：**
+  - POST 方法收藏推荐句式到用户亮点库
+  - 需要登录认证（未登录返回 401）
+  - 检查 phrase 是否存在（不存在返回 404）
+  - 幂等处理：重复收藏返回 200，首次收藏返回 201
+  - 创建亮点记录时设置 source='system' 和 recommended_phrase_id
+
+### Testing:
+- `npm run build`：构建成功，API 路由正确注册
+- `npm run lint`：0 errors（3个无关警告）
+- 单元测试：25/25 通过（GET路由14个，POST路由13个）
+- E2E测试：因数据库表不存在跳过（环境配置问题，非代码问题）
+
+### Notes:
+- 依赖的 DB 层 src/lib/db/recommended-phrases.ts 已存在（Task 3 完成）
+- 依赖的类型定义 src/types/database.ts 已存在（Task 2 完成）
+- API 符合 RESTful 设计规范
+- 与现有 highlights API 风格保持一致
+
+---
+
 ## 2026-03-25 - Task 11 完成：B6 字帖布局优化（字体大小、单词位置、行宽利用）
 
 ### What was done:

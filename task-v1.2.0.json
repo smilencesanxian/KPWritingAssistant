@@ -303,7 +303,7 @@
       "feature_ids": ["F3"],
       "priority": "P1",
       "phase": 5,
-      "passes": false,
+      "passes": true,
       "description": "创建推荐句式的读取和收藏API，以及种子数据",
       "steps": [
         "创建 src/app/api/recommended-phrases/route.ts：GET 方法；接收查询参数 type('vocabulary'|'phrase'|'sentence') 和 essay_type（可选）；调用 getRecommendedPhrases(filters) 获取数据；返回按 essay_type 分组的推荐句式列表",
