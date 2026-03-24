@@ -964,3 +964,31 @@
 - 类型定义文件已在之前完成，本次主要是验证和确认
 - 所有新增字段和类型与数据库迁移 004 + 005 保持一致
 - 为后续 Task 3（数据访问层更新）提供了类型基础
+
+## 2026-03-25 - Task 4: B1 - OCR噪音过滤 cleanOcrText() 函数
+
+### What was done:
+- 在 src/lib/ocr/index.ts 中新增并导出 cleanOcrText(text: string): string 函数
+  - 实现6种噪音模式过滤：/\d+张/g、/\d+页/g、/第\d+张/g、/共\d+张/g、/第\d+页/g、/共\d+页/g
+  - 处理顺序合理（先处理复合模式如'第X张'再处理简单模式，避免残留'第'或'共'字）
+  - 压缩连续超过3个的空白行为最多2个换行
+  - trim() 去除首尾空白
+- 更新 src/app/api/ocr/route.ts：OCR识别返回文本后调用 cleanOcrText() 再返回给前端
+- 创建 src/lib/ocr/index.test.ts：单元测试文件，17个测试用例覆盖所有清洗规则
+  - 噪音过滤测试（6个用例）：纯数字+张/页、第X张/页、共X张/页
+  - 空白处理测试（3个用例）：空行压缩、空白行保留、首尾trim
+  - 边界情况测试（8个用例）：复杂混合场景、纯噪音文本、正常文本保留、空字符串等
+- 安装 Jest + ts-jest 测试框架（项目之前无单元测试配置）
+  - 新增 jest.config.js 配置文件
+  - 更新 package.json 添加 test 脚本
+
+### Testing:
+- ✅ npm test src/lib/ocr/index.test.ts - 17个单元测试全部通过
+- ✅ npm run build - 构建成功，无TypeScript错误
+- ✅ npm run lint - 无错误（仅2个预存警告与本次任务无关）
+- ✅ test-engineer SubAgent 验证通过，返回 [PASS] 结论
+
+### Notes:
+- 处理顺序很重要：必须先过滤'第X张'再过滤'X张'，否则'第3张'会变成'第'
+- 当前实现会在过滤后清理多余空格，例如'这是第3张图片' → '这是图片'（中间无多余空格）
+- 已收藏的推荐句式如为空时不注入prompt，避免影响生成质量

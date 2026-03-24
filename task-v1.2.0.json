@@ -110,7 +110,7 @@
       "feature_ids": ["B1"],
       "priority": "P0",
       "phase": 2,
-      "passes": false,
+      "passes": true,
       "description": "在OCR层新增文本清洗函数，过滤'3张'/'2页'等拍照App产生的噪音文字",
       "steps": [
         "打开 src/lib/ocr/index.ts，在文件中新增并导出 cleanOcrText(text: string): string 函数",
