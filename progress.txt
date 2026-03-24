@@ -1,5 +1,33 @@
 # KP作文宝 - Progress Log
 
+## 2026-03-25 - Task 8 完成：B3 原文批注界面重设计（AnnotatedEssay 重构）
+
+### What was done:
+- **新建 src/components/correction/AnnotationDrawer.tsx：**
+  - 底部弹出抽屉组件，从底部滑入动画
+  - 展示错误类型标签（彩色 Badge）、严重程度标签（严重/重要/轻微）
+  - 原文展示（红色背景）、修正后展示（绿色背景）、解释文字
+  - 支持点击遮罩关闭、ESC 键关闭、点击关闭按钮关闭
+  - 移动端友好（60% 屏幕高度，可滚动）
+
+- **修改 src/components/correction/AnnotatedEssay.tsx：**
+  - 将原有的 Tooltip 改为使用 AnnotationDrawer
+  - 保留下划线标注样式（critical 红色、major 橙色、minor 灰色）
+  - 新增底部摘要栏：显示错误总数、按类型分组展示计数
+  - 支持点击类型筛选/高亮对应批注（其他批注变暗）
+  - 使用 useMemo 优化性能
+
+### Testing:
+- `npm run build`：构建成功
+- `npm run lint`：0 errors（3个无关警告，已修复1个本任务引入的警告）
+- 单元测试：54/54 通过
+- 组件功能验证：通过（TypeScript 类型正确）
+
+### Notes:
+- ErrorTooltip 组件保留但不再被 AnnotatedEssay 使用（供其他组件使用）
+- 抽屉动画使用 inline styles 实现，确保流畅体验
+- 摘要栏类型筛选支持切换和清除
+
 ## 2026-03-25 - v1.2.0 Task 3 完成：更新数据访问层
 
 ### What was done:

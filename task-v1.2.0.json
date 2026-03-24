@@ -206,7 +206,7 @@
       "feature_ids": ["B3"],
       "priority": "P1",
       "phase": 3,
-      "passes": false,
+      "passes": true,
       "description": "将批注Tooltip改为底部抽屉，展示更丰富的错误信息（类型/严重程度/纠正/解释）",
       "steps": [
         "打开 src/components/correction/AnnotatedEssay.tsx，分析现有的批注数据结构和交互逻辑",
