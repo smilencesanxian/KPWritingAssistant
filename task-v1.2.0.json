@@ -63,7 +63,7 @@
       "feature_ids": ["F1", "F2", "F3", "F4"],
       "priority": "P0",
       "phase": 1,
-      "passes": false,
+      "passes": true,
       "description": "更新 TypeScript 类型定义文件，确保新增字段和新表的类型安全",
       "steps": [
         "打开 src/types/database.ts，为 essay_submissions 的 Row/Insert/Update 类型新增字段：exam_part: 'part1' | 'part2' | null；question_type: 'q1' | 'q2' | null；question_image_path: string | null；question_ocr_text: string | null；essay_topic: string | null",

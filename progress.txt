@@ -1,5 +1,24 @@
 # KP作文宝 - Progress Log
 
+## 2026-03-25 - v1.2.0 Task 2 完成：更新 types/database.ts
+
+### What was done:
+- **更新 src/types/database.ts，添加 v1.2.0 类型定义：**
+  - Submission 新增 exam_part/question_type/question_image_path/question_ocr_text/essay_topic 字段
+  - 新增 EditHistoryItem 类型，ModelEssay 新增用户编辑相关字段
+  - Highlight 新增 source/recommended_phrase_id 字段
+  - 新增 RecommendedPhrase 完整类型定义
+  - 新增 WritingGuideNode 完整类型定义
+
+### Testing:
+- TypeScript 类型检查（tsc --noEmit）：通过
+- `npm run build`：构建成功
+- `npm run lint`：0 errors（2个无关警告）
+- 类型定义完整性验证：通过
+
+### Notes:
+- Task 2 标记为完成，继续 Task 3
+
 ## 2026-03-24 - v1.2.0 Task 1 完成：DB迁移004 + 005
 
 ### What was done:

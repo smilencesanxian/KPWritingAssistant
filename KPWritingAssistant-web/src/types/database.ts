@@ -6,6 +6,12 @@ export interface Submission {
   title: string | null;
   status: string;
   created_at: string;
+  // v1.2.0 新增字段
+  exam_part: 'part1' | 'part2' | null;
+  question_type: 'q1' | 'q2' | null;
+  question_image_path: string | null;
+  question_ocr_text: string | null;
+  essay_topic: string | null;
 }
 
 export interface Correction {
@@ -23,12 +29,24 @@ export interface Correction {
   created_at: string;
 }
 
+export interface EditHistoryItem {
+  timestamp: string;
+  original: string;
+  edited: string;
+  note?: string;
+}
+
 export interface ModelEssay {
   id: string;
   correction_id: string;
   target_level: 'pass' | 'good' | 'excellent';
   content: string;
   created_at: string;
+  // v1.2.0 新增字段
+  user_edited_content: string | null;
+  is_user_edited: boolean;
+  edit_history: EditHistoryItem[] | null;
+  user_preference_notes: string | null;
 }
 
 export interface Highlight {
@@ -38,6 +56,9 @@ export interface Highlight {
   type: 'vocabulary' | 'phrase' | 'sentence';
   source_submission_id: string | null;
   created_at: string;
+  // v1.2.0 新增字段
+  source: 'user' | 'system';
+  recommended_phrase_id: string | null;
 }
 
 export interface ErrorPoint {
@@ -70,6 +91,32 @@ export interface Copybook {
   mode: string;
   pdf_storage_path: string | null;
   pdf_url: string | null;
+  created_at: string;
+}
+
+// v1.2.0 新增：推荐句式
+export interface RecommendedPhrase {
+  id: string;
+  text: string;
+  type: 'vocabulary' | 'phrase' | 'sentence';
+  essay_type: 'email' | 'article' | 'general' | null;
+  topic_tags: string[] | null;
+  usage_example: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+// v1.2.0 新增：写作导览节点
+export interface WritingGuideNode {
+  id: string;
+  user_id: string | null;
+  parent_id: string | null;
+  node_type: 'essay_type' | 'topic' | 'highlight';
+  label: string;
+  highlight_id: string | null;
+  source: 'user' | 'system';
+  sort_order: number;
   created_at: string;
 }
 
