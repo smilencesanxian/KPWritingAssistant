@@ -155,7 +155,7 @@
       "feature_ids": ["F1", "B1", "B2"],
       "priority": "P0",
       "phase": 2,
-      "passes": false,
+      "passes": true,
       "description": "重构上传页面为4步流程：选择照片→AI识别→题型确认→批改Loading（展示评分维度卡片）",
       "steps": [
         "修改 src/app/upload/page.tsx，将上传流程改为4个步骤的状态机：step='select'（选择照片）→ step='processing'（AI识别中）→ step='confirm'（确认题型）→ step='correcting'（批改中）",
