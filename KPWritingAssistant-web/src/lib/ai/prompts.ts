@@ -85,3 +85,34 @@ export function buildDetectTypePrompt(
     user: userPrompt,
   };
 }
+
+export function buildRegenerateModelEssayPrompt(
+  originalText: string,
+  highlights: string[],
+  preferenceNotes: string,
+  historyNotes: string[]
+): string {
+  const levelDescription = config.modelEssay.levelDescriptions.excellent;
+
+  const highlightsSection =
+    highlights.length > 0
+      ? config.modelEssay.highlightsSectionTemplate.replace(
+          '{{highlights}}',
+          highlights.map((h) => `- ${h}`).join('\n')
+        )
+      : '';
+
+  const preferenceSection = preferenceNotes
+    ? `\n【用户本次偏好要求】\n${preferenceNotes}`
+    : '';
+
+  const historySection =
+    historyNotes.length > 0
+      ? `\n【用户历史偏好（参考）】\n${historyNotes.map((n) => `- ${n}`).join('\n')}`
+      : '';
+
+  return config.modelEssay.userPromptTemplate
+    .replace('{{originalText}}', originalText)
+    .replace('{{highlightsSection}}', highlightsSection + preferenceSection + historySection)
+    .replace('{{levelDescription}}', levelDescription);
+}

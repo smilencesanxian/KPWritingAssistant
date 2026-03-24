@@ -1107,3 +1107,63 @@
 - The system prompt now enforces proper email formatting for PET Part 1 essays
 - Negative examples help avoid common unnatural expressions students use
 - Logic correction instructions ensure model essays are natural and well-written
+
+## 2026-03-25 - Task 9: F2 - Model Essay Edit and Regenerate Feature
+
+### What was done:
+- Created PUT /api/model-essays/[id]/route.ts API endpoint:
+  - Validates user ownership through correction -> submission chain
+  - Updates user_edited_content, is_user_edited=true, user_preference_notes
+  - Appends edit_history entry with timestamp, original, edited, and note
+  - Returns updated model essay record
+
+- Created POST /api/model-essays/[id]/regenerate/route.ts API endpoint:
+  - Validates user ownership
+  - Queries user's highlights for the submission
+  - Gets user's recent 5 preference notes via getUserPreferenceNotes()
+  - Calls LLM to regenerate essay with preference context
+  - Updates model essay with new content
+  - Includes rate limiting protection
+
+- Created src/components/model-essay/EditEssayModal.tsx:
+  - Centered modal with backdrop click to close
+  - Large Textarea (300px height) for editing essay content
+  - Save and Cancel buttons with loading states
+  - Error display and form validation
+  - data-testid attributes for testing
+
+- Created src/components/model-essay/RegenerateModal.tsx:
+  - Bottom sheet design with handle bar
+  - Preference notes input textarea
+  - Regenerate and Cancel buttons with loading states
+  - Error display
+  - data-testid attributes for testing
+
+- Updated src/components/correction/ModelEssayView.tsx:
+  - Added "已自定义" badge when is_user_edited=true
+  - Added "编辑范文" button with edit icon
+  - Added "重新生成" button with refresh icon
+  - Integrated EditEssayModal and RegenerateModal
+  - Displays user_edited_content when available
+  - Added state management for modals
+
+- Updated src/lib/ai/prompts.ts:
+  - Added buildRegenerateModelEssayPrompt() function
+  - Includes user preference notes and history notes in prompt
+  - Reuses existing model essay template structure
+
+- Updated src/lib/ai/llm.ts:
+  - Added regenerateModelEssay() function
+  - Calls LLM with preference-enhanced prompt
+  - Consistent with existing generateModelEssay() pattern
+
+### Testing:
+- Lint test: npm run lint passed (0 errors, 4 warnings - 1 fixed)
+- Build test: npm run build successful
+- Test Engineer SubAgent: [PASS] confirmed
+
+### Notes:
+- Edit history is appended to edit_history array for audit trail
+- Regenerate uses user's collected highlights and preference history
+- UI components follow existing design system (Button, Card, etc.)
+- Rate limiting applied to regenerate API to prevent abuse

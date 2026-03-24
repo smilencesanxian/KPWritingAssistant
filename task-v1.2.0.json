@@ -232,8 +232,7 @@
       "feature_ids": ["F2"],
       "priority": "P1",
       "phase": 3,
-      "passes": false,
-      "description": "在批改详情页的范文区域增加编辑和重新生成功能，支持用户保存偏好",
+      "passes": true,,
       "steps": [
         "创建 PUT /api/model-essays/[id]/route.ts：接收 {user_edited_content: string, user_preference_notes?: string}；验证所有权（查询该 model_essay 属于当前登录用户）；更新 model_essays 的 user_edited_content/is_user_edited=true/edit_history（追加新条目）/user_preference_notes；返回更新后的记录",
         "创建 POST /api/model-essays/[id]/regenerate/route.ts：接收 {preference_notes: string}；查询该 essay 的 highlights（用户亮点）；查询用户最近5条 user_preference_notes（getUserPreferenceNotes）；将当前 preference_notes + 历史偏好拼入 model essay prompt；调用 LLM 重新生成范文内容；保存新内容到 model_essays；返回新生成的范文",

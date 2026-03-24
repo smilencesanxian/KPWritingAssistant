@@ -6,6 +6,7 @@ import {
   buildCorrectionUserPrompt,
   buildModelEssayPrompt,
   buildDetectTypePrompt,
+  buildRegenerateModelEssayPrompt,
 } from './prompts';
 
 const LLM_BASE_URL =
@@ -161,4 +162,38 @@ function getDefaultDetectTypeResult(): DetectTypeResult {
     topic: '未知主题',
     confidence: 'low',
   };
+}
+
+export async function regenerateModelEssay(
+  originalText: string,
+  highlights: string[],
+  preferenceNotes: string,
+  historyNotes: string[]
+): Promise<string> {
+  const client = createLLMClient();
+
+  const response = await client.chat.completions.create({
+    model: LLM_MODEL,
+    messages: [
+      { role: 'system', content: MODEL_ESSAY_SYSTEM_PROMPT },
+      {
+        role: 'user',
+        content: buildRegenerateModelEssayPrompt(
+          originalText,
+          highlights,
+          preferenceNotes,
+          historyNotes
+        ),
+      },
+    ],
+    max_tokens: 1024,
+    temperature: 0.7,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    throw new Error('范文重新生成失败，请稍后重试。');
+  }
+
+  return content.trim();
 }

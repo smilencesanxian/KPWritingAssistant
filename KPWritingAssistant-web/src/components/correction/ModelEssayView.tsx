@@ -7,6 +7,8 @@ import type { CopybookMode } from '@/types/pdf';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Spinner from '@/components/ui/Spinner';
+import EditEssayModal from '@/components/model-essay/EditEssayModal';
+import RegenerateModal from '@/components/model-essay/RegenerateModal';
 
 interface TemplateOption {
   id: string;
@@ -59,6 +61,13 @@ export default function ModelEssayView({ correctionId, initialEssays }: ModelEss
   const [fontStyle, setFontStyle] = useState<string>('hengshui');
   const [fontSize, setFontSize] = useState<number>(18); // 默认字体大小18pt
   const [tracingOpacity, setTracingOpacity] = useState<number>(30);
+
+  // Modal states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false);
+
+  // Get display content (use user_edited_content if available)
+  const displayContent = essay?.user_edited_content ?? essay?.content ?? '';
 
   // Auto-fetch excellent essay on mount if not already available
   useEffect(() => {
@@ -125,6 +134,36 @@ export default function ModelEssayView({ correctionId, initialEssays }: ModelEss
     }
   }, [essay, router, templateId, copybookMode, fontStyle, fontSize, tracingOpacity]);
 
+  const handleEditSave = useCallback(
+    (updatedEssay: { id: string; user_edited_content: string | null; is_user_edited: boolean }) => {
+      setEssay((prev) =>
+        prev
+          ? {
+              ...prev,
+              user_edited_content: updatedEssay.user_edited_content,
+              is_user_edited: updatedEssay.is_user_edited,
+            }
+          : null
+      );
+    },
+    []
+  );
+
+  const handleRegenerateSave = useCallback(
+    (updatedEssay: { id: string; user_edited_content: string | null; is_user_edited: boolean }) => {
+      setEssay((prev) =>
+        prev
+          ? {
+              ...prev,
+              user_edited_content: updatedEssay.user_edited_content,
+              is_user_edited: updatedEssay.is_user_edited,
+            }
+          : null
+      );
+    },
+    []
+  );
+
   return (
     <div className="space-y-3">
       <h3 className="text-sm font-semibold text-neutral-700">卓越范文</h3>
@@ -139,136 +178,201 @@ export default function ModelEssayView({ correctionId, initialEssays }: ModelEss
       )}
 
       {!loading && essay && (
-        <Card>
-          {/* Essay content */}
-          <p
-            className="text-sm text-neutral-800 whitespace-pre-wrap select-text"
-            style={{ fontFamily: 'monospace', lineHeight: '1.8' }}
-          >
-            {essay.content}
-          </p>
-          {/* Word count */}
-          <p className="text-xs text-neutral-400 mt-2 text-right">
-            共 {countWords(essay.content)} 词
-          </p>
-
-          {/* Copybook generation controls */}
-          <div className="mt-4 pt-4 border-t border-neutral-100 space-y-3">
-            <p className="text-xs font-medium text-neutral-500">生成字帖</p>
-
-            {/* Template selector */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-neutral-600 shrink-0 w-14">模板</label>
-              <select
-                value={templateId}
-                onChange={(e) => setTemplateId(e.target.value)}
-                disabled={copybookLoading}
-                className="flex-1 text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-white text-neutral-700 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
-              >
-                {TEMPLATE_OPTIONS.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} — {t.description}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Font selector */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-neutral-600 shrink-0 w-14">字体</label>
-              <select
-                value={fontStyle}
-                onChange={(e) => setFontStyle(e.target.value)}
-                disabled={copybookLoading}
-                className="flex-1 text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-white text-neutral-700 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
-              >
-                {FONT_OPTIONS.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name} — {f.description}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Font size slider */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-neutral-600 shrink-0 w-14">字号</label>
-              <input
-                type="range"
-                min={12}
-                max={22}
-                step={1}
-                value={fontSize}
-                onChange={(e) => setFontSize(Number(e.target.value))}
-                disabled={copybookLoading}
-                className="flex-1 h-1.5 accent-primary-600 disabled:opacity-50"
-              />
-              <span className="text-xs text-neutral-500 w-10 text-right">{fontSize}pt</span>
-            </div>
-
-            {/* Mode toggle */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-neutral-600 shrink-0 w-14">模式</label>
-              <div className="flex rounded-lg overflow-hidden border border-neutral-200 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setCopybookMode('tracing')}
-                  disabled={copybookLoading}
-                  className={`px-3 py-1.5 transition-colors disabled:opacity-50 ${
-                    copybookMode === 'tracing'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-neutral-600 hover:bg-neutral-50'
-                  }`}
+        <>
+          <Card>
+            {/* Header with badge and buttons */}
+            <div className="flex items-center justify-between mb-3">
+              {essay.is_user_edited && (
+                <span
+                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-700"
+                  data-testid="user-edited-badge"
                 >
-                  临摹
+                  <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                      fillRule="evenodd"
+                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  已自定义
+                </span>
+              )}
+              {!essay.is_user_edited && <div />}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-primary-600 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
+                  data-testid="edit-essay-button"
+                >
+                  <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                    />
+                  </svg>
+                  编辑范文
                 </button>
                 <button
-                  type="button"
-                  onClick={() => setCopybookMode('dictation')}
-                  disabled={copybookLoading}
-                  className={`px-3 py-1.5 transition-colors disabled:opacity-50 border-l border-neutral-200 ${
-                    copybookMode === 'dictation'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-white text-neutral-600 hover:bg-neutral-50'
-                  }`}
+                  onClick={() => setIsRegenerateModalOpen(true)}
+                  className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-neutral-600 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition-colors"
+                  data-testid="regenerate-essay-button"
                 >
-                  默写
+                  <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                    />
+                  </svg>
+                  重新生成
                 </button>
               </div>
-              <span className="text-xs text-neutral-400">
-                {copybookMode === 'tracing' ? '显示范文供临摹' : '空白行供默写'}
-              </span>
             </div>
 
-            {/* Tracing opacity slider (only in tracing mode) */}
-            {copybookMode === 'tracing' && (
+            {/* Essay content */}
+            <p
+              className="text-sm text-neutral-800 whitespace-pre-wrap select-text"
+              style={{ fontFamily: 'monospace', lineHeight: '1.8' }}
+            >
+              {displayContent}
+            </p>
+            {/* Word count */}
+            <p className="text-xs text-neutral-400 mt-2 text-right">
+              共 {countWords(displayContent)} 词
+            </p>
+
+            {/* Copybook generation controls */}
+            <div className="mt-4 pt-4 border-t border-neutral-100 space-y-3">
+              <p className="text-xs font-medium text-neutral-500">生成字帖</p>
+
+              {/* Template selector */}
               <div className="flex items-center gap-2">
-                <label className="text-xs text-neutral-600 shrink-0 w-14">灰度</label>
+                <label className="text-xs text-neutral-600 shrink-0 w-14">模板</label>
+                <select
+                  value={templateId}
+                  onChange={(e) => setTemplateId(e.target.value)}
+                  disabled={copybookLoading}
+                  className="flex-1 text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-white text-neutral-700 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
+                >
+                  {TEMPLATE_OPTIONS.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} — {t.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Font selector */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-neutral-600 shrink-0 w-14">字体</label>
+                <select
+                  value={fontStyle}
+                  onChange={(e) => setFontStyle(e.target.value)}
+                  disabled={copybookLoading}
+                  className="flex-1 text-xs border border-neutral-200 rounded-lg px-2 py-1.5 bg-white text-neutral-700 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50"
+                >
+                  {FONT_OPTIONS.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name} — {f.description}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Font size slider */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-neutral-600 shrink-0 w-14">字号</label>
                 <input
                   type="range"
-                  min={10}
-                  max={80}
-                  step={5}
-                  value={tracingOpacity}
-                  onChange={(e) => setTracingOpacity(Number(e.target.value))}
+                  min={12}
+                  max={22}
+                  step={1}
+                  value={fontSize}
+                  onChange={(e) => setFontSize(Number(e.target.value))}
                   disabled={copybookLoading}
                   className="flex-1 h-1.5 accent-primary-600 disabled:opacity-50"
                 />
-                <span className="text-xs text-neutral-500 w-8 text-right">{tracingOpacity}%</span>
+                <span className="text-xs text-neutral-500 w-10 text-right">{fontSize}pt</span>
               </div>
-            )}
 
-            <div className="flex justify-end">
-              <Button
-                onClick={handleGenerateCopybook}
-                loading={copybookLoading}
-                disabled={copybookLoading}
-              >
-                生成字帖
-              </Button>
+              {/* Mode toggle */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-neutral-600 shrink-0 w-14">模式</label>
+                <div className="flex rounded-lg overflow-hidden border border-neutral-200 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setCopybookMode('tracing')}
+                    disabled={copybookLoading}
+                    className={`px-3 py-1.5 transition-colors disabled:opacity-50 ${
+                      copybookMode === 'tracing'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                    }`}
+                  >
+                    临摹
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCopybookMode('dictation')}
+                    disabled={copybookLoading}
+                    className={`px-3 py-1.5 transition-colors disabled:opacity-50 border-l border-neutral-200 ${
+                      copybookMode === 'dictation'
+                        ? 'bg-primary-600 text-white'
+                        : 'bg-white text-neutral-600 hover:bg-neutral-50'
+                    }`}
+                  >
+                    默写
+                  </button>
+                </div>
+                <span className="text-xs text-neutral-400">
+                  {copybookMode === 'tracing' ? '显示范文供临摹' : '空白行供默写'}
+                </span>
+              </div>
+
+              {/* Tracing opacity slider (only in tracing mode) */}
+              {copybookMode === 'tracing' && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-neutral-600 shrink-0 w-14">灰度</label>
+                  <input
+                    type="range"
+                    min={10}
+                    max={80}
+                    step={5}
+                    value={tracingOpacity}
+                    onChange={(e) => setTracingOpacity(Number(e.target.value))}
+                    disabled={copybookLoading}
+                    className="flex-1 h-1.5 accent-primary-600 disabled:opacity-50"
+                  />
+                  <span className="text-xs text-neutral-500 w-8 text-right">{tracingOpacity}%</span>
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button onClick={handleGenerateCopybook} loading={copybookLoading} disabled={copybookLoading}>
+                  生成字帖
+                </Button>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
+
+          {/* Modals */}
+          <EditEssayModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            initialContent={displayContent}
+            essayId={essay.id}
+            onSave={handleEditSave}
+          />
+          <RegenerateModal
+            isOpen={isRegenerateModalOpen}
+            onClose={() => setIsRegenerateModalOpen(false)}
+            essayId={essay.id}
+            onRegenerate={handleRegenerateSave}
+          />
+        </>
       )}
 
       {!loading && !essay && !error && (
