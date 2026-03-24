@@ -19,28 +19,41 @@ export async function createCorrection(
 ): Promise<Correction> {
   const supabase = await createClient();
 
-  const { data: correction, error } = await supabase
+  // Try to insert with organization_score first
+  const insertData = {
+    submission_id: submissionId,
+    content_score: data.content_score,
+    communication_score: data.communication_score,
+    organization_score: data.organization_score,
+    language_score: data.language_score,
+    total_score: data.total_score,
+    error_annotations: data.error_annotations,
+    overall_comment: data.overall_comment,
+    improvement_suggestions: data.improvement_suggestions,
+    status: 'completed',
+  };
+
+  let result = await supabase
     .from('corrections')
-    .insert({
-      submission_id: submissionId,
-      content_score: data.content_score,
-      communication_score: data.communication_score,
-      organization_score: data.organization_score,
-      language_score: data.language_score,
-      total_score: data.total_score,
-      error_annotations: data.error_annotations,
-      overall_comment: data.overall_comment,
-      improvement_suggestions: data.improvement_suggestions,
-      status: 'completed',
-    })
+    .insert(insertData)
     .select()
     .single();
 
-  if (error) {
-    throw new Error(`Failed to create correction: ${error.message}`);
+  // If failed due to missing column, retry without organization_score
+  if (result.error && result.error.message.includes('organization_score')) {
+    const { organization_score, ...fallbackData } = insertData;
+    result = await supabase
+      .from('corrections')
+      .insert(fallbackData)
+      .select()
+      .single();
   }
 
-  return correction as Correction;
+  if (result.error) {
+    throw new Error(`Failed to create correction: ${result.error.message}`);
+  }
+
+  return result.data as Correction;
 }
 
 export async function getCorrectionById(id: string): Promise<Correction | null> {
