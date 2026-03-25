@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
   }
 
   // Encode opacity into cache key (appended to fontStyle) so different opacities don't share cache
-  const cacheKey = copybookMode === 'tracing' ? `${fontStyle}@${tracingOpacity}` : fontStyle;
+  // v2: bumped to invalidate old PDFs that had incorrect flat (non-email) formatting
+  const cacheKey = copybookMode === 'tracing' ? `v2_${fontStyle}@${tracingOpacity}` : `v2_${fontStyle}`;
 
   // Cache check: (model_essay_id, template_id, mode, cacheKey)
   const existing = await getCopybookByModelEssayId(model_essay_id, user.id, templateId, copybookMode, cacheKey);

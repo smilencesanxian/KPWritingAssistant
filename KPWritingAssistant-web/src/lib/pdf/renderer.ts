@@ -252,28 +252,22 @@ function drawBarcode(doc: PDFKit.PDFDocument, pageWidth: number, pageHeight: num
 }
 
 /**
- * Wraps essay text into lines targeting ~10 words per line for better tracing experience.
- * Strips paragraph breaks and wraps based on word count to control line density.
+ * Wraps a single paragraph of words into lines fitting within maxWidth,
+ * targeting ~targetWordsPerLine words per line.
  */
-function wrapTextWithFontMetrics(
+function wrapParagraph(
   doc: PDFKit.PDFDocument,
-  text: string,
+  paragraph: string,
   maxWidth: number,
-  fontSize: number,
-  fontName: string,
-  targetWordsPerLine: number = 10
+  targetWordsPerLine: number
 ): string[] {
-  doc.fontSize(fontSize).font(fontName);
-  // Flatten paragraph breaks into spaces so lines fill as much as possible
-  const words = text.replace(/\n+/g, ' ').split(/\s+/).filter(Boolean);
+  const words = paragraph.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [];
   const lines: string[] = [];
   let currentLine: string[] = [];
 
   for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    currentLine.push(word);
-
-    // Check if we've reached target word count or if adding another word would exceed width
+    currentLine.push(words[i]);
     const testLine = currentLine.join(' ');
     const nextWord = words[i + 1];
     const wouldExceedWidth = nextWord && doc.widthOfString(testLine + ' ' + nextWord) > maxWidth;
@@ -285,9 +279,40 @@ function wrapTextWithFontMetrics(
     }
   }
 
-  // Handle any remaining words
   if (currentLine.length > 0) {
     lines.push(currentLine.join(' '));
+  }
+
+  return lines;
+}
+
+/**
+ * Wraps essay text into lines for tracing, preserving the original line/paragraph
+ * structure (e.g. email salutation, body paragraphs, sign-off).
+ * Each non-empty source line is wrapped independently; blank lines become empty slots.
+ */
+function wrapTextWithFontMetrics(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  maxWidth: number,
+  fontSize: number,
+  fontName: string,
+  targetWordsPerLine: number = 10
+): string[] {
+  doc.fontSize(fontSize).font(fontName);
+  // Split on single newlines to preserve email structure (salutation, paragraphs, sign-off)
+  const sourceLines = text.split('\n');
+  const lines: string[] = [];
+
+  for (const sourceLine of sourceLines) {
+    const trimmed = sourceLine.trim();
+    if (trimmed === '') {
+      // Blank line → empty slot to preserve visual separation
+      lines.push('');
+    } else {
+      const wrapped = wrapParagraph(doc, trimmed, maxWidth, targetWordsPerLine);
+      lines.push(...wrapped);
+    }
   }
 
   return lines;
