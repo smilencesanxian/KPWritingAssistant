@@ -3,6 +3,7 @@ import { getSubmissionById, updateSubmissionStatus } from '@/lib/db/essays';
 import { createCorrection } from '@/lib/db/corrections';
 import { createHighlights } from '@/lib/db/highlights';
 import { processErrorsFromCorrection } from '@/lib/db/error-points';
+import { syncWritingGuideFromCorrection } from '@/lib/db/writing-guide';
 import { correctEssay } from '@/lib/ai/llm';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { NextRequest } from 'next/server';
@@ -71,14 +72,26 @@ export async function POST(request: NextRequest) {
       improvement_suggestions: correctionResult.improvement_suggestions,
     });
 
-    // Save highlights to library
+    // Save highlights to library and capture their IDs
+    let highlightIds: string[] = [];
     if (correctionResult.highlights.length > 0) {
-      await createHighlights(
+      const createdHighlights = await createHighlights(
         user.id,
         correctionResult.highlights.map((h) => ({ text: h.text, type: h.type })),
         submission_id
       );
+      highlightIds = createdHighlights.map((h) => h.id);
     }
+
+    // Sync writing guide with correction results
+    await syncWritingGuideFromCorrection(
+      user.id,
+      submission.essay_topic,
+      highlightIds
+    ).catch((err) => {
+      // Log error but don't fail the correction
+      console.error('Failed to sync writing guide:', err);
+    });
 
     // Process error points and get newly flagged ones
     const flagged_errors = await processErrorsFromCorrection(

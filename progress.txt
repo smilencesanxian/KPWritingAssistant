@@ -1,5 +1,52 @@
 # KP作文宝 - Progress Log
 
+## 2026-03-25 - Task 15 完成：F4 写作导览API（获取树形数据）
+
+### What was done:
+- **更新 src/lib/db/writing-guide.ts：**
+  - 添加 highlight 字段到 WritingGuideNodeTree 接口
+  - 更新 getWritingGuideTree() 查询 highlight 关联数据
+  - 新增 syncWritingGuideFromCorrection() 函数：
+    - 根据 essay_topic 关键词识别邮件/文章类型
+    - 自动查找或创建 essay_type 节点
+    - 自动查找或创建 topic 节点
+    - 将 highlights 挂载到对应 topic 下（去重处理）
+  - 新增 deleteUserNode() 函数用于删除用户节点
+
+- **新建 src/app/api/writing-guide/route.ts：**
+  - GET 方法获取写作导览树形数据
+  - 需要登录认证（未登录返回 401）
+  - 调用 getWritingGuideTree() 获取用户节点 + 系统节点
+  - 返回格式：{ tree: WritingGuideNodeTree[] }
+
+- **更新 src/app/api/correct/route.ts：**
+  - 导入 syncWritingGuideFromCorrection
+  - 批改完成后自动同步写作导览
+  - 捕获 highlight IDs 用于同步
+  - 错误处理：同步失败不中断批改流程
+
+- **新建 supabase/seed/writing_guide_nodes.sql：**
+  - 插入系统默认节点（user_id=NULL）
+  - Level 0：邮件 (Part 1)、文章 (Part 2)
+  - Level 1：户外活动、学校生活、日常生活（邮件下）
+  - Level 1：社会话题、个人经历（文章下）
+
+### Testing:
+- `npm run build`：构建成功，/api/writing-guide 路由已注册
+- `npm run lint`：0 errors（4个无关警告）
+- 单元测试：113/113 通过（新增 11 个测试）
+- API 测试：通过
+- DB 函数测试：通过
+
+### Notes:
+- 依赖的 writing_guide_nodes 表已创建（Migration 005）
+- 系统节点通过 user_id=NULL 标识，对所有用户可见
+- 新用户返回完整系统默认树
+- 老用户返回个人节点 + 系统节点的合并树
+- 批改后自动更新写作导览节点功能已集成
+
+---
+
 ## 2026-03-25 - Task 12 完成：F3 推荐句式API（获取列表 + 收藏到亮点库）
 
 ### What was done:

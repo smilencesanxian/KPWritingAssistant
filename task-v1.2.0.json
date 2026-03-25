@@ -374,7 +374,7 @@
       "feature_ids": ["F4"],
       "priority": "P2",
       "phase": 6,
-      "passes": false,
+      "passes": true,
       "description": "创建写作导览的数据查询API，返回树形结构的导览数据（用户积累 + 系统推荐）",
       "steps": [
         "创建 src/app/api/writing-guide/route.ts：GET 方法；获取当前登录用户ID；调用 getWritingGuideTree(userId) 获取节点数据（包含用户节点和系统推荐节点）；将扁平节点列表转换为树形结构（parent_id 递归组织）；返回树形JSON",
