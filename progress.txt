@@ -1254,3 +1254,50 @@
 - essay_topic 为空时降级为 "作文"
 - 支持中文文件名正确显示（通过 Content-Disposition: filename*=UTF-8''）
 - 避免使用 date-fns 依赖，改用原生 JavaScript 日期格式化
+
+## 2026-03-25 - Task 13: F3 - 亮点库页面增加推荐Tab
+
+### What was done:
+Verified implementation of the Recommended Tab feature in the highlights page:
+
+- src/app/highlights/page.tsx:
+  - Added '推荐' Tab to TYPE_TABS array
+  - Added state management for recommended phrases (recommendedPhrases, recommendedLoading, collectedIds, collectingIds)
+  - Implemented fetchRecommendedPhrases() to load phrases from API
+  - Implemented handleCollect() for collecting phrases
+  - Added grouping by essay_type with section headers (邮件类/文章类/通用)
+  - Added empty state UI for when no recommended phrases available
+  - Hidden search FAB and infinite scroll for recommended tab
+
+- src/components/highlights/RecommendedPhraseCard.tsx:
+  - Displays phrase text with type badge (词汇/短语/句子)
+  - Shows essay_type badge (邮件/文章/通用)
+  - Collect button with loading and collected states
+  - Collapsible usage example section
+
+- src/components/highlights/HighlightItem.tsx:
+  - Added '推荐' badge for source='system' highlights
+
+- src/app/api/recommended-phrases/route.ts:
+  - GET endpoint to fetch and group phrases by essay_type
+  - Supports filtering by type and essay_type
+
+- src/app/api/recommended-phrases/[id]/collect/route.ts:
+  - POST endpoint to collect a recommended phrase
+  - Idempotent - returns existing highlight if already collected
+
+- src/lib/db/recommended-phrases.ts:
+  - getRecommendedPhrases() with filtering options
+  - collectPhrase() to create highlight from recommended phrase
+  - isCollected() to check collection status
+
+### Testing:
+- npm run lint passed (0 errors, 3 warnings - pre-existing)
+- npm run build successful
+- Test Engineer SubAgent: [PASS] confirmed
+
+### Notes:
+- All data-testid attributes already in place for E2E testing
+- Recommended phrases are grouped by essay_type (email/article/general)
+- Collected phrases appear in user's highlights with '推荐' badge
+- Toast notification shown on successful collection

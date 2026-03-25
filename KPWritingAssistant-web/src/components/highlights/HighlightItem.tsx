@@ -104,6 +104,15 @@ export default function HighlightItem({ highlight, onDelete }: HighlightItemProp
         <span className="flex-1 text-sm text-neutral-800 leading-snug break-all">
           {highlight.text}
         </span>
+        {/* System badge */}
+        {highlight.source === 'system' && (
+          <span
+            data-testid="system-badge"
+            className="flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700"
+          >
+            推荐
+          </span>
+        )}
         {/* Desktop delete button (hidden on touch devices via pointer) */}
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(highlight.id); }}

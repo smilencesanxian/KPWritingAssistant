@@ -325,7 +325,7 @@
       "feature_ids": ["F3"],
       "priority": "P1",
       "phase": 5,
-      "passes": false,
+      "passes": true,
       "description": "在亮点库页面新增推荐Tab，展示系统推荐句式，支持收藏操作",
       "steps": [
         "打开 src/app/highlights/page.tsx，查看现有Tab结构（全部/词汇/短语/句子）",
