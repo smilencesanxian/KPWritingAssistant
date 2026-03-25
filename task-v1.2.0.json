@@ -398,7 +398,7 @@
       "feature_ids": ["F4"],
       "priority": "P2",
       "phase": 6,
-      "passes": false,
+      "passes": true,
       "description": "创建写作导览页面，以可折叠树状列表展示作文类型→话题→亮点词句的关联关系",
       "steps": [
         "创建 src/components/writing-guide/WritingGuideTree.tsx：接收树形数据节点数组；实现可折叠/展开交互（点击父节点切换子节点显示）；节点渲染：Level 0（作文类型）用粗体+图标（📧邮件/📰文章）；Level 1（话题/场景）用缩进+话题图标；Level 2（亮点词句）用缩进+来源图标（✨用户积累，⭐系统推荐）；系统推荐节点不可删除（无删除按钮）；用户积累节点显示删除按钮（可移除出导览）",
@@ -421,7 +421,7 @@
       "feature_ids": ["F4"],
       "priority": "P2",
       "phase": 6,
-      "passes": false,
+      "passes": true,
       "description": "在底部导航栏中新增写作导览入口，调整现有导航项布局",
       "steps": [
         "打开 src/components/layout/BottomNav.tsx，查看现有导航项（历史 | 亮点库 | 易错点）",

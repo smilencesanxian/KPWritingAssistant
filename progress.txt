@@ -1,3 +1,47 @@
+## 2026-03-25 - Task 16 完成：F4 写作导览页面（树状列表展示）
+
+### What was done:
+- **新建 src/components/writing-guide/WritingGuideTree.tsx：**
+  - 实现可折叠树形列表组件
+  - 支持三级节点类型：essay_type（粗体+图标）、topic（缩进）、highlight（缩进+来源图标）
+  - Level 0（作文类型）：📧邮件/📰文章图标 + 粗体样式
+  - Level 1（话题）：缩进 + 话题图标
+  - Level 2（亮点词句）：✨用户积累 / ⭐系统推荐 视觉区分
+  - 展开/折叠状态持久化到 localStorage（key: writing-guide-expanded-nodes）
+  - 用户节点显示删除按钮，系统节点不可删除
+  - 支持显示亮点类型标签（词汇/短语/句式）
+  - 添加 data-testid 属性便于测试
+
+- **新建 src/app/writing-guide/page.tsx：**
+  - 页面标题"写作导览"及说明文字
+  - 调用 GET /api/writing-guide 获取树形数据
+  - 加载状态展示骨架屏（TreeSkeleton 组件）
+  - 空数据状态：引导用户去批改作文
+  - 错误状态：显示重试按钮
+  - 集成删除功能：调用 DELETE /api/writing-guide/[id]
+  - Toast 提示操作结果
+
+- **新建 src/app/api/writing-guide/[id]/route.ts：**
+  - DELETE 方法删除用户写作导览节点
+  - 验证用户登录状态
+  - 验证节点所有权（只能删除自己的节点）
+  - 调用 deleteUserNode() 执行删除
+
+### Testing:
+- `npm run build`：构建成功，/writing-guide 路由已生成
+- `npm run lint`：0 errors（4个预有警告，与本次修改无关）
+- 单元测试：113/113 通过
+- E2E测试：3/3 通过（页面加载、错误处理、页面结构）
+- 测试 Agent 返回 [PASS] 结论
+
+### Notes:
+- 页面采用移动端友好的竖向布局（max-w-lg mx-auto）
+- 默认展开 Level 0 节点（作文类型）
+- 删除操作使用乐观更新，失败后显示错误提示
+- 与 Task 15 的 API 完美集成
+
+---
+
 # KP作文宝 - Progress Log
 
 ## 2026-03-25 - Task 15 完成：F4 写作导览API（获取树形数据）
@@ -1392,3 +1436,23 @@ Verified implementation of the Recommended Tab feature in the highlights page:
 
 ### Notes:
 The feature integrates collected phrases into the model essay generation flow, guiding the AI to prioritize using these user-favorited expressions when appropriate.
+
+## 2026-03-25 - Task 17: F4 - 底部导航更新（新增写作导览入口）
+
+### What was done:
+- 修改 src/components/layout/BottomNav.tsx，在"亮点库"和"易错点"之间插入新导航项"导览"
+- 添加地图图标 SVG（MapIcon）用于导览项
+- 设置路由为 /writing-guide
+- 修复测试文件 BottomNav.integration.test.tsx 中的 TypeScript 类型问题（将 any 改为 interface）
+
+### Testing:
+- 单元测试：14/14 通过
+- 集成测试：12/12 通过
+- E2E测试：浏览器截图验证底部导航显示6个项，导览项位置正确且active状态高亮正常
+- npm run lint 通过（无错误）
+- npm run build 构建成功
+
+### Notes:
+- 底部导航现在有6个项：首页、历史、亮点库、导览、易错点、我的
+- active 状态逻辑使用 pathname.startsWith，正确处理子路由
+- flex-1 布局确保6个项均匀分布
