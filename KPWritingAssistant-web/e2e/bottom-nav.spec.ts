@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:3000';
+const BASE = 'http://localhost:3001';
 
 test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
   test.beforeEach(async ({ page }) => {
@@ -219,6 +219,15 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
   });
 
   test.describe('E2E-005: 原有导航项功能正常', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.context().addCookies([{
+        name: 'x-e2e-user-id',
+        value: 'e2e-test-user-id',
+        domain: 'localhost',
+        path: '/',
+      }]);
+    });
+
     test('home navigation works correctly', async ({ page }) => {
       // Start from a different page
       await page.goto(`${BASE}/history`);
@@ -264,7 +273,7 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
       for (const { label, url } of navTests) {
         // Navigate to the page
         await page.goto(`${BASE}${url}`);
-        await page.waitForLoadState('networkidle');
+        await page.waitForLoadState('domcontentloaded');
 
         // Find the nav item
         const navItem = page.locator('a', { hasText: label }).first();

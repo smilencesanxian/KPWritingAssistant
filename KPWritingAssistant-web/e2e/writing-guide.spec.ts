@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:3000';
+const BASE = 'http://localhost:3001';
 
 test.describe('写作导览页面 /writing-guide', () => {
   test('页面正常加载，不崩溃', async ({ page }) => {

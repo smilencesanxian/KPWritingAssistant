@@ -92,13 +92,26 @@ export async function POST(request: NextRequest) {
     return Response.json({ copybook: existing });
   }
 
-  // Generate PDF buffer
-  const essayContent = (modelEssayData as { content: string }).content;
-  const pdfBuffer = await generateCopybookPDF(essayContent, templateId, copybookMode, fontStyle, tracingOpacity, fontSize);
+  let pdfBuffer: Buffer;
+  try {
+    const essayContent = (modelEssayData as { content: string }).content;
+    pdfBuffer = await generateCopybookPDF(essayContent, templateId, copybookMode, fontStyle, tracingOpacity, fontSize);
+  } catch (err) {
+    console.error('[copybook] PDF generation failed:', err);
+    return Response.json({ error: `PDF生成失败: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 });
+  }
 
-  // Upload PDF
-  const tempId = crypto.randomUUID();
-  const { path: pdfStoragePath, url: pdfUrl } = await uploadCopybookPDF(user.id, tempId, pdfBuffer);
+  let pdfStoragePath: string;
+  let pdfUrl: string;
+  try {
+    const tempId = crypto.randomUUID();
+    const result = await uploadCopybookPDF(user.id, tempId, pdfBuffer);
+    pdfStoragePath = result.path;
+    pdfUrl = result.url;
+  } catch (err) {
+    console.error('[copybook] PDF upload failed:', err);
+    return Response.json({ error: `PDF上传失败: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 });
+  }
 
   // Generate download filename based on exam_part and essay_topic
   const downloadFileName = generateCopybookFileName(
@@ -106,17 +119,22 @@ export async function POST(request: NextRequest) {
     correction.essay_submissions.essay_topic
   );
 
-  // Save copybook record with download filename
-  const copybook = await createCopybook(
-    user.id,
-    model_essay_id,
-    pdfStoragePath,
-    pdfUrl,
-    cacheKey,
-    templateId,
-    copybookMode,
-    downloadFileName
-  );
+  let copybook;
+  try {
+    copybook = await createCopybook(
+      user.id,
+      model_essay_id,
+      pdfStoragePath,
+      pdfUrl,
+      cacheKey,
+      templateId,
+      copybookMode,
+      downloadFileName
+    );
+  } catch (err) {
+    console.error('[copybook] DB insert failed:', err);
+    return Response.json({ error: `保存字帖记录失败: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 });
+  }
 
   return Response.json({ copybook });
 }

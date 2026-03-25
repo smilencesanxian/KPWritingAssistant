@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:3000';
+const BASE = 'http://localhost:3001';
 
 // ─── GET /api/recommended-phrases 测试 ────────────────────────────────────────
 

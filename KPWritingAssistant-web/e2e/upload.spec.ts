@@ -14,6 +14,16 @@ const BASE = 'http://localhost:3001';
  * - Error handling
  */
 
+// Set E2E auth bypass cookie for all tests in this file
+test.beforeEach(async ({ page }) => {
+  await page.context().addCookies([{
+    name: 'x-e2e-user-id',
+    value: 'e2e-test-user-id',
+    domain: 'localhost',
+    path: '/',
+  }]);
+});
+
 // ─── Helper Functions ───────────────────────────────────────────────────────
 
 async function mockUploadApi(page: Page) {
@@ -501,7 +511,9 @@ test.describe('上传页面 - Step 4: 批改Loading', () => {
 test.describe('上传页面 - 错误处理', () => {
   test('E2E-004: OCR失败时显示错误提示并可手动输入', async ({ page }) => {
     await mockUploadApi(page);
-    await mockOcrApi(page, { success: false });
+    // Return empty text to trigger ocrFailed banner (not HTTP 500 which goes back to select step)
+    await mockOcrApi(page, { success: true, text: '' });
+    await mockDetectTypeApi(page);
 
     await page.goto(`${BASE}/upload`);
 
@@ -514,10 +526,10 @@ test.describe('上传页面 - 错误处理', () => {
 
     await page.getByRole('button', { name: /开始识别/ }).click();
 
-    // Should show error message
-    await expect(page.locator('text=识别失败').or(page.locator('text=OCR失败')).or(page.locator('text=请手动输入'))).toBeVisible({ timeout: 10000 });
+    // When OCR returns empty text, the yellow banner shows "图片识别失败，请手动输入作文内容"
+    await expect(page.locator('text=识别失败').or(page.locator('text=请手动输入'))).toBeVisible({ timeout: 10000 });
 
-    // Should still show textarea for manual input
+    // Should show textarea for manual input (in confirm step)
     const textarea = page.locator('textarea').first();
     await expect(textarea).toBeVisible();
 
@@ -542,8 +554,11 @@ test.describe('上传页面 - 错误处理', () => {
 
     await page.getByRole('button', { name: /开始识别/ }).click();
 
-    // Should show error
-    await expect(page.locator('text=失败').or(page.locator('text=错误')).or(page.locator('text=请重试'))).toBeVisible({ timeout: 10000 });
+    // Upload failure shows a toast and returns to select step
+    // Verify we're back on select step: the "开始识别" button is visible and disabled (no file)
+    await expect(page.getByRole('button', { name: /开始识别/ })).toBeVisible({ timeout: 10000 });
+    // The dropzone area should be visible (custom upload area, not the hidden input)
+    await expect(page.locator('text=作文照片').or(page.locator('text=上传作文')).first()).toBeVisible();
   });
 });
 

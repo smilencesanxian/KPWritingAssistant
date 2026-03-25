@@ -173,8 +173,16 @@ test.describe('路由保护（未登录访问受保护页面）', () => {
 
 test.describe('注册成功流程', () => {
   test('成功注册后跳转到 /login?registered=1 并显示提示', async ({ page }) => {
-    // Mock supabase signUp 成功
-    await page.route('**/auth/v1/signup', async (route) => {
+    // Set E2E bypass cookie so middleware doesn't block post-signup navigation
+    await page.context().addCookies([{
+      name: 'x-e2e-user-id',
+      value: 'e2e-test-user-id',
+      domain: 'localhost',
+      path: '/',
+    }]);
+
+    // Mock supabase signUp 成功 (use regex to ensure HTTPS URLs are matched)
+    await page.route(/auth\/v1\/signup/, async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',

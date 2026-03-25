@@ -1,3 +1,27 @@
+## 2026-03-25 - Bug修复：字帖生成 & E2E测试修复
+
+### What was done:
+
+**Bug 1：字帖生成 500 错误**
+- 根因：`copybooks` 表缺少 `download_file_name` 列，INSERT 失败
+- 修复：新增 migration `006_add_copybook_download_filename.sql`（已在 Supabase 执行）
+- 顺带：`src/app/api/generate/copybook/route.ts` 加入 try-catch，错误信息现在会正确返回给前端
+
+**Bug 2：字帖 PDF 排版混乱（字母极度拉伸）**
+- 根因：`calculateWordSpacing` 计算出的间距通过 PDFKit 的 `characterSpacing` 属性应用，该属性作用于每个字符而非单词间距。短行（如"Best wishes, Lily"）计算出 ~175pt 间距，导致每个字母之间都有巨大间隔，还造成文字溢出容器、双行叠加视觉效果
+- 修复：删除 `calculateWordSpacing` 函数，移除 `characterSpacing` 参数，改为左对齐（临摹字帖本来就不需要两端对齐）
+
+**E2E 测试修复（100/102 通过，2 个预期 skip）**
+- 3 个测试文件硬编码 `localhost:3000` → 改为 `3001`（playwright.config.ts 的 baseURL）
+- `upload.spec.ts`：新增文件级 `test.beforeEach` 设置 `x-e2e-user-id` cookie，通过 middleware E2E bypass
+- `bottom-nav.spec.ts E2E-005`：同样加 auth cookie；`waitForLoadState('networkidle')` → `'domcontentloaded'` 避免轮询请求导致超时
+- `auth.spec.ts` 注册跳转测试：route mock 改用正则 `/auth\/v1\/signup/` 确保匹配 HTTPS 外部域名；加 `x-e2e-user-id` cookie 使 middleware bypass 加速导航
+- `upload.spec.ts` OCR 错误测试：mock 改为返回空文本（触发黄色 banner），而非 500（触发 catch 回到 select 步骤）；网络错误测试改为验证页面回到 select 步骤
+
+### Notes:
+- 每次非正常关闭 dev server 后，`.next` 缓存可能损坏导致首页 404，重启前需 `rm -rf .next`
+- E2E 测试需在 `PORT=3001 E2E_BYPASS_AUTH=true npm run dev` 下运行
+
 ## 2026-03-25 - Task 16 完成：F4 写作导览页面（树状列表展示）
 
 ### What was done:
