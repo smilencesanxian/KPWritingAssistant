@@ -82,7 +82,8 @@ export async function correctEssay(text: string): Promise<CorrectionResult> {
 export async function generateModelEssay(
   originalText: string,
   highlights: string[],
-  level: 'pass' | 'good' | 'excellent'
+  level: 'pass' | 'good' | 'excellent',
+  collectedPhrases?: string[]
 ): Promise<string> {
   const client = createLLMClient();
 
@@ -90,7 +91,7 @@ export async function generateModelEssay(
     model: LLM_MODEL,
     messages: [
       { role: 'system', content: MODEL_ESSAY_SYSTEM_PROMPT },
-      { role: 'user', content: buildModelEssayPrompt(originalText, highlights, level) },
+      { role: 'user', content: buildModelEssayPrompt(originalText, highlights, level, collectedPhrases) },
     ],
     max_tokens: 1024,
     temperature: 0.7,

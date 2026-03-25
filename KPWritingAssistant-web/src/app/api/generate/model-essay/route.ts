@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { getModelEssayByLevel, createModelEssay } from '@/lib/db/corrections';
-import { getHighlights } from '@/lib/db/highlights';
+import { getHighlights, getCollectedSystemPhrases } from '@/lib/db/highlights';
 import { generateModelEssay } from '@/lib/ai/llm';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { NextRequest } from 'next/server';
@@ -71,8 +71,11 @@ export async function POST(request: NextRequest) {
   const { highlights } = await getHighlights(user.id, { limit: 50 });
   const highlightTexts = highlights.map((h) => h.text);
 
+  // Get user's collected system phrases to guide the model essay generation
+  const collectedPhrases = await getCollectedSystemPhrases(user.id);
+
   // Generate model essay
-  const content = await generateModelEssay(submissionData.ocr_text, highlightTexts, level);
+  const content = await generateModelEssay(submissionData.ocr_text, highlightTexts, level, collectedPhrases);
 
   // Save model essay
   const model_essay = await createModelEssay(correction_id, level, content);

@@ -352,7 +352,7 @@
       "feature_ids": ["F3"],
       "priority": "P1",
       "phase": 5,
-      "passes": false,
+      "passes": true,
       "description": "在生成范文时，将用户收藏的推荐句式加入prompt，引导AI优先使用这些表达",
       "steps": [
         "打开 src/app/api/generate/model-essay/route.ts（或相关的范文生成路由）",

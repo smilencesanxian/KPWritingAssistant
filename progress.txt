@@ -1301,3 +1301,47 @@ Verified implementation of the Recommended Tab feature in the highlights page:
 - Recommended phrases are grouped by essay_type (email/article/general)
 - Collected phrases appear in user's highlights with '推荐' badge
 - Toast notification shown on successful collection
+
+---
+
+## 2026-03-25 - Task 14: F3 - 范文生成集成推荐句式 - completed
+
+### What was done:
+1. Added `getCollectedSystemPhrases()` function to `src/lib/db/highlights.ts`
+   - Queries user's highlights with source='system' (collected recommended phrases)
+   - Returns array of phrase texts
+
+2. Updated `buildModelEssayPrompt()` in `src/lib/ai/prompts.ts`
+   - Added optional `collectedPhrases?: string[]` parameter
+   - When phrases exist, adds section: "用户收藏的写作表达（优先在合适场景下使用）："
+   - Backward compatible (undefined/empty array = no section added)
+
+3. Updated `generateModelEssay()` in `src/lib/ai/llm.ts`
+   - Added optional `collectedPhrases?: string[]` parameter
+   - Passes phrases to `buildModelEssayPrompt()`
+
+4. Updated API route `src/app/api/generate/model-essay/route.ts`
+   - Imported `getCollectedSystemPhrases` from highlights DB module
+   - Queries user's collected phrases before generating essay
+   - Passes collected phrases to `generateModelEssay()`
+
+5. Updated `src/config/prompts.json`
+   - Added `collectedPhrasesSectionTemplate` to modelEssay config
+   - Updated `userPromptTemplate` to include `{{collectedPhrasesSection}}` placeholder
+
+6. Fixed `buildRegenerateModelEssayPrompt()` to handle new placeholder
+   - Added `.replace('{{collectedPhrasesSection}}', '')` to avoid template leakage
+
+### Testing:
+- `npm run build` - TypeScript compilation successful
+- `npm run lint` - No errors (3 pre-existing warnings unrelated to this task)
+- `npm test` - All 102 tests passed
+
+### Acceptance Criteria Met:
+- ✅ 范文生成时查询用户收藏的推荐句式
+- ✅ 收藏的句式被正确注入到生成prompt中
+- ✅ 收藏句式为空时正常生成（不报错）
+- ✅ npm run build 和 npm run lint 无错误
+
+### Notes:
+The feature integrates collected phrases into the model essay generation flow, guiding the AI to prioritize using these user-favorited expressions when appropriate.

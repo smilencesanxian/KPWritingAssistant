@@ -15,6 +15,7 @@ interface PromptsConfig {
     };
     userPromptTemplate: string;
     highlightsSectionTemplate: string;
+    collectedPhrasesSectionTemplate: string;
   };
   ocr: {
     userPrompt: string;
@@ -49,7 +50,8 @@ export function buildCorrectionUserPrompt(text: string): string {
 export function buildModelEssayPrompt(
   originalText: string,
   highlights: string[],
-  level: 'pass' | 'good' | 'excellent'
+  level: 'pass' | 'good' | 'excellent',
+  collectedPhrases?: string[]
 ): string {
   const levelDescription = config.modelEssay.levelDescriptions[level];
 
@@ -61,9 +63,18 @@ export function buildModelEssayPrompt(
         )
       : '';
 
+  const collectedPhrasesSection =
+    collectedPhrases && collectedPhrases.length > 0
+      ? config.modelEssay.collectedPhrasesSectionTemplate.replace(
+          '{{collectedPhrases}}',
+          collectedPhrases.map((p) => `- ${p}`).join('\n')
+        )
+      : '';
+
   return config.modelEssay.userPromptTemplate
     .replace('{{originalText}}', originalText)
     .replace('{{highlightsSection}}', highlightsSection)
+    .replace('{{collectedPhrasesSection}}', collectedPhrasesSection)
     .replace('{{levelDescription}}', levelDescription);
 }
 
@@ -114,5 +125,6 @@ export function buildRegenerateModelEssayPrompt(
   return config.modelEssay.userPromptTemplate
     .replace('{{originalText}}', originalText)
     .replace('{{highlightsSection}}', highlightsSection + preferenceSection + historySection)
+    .replace('{{collectedPhrasesSection}}', '')
     .replace('{{levelDescription}}', levelDescription);
 }

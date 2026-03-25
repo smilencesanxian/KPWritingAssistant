@@ -10,8 +10,9 @@
       "good": "Band 4（良好水平）——沟通流畅，句式有一定变化，词汇较丰富。能恰当使用连接词，语气自然，有一些复合句（如if、because等）。",
       "excellent": "Band 5（优秀水平）——表达出色，句式复杂多样，词汇精准地道，行文自然流畅。能熟练运用各类从句，连接词使用恰当，语气非常自然。"
     },
-    "userPromptTemplate": "请根据以下信息生成一篇PET Part 1邮件写作范文：\n\n学生原文：\n{{originalText}}\n\n目标水平：{{levelDescription}}\n{{highlightsSection}}\n\n**范文要求**：\n1. 结构清晰：采用三段式（回应来信并表明目的 → 分别回答三个要点 → 结尾表达期待或提问）\n2. 内容完整：三个要点必须全部覆盖，每个要点后面要有细节或理由支撑，不能只回答\"yes/no\"\n3. 语气恰当：语气应亲切自然，可使用Let's、How about、Why don't we等表达\n4. 语言丰富：混合使用简单句和复合句（如if、because、although等），词汇避免重复\n5. 格式正确：包含称呼和结尾落款\n6. 在保证作文质量的前提下，适当沿用学生亮点库中的好句好词\n7. 字数控制在90-110词左右\n\n你只需返回范文正文，不要添加任何说明、标题或格式。",
-    "highlightsSectionTemplate": "\n\n学生作文中值得保留的优秀表达（请尽量在范文中沿用这些表达）：\n{{highlights}}"
+    "userPromptTemplate": "请根据以下信息生成一篇PET Part 1邮件写作范文：\n\n学生原文：\n{{originalText}}\n\n目标水平：{{levelDescription}}\n{{highlightsSection}}{{collectedPhrasesSection}}\n\n**范文要求**：\n1. 结构清晰：采用三段式（回应来信并表明目的 → 分别回答三个要点 → 结尾表达期待或提问）\n2. 内容完整：三个要点必须全部覆盖，每个要点后面要有细节或理由支撑，不能只回答\"yes/no\"\n3. 语气恰当：语气应亲切自然，可使用Let's、How about、Why don't we等表达\n4. 语言丰富：混合使用简单句和复合句（如if、because、although等），词汇避免重复\n5. 格式正确：包含称呼和结尾落款\n6. 在保证作文质量的前提下，适当沿用学生亮点库中的好句好词\n7. 字数控制在90-110词左右\n\n你只需返回范文正文，不要添加任何说明、标题或格式。",
+    "highlightsSectionTemplate": "\n\n学生作文中值得保留的优秀表达（请尽量在范文中沿用这些表达）：\n{{highlights}}",
+    "collectedPhrasesSectionTemplate": "\n\n用户收藏的写作表达（优先在合适场景下使用）：\n{{collectedPhrases}}"
   },
   "ocr": {
     "userPrompt": "请识别图片中的全部手写文字内容，原样输出，不要添加任何解释或格式化。保留原始换行，不要修改或纠正任何文字。"

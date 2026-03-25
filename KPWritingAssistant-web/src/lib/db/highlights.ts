@@ -177,3 +177,20 @@ export async function addHighlightManually(
 
   return data as Highlight;
 }
+
+export async function getCollectedSystemPhrases(userId: string): Promise<string[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('highlights_library')
+    .select('text')
+    .eq('user_id', userId)
+    .eq('source', 'system')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to get collected system phrases: ${error.message}`);
+  }
+
+  return (data ?? []).map((h) => h.text);
+}
