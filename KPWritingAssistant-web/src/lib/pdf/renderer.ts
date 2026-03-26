@@ -90,19 +90,79 @@ function drawTopInstructions(
   doc: PDFKit.PDFDocument,
   instructions: string[],
   startY: number,
-  pageWidth: number
+  pageWidth: number,
+  firstLineRightAlign?: boolean
 ): number {
   const leftPad = mmToPt(20);
   const fontSize = 10;
   doc.fontSize(fontSize).font('Helvetica').fillColor('#000000');
   let y = startY;
-  for (const line of instructions) {
-    doc.text(line, leftPad, y, { width: pageWidth - leftPad * 2, lineBreak: false });
+  for (let i = 0; i < instructions.length; i++) {
+    const align = firstLineRightAlign && i === 0 ? 'right' : 'left';
+    doc.text(instructions[i], leftPad, y, { width: pageWidth - leftPad * 2, lineBreak: false, align });
     y += fontSize + 8;
   }
   return y;
 }
 
+
+function drawPart2SelectorHeader(
+  doc: PDFKit.PDFDocument,
+  startY: number,
+  answerAreaX: number,
+  answerAreaWidth: number,
+  headerHeight: number,
+  headerBgColor: string,
+  headerFontSize: number,
+  borderColor: string
+): void {
+  // Light header background
+  doc.fillColor(headerBgColor).rect(answerAreaX, startY, answerAreaWidth, headerHeight).fill();
+
+  // Header bottom border
+  doc
+    .lineWidth(1)
+    .strokeColor(borderColor)
+    .moveTo(answerAreaX, startY + headerHeight)
+    .lineTo(answerAreaX + answerAreaWidth, startY + headerHeight)
+    .stroke();
+
+  // "Part 2" label
+  const textY = startY + (headerHeight - headerFontSize) / 2;
+  doc
+    .fontSize(headerFontSize)
+    .font('Helvetica-Bold')
+    .fillColor('#000000')
+    .text('Part 2', answerAreaX + 10, textY, { lineBreak: false });
+
+  // "Question 2 □" and "Question 3 □" checkboxes
+  const checkboxSize = 14;
+  const q2X = answerAreaX + 80;
+  const q3X = answerAreaX + 190;
+  const cbY = startY + (headerHeight - checkboxSize) / 2;
+
+  doc
+    .fontSize(headerFontSize)
+    .font('Helvetica')
+    .fillColor('#000000')
+    .text('Question 2', q2X, textY, { lineBreak: false });
+  doc
+    .lineWidth(1)
+    .strokeColor('#000000')
+    .rect(q2X + 72, cbY, checkboxSize, checkboxSize)
+    .stroke();
+
+  doc
+    .fontSize(headerFontSize)
+    .font('Helvetica')
+    .fillColor('#000000')
+    .text('Question 3', q3X, textY, { lineBreak: false });
+  doc
+    .lineWidth(1)
+    .strokeColor('#000000')
+    .rect(q3X + 72, cbY, checkboxSize, checkboxSize)
+    .stroke();
+}
 
 function drawAnswerContainer(
   doc: PDFKit.PDFDocument,
@@ -116,8 +176,12 @@ function drawAnswerContainer(
   answerAreaWidth: number,
   customFontSize?: number
 ): number {
-  const { linesPerPage, lineHeight, headerText, headerBgColor, headerFontSize, defaultFontSize } =
-    template;
+  const {
+    linesPerPage, lineHeight, headerText, headerBgColor, headerFontSize, defaultFontSize,
+    headerType, borderColor: templateBorderColor,
+  } = template;
+
+  const borderColor = templateBorderColor ?? '#000000';
 
   // Use custom font size if provided, otherwise use template default
   const contentFontSize = customFontSize ?? defaultFontSize;
@@ -126,29 +190,34 @@ function drawAnswerContainer(
   const containerHeight = headerHeight + linesPerPage * lineHeight;
 
   // Outer container border
-  doc.lineWidth(1).strokeColor('#000000').rect(answerAreaX, startY, answerAreaWidth, containerHeight).stroke();
+  doc.lineWidth(1).strokeColor(borderColor).rect(answerAreaX, startY, answerAreaWidth, containerHeight).stroke();
 
-  // Grey header background
-  doc.fillColor(headerBgColor).rect(answerAreaX, startY, answerAreaWidth, headerHeight).fill();
+  if (headerType === 'part2-selector') {
+    drawPart2SelectorHeader(
+      doc, startY, answerAreaX, answerAreaWidth, headerHeight,
+      headerBgColor, headerFontSize, borderColor
+    );
+  } else {
+    // Default: "Question 1" style grey header
+    doc.fillColor(headerBgColor).rect(answerAreaX, startY, answerAreaWidth, headerHeight).fill();
 
-  // Header bottom border
-  doc
-    .lineWidth(1)
-    .strokeColor('#000000')
-    .moveTo(answerAreaX, startY + headerHeight)
-    .lineTo(answerAreaX + answerAreaWidth, startY + headerHeight)
-    .stroke();
+    doc
+      .lineWidth(1)
+      .strokeColor('#000000')
+      .moveTo(answerAreaX, startY + headerHeight)
+      .lineTo(answerAreaX + answerAreaWidth, startY + headerHeight)
+      .stroke();
 
-  // Header text
-  doc
-    .fontSize(headerFontSize)
-    .font('Helvetica-Bold')
-    .fillColor('#000000')
-    .text(headerText, answerAreaX, startY + (headerHeight - headerFontSize) / 2, {
-      width: answerAreaWidth,
-      align: 'center',
-      lineBreak: false,
-    });
+    doc
+      .fontSize(headerFontSize)
+      .font('Helvetica-Bold')
+      .fillColor('#000000')
+      .text(headerText, answerAreaX, startY + (headerHeight - headerFontSize) / 2, {
+        width: answerAreaWidth,
+        align: 'center',
+        lineBreak: false,
+      });
+  }
 
   // Answer lines
   const linesStartY = startY + headerHeight;
@@ -159,7 +228,7 @@ function drawAnswerContainer(
     if (i < linesPerPage - 1) {
       doc
         .lineWidth(0.5)
-        .strokeColor('#000000')
+        .strokeColor(borderColor)
         .moveTo(answerAreaX, lineY + lineHeight)
         .lineTo(answerAreaX + answerAreaWidth, lineY + lineHeight)
         .stroke();
@@ -385,7 +454,8 @@ export async function renderCopybookPDF(
         doc,
         template.topInstructions,
         50,
-        pageWidth
+        pageWidth,
+        template.headerType === 'part2-selector'
       );
 
       const containerStartY = instructionsEndY + 14;

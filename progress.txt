@@ -1480,3 +1480,56 @@ The feature integrates collected phrases into the model essay generation flow, g
 - 底部导航现在有6个项：首页、历史、亮点库、导览、易错点、我的
 - active 状态逻辑使用 pathname.startsWith，正确处理子路由
 - flex-1 布局确保6个项均匀分布
+
+## 2026-03-26 - Feature: PET Part1/Part2 分题型提示词与答题纸模板
+
+### What was done:
+1. **提示词更新** (`src/config/prompts.json`):
+   - 新增 `correction.part1ExtraGuidance`：详细的Part 1批改标准（4维度详细评分规则、5步批改流程、常见失分点）
+   - 新增 `correction.part2ExtraGuidance`：Part 2批改标准（文章/故事双题型，各维度考查重点）
+   - 新增 `modelEssay.part1SystemPrompt`：Part 1邮件范文生成要求（三段式结构、格式规范、语气要求）
+   - 新增 `modelEssay.part2SystemPrompt`：Part 2范文生成要求（文章类/故事类分别定义）
+   - 新增 `modelEssay.part2UserPromptTemplate`：Part 2用户提示词模板（含questionTypeDescription占位符）
+   - 新增 `correction.part2UserPromptTemplate`：Part 2批改用户提示词
+
+2. **答题纸模板** (`src/lib/pdf/templates/pet.ts`):
+   - Part 1模板 (`petTemplate`)：18行，11.2mm行高，"Question 1"灰色标题，含条形码
+   - Part 2模板 (`petPart2Template`)：17行，10.5mm行高，Part 2选题栏（Question 2/3复选框），无条形码，浅色边框(#dddddd)
+   - 注释指向HTML参考文件 `src/assets/PET作文part1答题纸.html` 和 `PET作文part2答题纸.html`
+
+3. **模板注册** (`src/lib/pdf/templates/index.ts`):
+   - 注册 `pet-part2` 模板
+   - 新增 `getTemplateByExamPart()` 函数：根据 exam_part 自动返回对应模板ID
+
+4. **PDF渲染器** (`src/lib/pdf/renderer.ts`):
+   - 新增 `drawPart2SelectorHeader()`：渲染Part 2的"Part 2 | Question 2 □ | Question 3 □"选题栏
+   - `drawAnswerContainer()` 支持 `headerType: 'part2-selector'`
+   - 支持 `borderColor` 可配置（Part 2使用#dddddd浅色边框）
+   - `drawTopInstructions()` 支持首行右对齐（Part 2样式）
+
+5. **提示词函数** (`src/lib/ai/prompts.ts`):
+   - 新增 `getCorrectionSystemPrompt(examPart)`：Part1/Part2分别返回对应批改提示词
+   - 新增 `getModelEssaySystemPrompt(examPart)`：返回对应范文生成提示词
+   - `buildCorrectionUserPrompt(text, examPart)` 支持按Part选择模板
+   - `buildModelEssayPrompt()` 新增 examPart 和 questionType 参数
+   - `buildRegenerateModelEssayPrompt()` 同上
+
+6. **LLM调用** (`src/lib/ai/llm.ts`):
+   - `correctEssay(text, examPart)` - 传递exam_part使用对应提示词
+   - `generateModelEssay(text, highlights, level, phrases, examPart, questionType)` - 同上
+   - `regenerateModelEssay()` - 同上
+
+7. **API路由更新**:
+   - `correct/route.ts`：从submission获取exam_part传递给correctEssay
+   - `generate/model-essay/route.ts`：查询exam_part/question_type并传递
+   - `model-essays/[id]/regenerate/route.ts`：同上
+   - `generate/copybook/route.ts`：移除固定默认模板，基于exam_part自动选择模板（part1→pet, part2→pet-part2），cache key升级为v3
+
+### Testing:
+- `npm run build` 通过，无TypeScript错误
+- `npm run lint` 通过，无新增错误
+
+### Notes:
+- HTML参考文件已复制到 `src/assets/` 目录，便于后续修改对照
+- 如果HTML模板参数有变动（行数、行高、颜色等），需同步更新 `src/lib/pdf/templates/pet.ts`
+- Cache key从v2升级为v3，旧字帖缓存会自动失效并重新生成

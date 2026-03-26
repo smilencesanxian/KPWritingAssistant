@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
 import type { CorrectionResult, DetectTypeResult } from '@/types/ai';
 import {
-  PET_CORRECTION_SYSTEM_PROMPT,
-  MODEL_ESSAY_SYSTEM_PROMPT,
+  getCorrectionSystemPrompt,
+  getModelEssaySystemPrompt,
   buildCorrectionUserPrompt,
   buildModelEssayPrompt,
   buildDetectTypePrompt,
@@ -25,7 +25,10 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function correctEssay(text: string): Promise<CorrectionResult> {
+export async function correctEssay(
+  text: string,
+  examPart?: string | null
+): Promise<CorrectionResult> {
   const client = createLLMClient();
   let lastError: Error | null = null;
 
@@ -38,10 +41,10 @@ export async function correctEssay(text: string): Promise<CorrectionResult> {
       const response = await client.chat.completions.create({
         model: LLM_MODEL,
         messages: [
-          { role: 'system', content: PET_CORRECTION_SYSTEM_PROMPT },
+          { role: 'system', content: getCorrectionSystemPrompt(examPart) },
           {
             role: 'user',
-            content: buildCorrectionUserPrompt(text),
+            content: buildCorrectionUserPrompt(text, examPart),
           },
         ],
         max_tokens: 4096,
@@ -83,15 +86,20 @@ export async function generateModelEssay(
   originalText: string,
   highlights: string[],
   level: 'pass' | 'good' | 'excellent',
-  collectedPhrases?: string[]
+  collectedPhrases?: string[],
+  examPart?: string | null,
+  questionType?: string | null
 ): Promise<string> {
   const client = createLLMClient();
 
   const response = await client.chat.completions.create({
     model: LLM_MODEL,
     messages: [
-      { role: 'system', content: MODEL_ESSAY_SYSTEM_PROMPT },
-      { role: 'user', content: buildModelEssayPrompt(originalText, highlights, level, collectedPhrases) },
+      { role: 'system', content: getModelEssaySystemPrompt(examPart) },
+      {
+        role: 'user',
+        content: buildModelEssayPrompt(originalText, highlights, level, collectedPhrases, examPart, questionType),
+      },
     ],
     max_tokens: 1024,
     temperature: 0.7,
@@ -169,21 +177,25 @@ export async function regenerateModelEssay(
   originalText: string,
   highlights: string[],
   preferenceNotes: string,
-  historyNotes: string[]
+  historyNotes: string[],
+  examPart?: string | null,
+  questionType?: string | null
 ): Promise<string> {
   const client = createLLMClient();
 
   const response = await client.chat.completions.create({
     model: LLM_MODEL,
     messages: [
-      { role: 'system', content: MODEL_ESSAY_SYSTEM_PROMPT },
+      { role: 'system', content: getModelEssaySystemPrompt(examPart) },
       {
         role: 'user',
         content: buildRegenerateModelEssayPrompt(
           originalText,
           highlights,
           preferenceNotes,
-          historyNotes
+          historyNotes,
+          examPart,
+          questionType
         ),
       },
     ],

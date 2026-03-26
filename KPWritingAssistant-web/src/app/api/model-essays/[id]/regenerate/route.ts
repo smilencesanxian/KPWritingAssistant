@@ -40,7 +40,7 @@ export async function POST(
       *,
       corrections!inner(
         submission_id,
-        essay_submissions!inner(user_id, ocr_text)
+        essay_submissions!inner(user_id, ocr_text, exam_part, question_type)
       )
     `)
     .eq('id', id)
@@ -53,7 +53,12 @@ export async function POST(
   // Verify ownership
   const correctionData = modelEssayData.corrections as {
     submission_id: string;
-    essay_submissions: { user_id: string; ocr_text: string };
+    essay_submissions: {
+      user_id: string;
+      ocr_text: string;
+      exam_part: string | null;
+      question_type: string | null;
+    };
   };
   if (correctionData.essay_submissions.user_id !== user.id) {
     return Response.json({ error: '无权访问此范文' }, { status: 403 });
@@ -75,12 +80,14 @@ export async function POST(
     // Get original text
     const originalText = correctionData.essay_submissions.ocr_text ?? '';
 
-    // Regenerate model essay
+    // Regenerate model essay (pass exam_part and question_type for part-specific prompts)
     const newContent = await regenerateModelEssay(
       originalText,
       highlightTexts,
       preference_notes ?? '',
-      historyNotes
+      historyNotes,
+      correctionData.essay_submissions.exam_part,
+      correctionData.essay_submissions.question_type
     );
 
     // Update the model essay with new content

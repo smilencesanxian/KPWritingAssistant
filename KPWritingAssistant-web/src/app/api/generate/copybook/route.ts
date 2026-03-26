@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 import { getCopybookByModelEssayId, createCopybook } from '@/lib/db/copybooks';
 import { generateCopybookPDF } from '@/lib/pdf/copybook';
 import { uploadCopybookPDF } from '@/lib/storage/upload';
-import { getAllTemplates } from '@/lib/pdf/templates';
+import { getAllTemplates, getTemplateByExamPart } from '@/lib/pdf/templates';
 import { DEFAULT_TEMPLATE_ID } from '@/lib/pdf/templates';
 import { NextRequest } from 'next/server';
 import type { CopybookMode } from '@/types/pdf';
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
   const {
     model_essay_id,
-    template_id = DEFAULT_TEMPLATE_ID,
+    template_id,
     mode = 'tracing',
     font_style = 'gochi-hand',
     tracing_opacity = 30,
@@ -40,7 +40,8 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'model_essay_id is required' }, { status: 400 });
   }
 
-  const templateId = typeof template_id === 'string' ? template_id : DEFAULT_TEMPLATE_ID;
+  // template_id from request is optional; auto-selection based on exam_part happens after DB query
+  const requestedTemplateId = typeof template_id === 'string' ? template_id : null;
   const copybookMode: CopybookMode = VALID_MODES.includes(mode as CopybookMode)
     ? (mode as CopybookMode)
     : 'tracing';
@@ -53,14 +54,14 @@ export async function POST(request: NextRequest) {
     ? Math.max(10, Math.min(30, Math.round(font_size)))
     : undefined;
 
-  // Validate template_id against registered templates
+  // Validate requestedTemplateId early if explicitly provided
   const validTemplateIds = getAllTemplates().map((t) => t.id);
-  if (!validTemplateIds.includes(templateId)) {
-    return Response.json({ error: `未知模板: ${templateId}` }, { status: 400 });
+  if (requestedTemplateId && !validTemplateIds.includes(requestedTemplateId)) {
+    return Response.json({ error: `未知模板: ${requestedTemplateId}` }, { status: 400 });
   }
 
   // Verify ownership chain: model_essay → correction → submission → user_id
-  // Also get exam_part and essay_topic for filename generation
+  // Also get exam_part and essay_topic for template auto-selection and filename generation
   const { data: modelEssayData, error: modelEssayError } = await supabase
     .from('model_essays')
     .select('*, corrections!inner(id, essay_submissions!inner(user_id, exam_part, essay_topic))')
@@ -83,9 +84,12 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: '无权访问此范文记录' }, { status: 403 });
   }
 
+  // Auto-select template based on exam_part if not explicitly requested
+  const templateId = requestedTemplateId ?? getTemplateByExamPart(correction.essay_submissions.exam_part);
+
   // Encode opacity into cache key (appended to fontStyle) so different opacities don't share cache
-  // v2: bumped to invalidate old PDFs that had incorrect flat (non-email) formatting
-  const cacheKey = copybookMode === 'tracing' ? `v2_${fontStyle}@${tracingOpacity}` : `v2_${fontStyle}`;
+  // v3: bumped to invalidate old PDFs when template auto-selection was introduced
+  const cacheKey = copybookMode === 'tracing' ? `v3_${fontStyle}@${tracingOpacity}` : `v3_${fontStyle}`;
 
   // Cache check: (model_essay_id, template_id, mode, cacheKey)
   const existing = await getCopybookByModelEssayId(model_essay_id, user.id, templateId, copybookMode, cacheKey);

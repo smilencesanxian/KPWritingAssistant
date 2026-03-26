@@ -19,6 +19,10 @@ export interface CopybookTemplate {
   headerText: string;
   headerBgColor: string;
   headerFontSize: number;
+  // Header type: 'question1' = simple "Question 1" header; 'part2-selector' = Part 2 with Q2/Q3 checkboxes
+  headerType?: 'question1' | 'part2-selector';
+  // Border colors (defaults to '#000000' if unset)
+  borderColor?: string;
   // Content font
   contentFontSize: number;
   // Font size options (min, max, default in points)

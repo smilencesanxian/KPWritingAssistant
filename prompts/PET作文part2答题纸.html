@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PET Writing Part 2 Official Answer Sheet (Final Definitive Version)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', 'Helvetica', sans-serif;
+        }
+
+        /* 强制A4尺寸+无边距打印，1:1匹配原版答题纸物理尺寸 */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        body {
+            width: 210mm;
+            height: 297mm;
+            position: relative;
+            background: #ffffff; /* 纯白背景，无任何着色 */
+            overflow: hidden;
+            padding: 15px;
+        }
+
+        /* 四角L型定位标（原版尺寸/位置：20px×20px，2px粗黑色边框） */
+        .corner-mark {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #000000;
+            z-index: 10;
+        }
+        .corner-tl { top: 15px; left: 15px; border-right: none; border-bottom: none; }
+        .corner-tr { top: 15px; right: 15px; border-left: none; border-bottom: none; }
+        .corner-bl { bottom: 15px; left: 15px; border-right: none; border-top: none; }
+        .corner-br { bottom: 15px; right: 15px; border-left: none; border-top: none; }
+
+        /* 右侧竖排重复文字（原版样式：9px，浅灰色，字间距1px） */
+        .vertical-text {
+            position: absolute;
+            right: 8px;
+            top: 15px;
+            bottom: 15px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            font-size: 9px;
+            color: #999999;
+            letter-spacing: 1px;
+            line-height: 1.6;
+        }
+
+        /* 顶部核心提示语（原版排版/文字/字号/位置） */
+        .top-prompts {
+            width: 100%;
+            padding: 0 18mm;
+            margin-top: 22px; /* 精准匹配实拍版垂直间距 */
+            font-size: 10.5px; /* 原版实际字号 */
+            color: #000000;
+            line-height: 1.35;
+        }
+        .top-prompts .main-tip {
+            text-align: right;
+            margin-bottom: 6px;
+            font-weight: normal;
+        }
+        .top-prompts .sub-tips {
+            line-height: 1.25;
+        }
+
+        /* Part2 答题框主体（原版尺寸：170mm宽，纯白背景+浅灰边框） */
+        .answer-container {
+            width: 170mm;
+            margin: 10px auto 0; /* 精准匹配原版间距 */
+            border: 1px solid #dddddd; /* 极浅灰边框，不影响书写 */
+            background-color: #ffffff; /* 纯白背景，无着色 */
+        }
+
+        /* Question2/3 选择栏（原版样式：浅灰表头+浅灰分隔线） */
+        .question-select {
+            display: flex;
+            align-items: center;
+            padding: 5px 10px; /* 原版内边距 */
+            background-color: #f9f9f9; /* 极浅灰表头，仅区分区域 */
+            border-bottom: 1px solid #dddddd; /* 极浅灰分隔线 */
+        }
+        .part-label {
+            font-size: 11px; /* 原版字号 */
+            font-weight: 600;
+            margin-right: 35px; /* 原版间距 */
+            color: #000000; /* 黑色文字 */
+        }
+        .question-option {
+            display: flex;
+            align-items: center;
+            margin-right: 55px; /* 原版选项间距 */
+            font-size: 11px;
+            color: #000000; /* 黑色文字 */
+        }
+        .checkbox {
+            width: 16px; /* 原版勾选框尺寸 */
+            height: 16px;
+            border: 1px solid #000000; /* 黑色边框 */
+            margin-left: 12px;
+            background: #ffffff; /* 纯白勾选框背景 */
+        }
+
+        /* 答题横线区（16行+浅灰横线，行高精准匹配，纯白背景） */
+        .answer-lines {
+            padding: 0 6px; /* 原版左右内边距 */
+            background-color: #ffffff; /* 纯白背景，无任何着色 */
+        }
+        .line {
+            width: 100%;
+            height: 10.5mm; /* 原版实际行高 */
+            border-bottom: 1px solid #dddddd; /* 极浅灰横线，清晰不刺眼 */
+        }
+        .line:last-child {
+            border-bottom: none;
+        }
+
+        /* 考官打分区域（原版排版/尺寸/黑白灰配色） */
+        .examiner-section {
+            margin: 13px 0 0 18mm; /* 原版间距 */
+            font-size: 10.5px; /* 原版字号 */
+        }
+        .examiner-title {
+            margin-bottom: 5px;
+            color: #000000; /* 黑色文字 */
+        }
+        .mark-table {
+            border-collapse: collapse;
+        }
+        .mark-table th {
+            background-color: #f9f9f9; /* 极浅灰表头 */
+            border: 1px solid #000000; /* 黑色边框 */
+            padding: 3px 18px; /* 原版内边距 */
+            font-size: 10.5px;
+            font-weight: normal;
+            color: #000000;
+        }
+        .mark-table td {
+            border: 1px solid #000000; /* 黑色边框 */
+            height: 22px; /* 原版单元格高度 */
+            width: 42px; /* 原版单元格宽度 */
+            text-align: center;
+            background-color: #ffffff; /* 纯白背景 */
+        }
+    </style>
+</head>
+<body>
+    <!-- 四角定位标 -->
+    <div class="corner-mark corner-tl"></div>
+    <div class="corner-mark corner-tr"></div>
+    <div class="corner-mark corner-bl"></div>
+    <div class="corner-mark corner-br"></div>
+
+    <!-- 右侧竖排文字（原版重复内容） -->
+    <div class="vertical-text">
+        CAMBRIDGE ENGLISH CAMBRIDGE ENGLISH CAMBRIDGE ENGLISH CAMBRIDGE ENGLISH CAMBRIDGE ENGLISH
+    </div>
+
+    <!-- 顶部提示语（完全匹配实拍版文字/排版） -->
+    <div class="top-prompts">
+        <div class="main-tip">You must write within the grey lines.</div>
+        <div class="sub-tips">
+            Answer only one of the two questions for Part 2.<br>
+            Tick (✓) the box to show which question you have answered.<br>
+            Write your answer below. Do not write on the barcodes.
+        </div>
+    </div>
+
+    <!-- 答题主容器 -->
+    <div class="answer-container">
+        <!-- Question2/3 选择框（原版样式） -->
+        <div class="question-select">
+            <div class="part-label">Part 2</div>
+            <div class="question-option">
+                Question 2 <div class="checkbox"></div>
+            </div>
+            <div class="question-option">
+                Question 3 <div class="checkbox"></div>
+            </div>
+        </div>
+
+        <!-- 16行答题横线（精准匹配附件行数） -->
+        <div class="answer-lines">
+            <div class="line"></div><div class="line"></div><div class="line"></div>
+            <div class="line"></div><div class="line"></div><div class="line"></div>
+            <div class="line"></div><div class="line"></div><div class="line"></div>
+            <div class="line"></div><div class="line"></div><div class="line"></div>
+            <div class="line"></div><div class="line"></div><div class="line"></div>
+            <div class="line"></div><div class="line"></div>
+        </div>
+    </div>
+
+    <!-- 考官打分区（原版样式） -->
+    <div class="examiner-section">
+        <div class="examiner-title">This section for use by Examiner only:</div>
+        <table class="mark-table">
+            <thead>
+                <tr>
+                    <th>C</th>
+                    <th>CA</th>
+                    <th>O</th>
+                    <th>L</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

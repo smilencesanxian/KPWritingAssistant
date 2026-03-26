@@ -57,8 +57,8 @@ export async function POST(request: NextRequest) {
   await updateSubmissionStatus(submission_id, 'processing');
 
   try {
-    // Call LLM to correct the essay
-    const correctionResult = await correctEssay(submission.ocr_text);
+    // Call LLM to correct the essay (pass exam_part for part-specific prompts)
+    const correctionResult = await correctEssay(submission.ocr_text, submission.exam_part);
 
     // Save correction record
     const correction = await createCorrection(submission_id, {

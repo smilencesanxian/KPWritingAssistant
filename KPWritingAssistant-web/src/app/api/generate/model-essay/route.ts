@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   // Query correction and verify ownership chain via submission
   const { data: correctionData, error: correctionError } = await supabase
     .from('corrections')
-    .select('*, essay_submissions!inner(user_id, ocr_text)')
+    .select('*, essay_submissions!inner(user_id, ocr_text, exam_part, question_type)')
     .eq('id', correction_id)
     .single();
 
@@ -56,7 +56,12 @@ export async function POST(request: NextRequest) {
   }
 
   // Verify ownership via submission
-  const submissionData = correctionData.essay_submissions as { user_id: string; ocr_text: string };
+  const submissionData = correctionData.essay_submissions as {
+    user_id: string;
+    ocr_text: string;
+    exam_part: string | null;
+    question_type: string | null;
+  };
   if (submissionData.user_id !== user.id) {
     return Response.json({ error: '无权访问此批改记录' }, { status: 403 });
   }
@@ -74,8 +79,15 @@ export async function POST(request: NextRequest) {
   // Get user's collected system phrases to guide the model essay generation
   const collectedPhrases = await getCollectedSystemPhrases(user.id);
 
-  // Generate model essay
-  const content = await generateModelEssay(submissionData.ocr_text, highlightTexts, level, collectedPhrases);
+  // Generate model essay (pass exam_part and question_type for part-specific prompts)
+  const content = await generateModelEssay(
+    submissionData.ocr_text,
+    highlightTexts,
+    level,
+    collectedPhrases,
+    submissionData.exam_part,
+    submissionData.question_type
+  );
 
   // Save model essay
   const model_essay = await createModelEssay(correction_id, level, content);
