@@ -1,3 +1,26 @@
+## 2026-03-26 - Task 20: B3 - 亮点库'推荐'Tab页面反复闪烁Bug修复
+
+### What was done:
+- 找到 `src/app/highlights/page.tsx` 中推荐Tab的 useEffect 依赖问题
+- 根本原因：useEffect 依赖数组包含 `recommendedPhrases` state，fetchRecommendedPhrases() 更新该 state 后 effect 重新触发，造成 loading 反复出现
+- 修复：添加 `hasFetchedRecommendedRef = useRef(false)`，用 ref 跟踪是否已发起请求
+- 修改 useEffect：移除 `recommendedPhrases` 依赖，改用 ref 判断，只 fetch 一次
+- 测试 Agent 补充了 E2E 测试文件的 auth bypass cookie（与项目惯例一致）
+
+### Testing:
+- npm run lint: 0 errors（10 warnings 为历史遗留）
+- npm run build: 构建成功
+- E2E 测试（highlights-recommended-tab.spec.ts）: 5/5 通过
+  - 首次切换推荐Tab内容稳定显示不闪烁
+  - API 不被重复调用
+  - 切走再切回使用缓存，不重新 loading
+  - Loading spinner 只出现一次
+  - 空数据时正确显示空状态
+
+### Notes:
+- useRef 方案比检查 Object.keys(recommendedPhrases).length 更可靠，不会因 state 变化触发 effect 重跑
+- 推荐数据在组件生命周期内只 fetch 一次，切换 tab 时直接复用缓存
+
 ## 2026-03-25 - Bug修复：字帖生成 & E2E测试修复
 
 ### What was done:

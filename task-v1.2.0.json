@@ -601,7 +601,7 @@
       ],
       "priority": "P0",
       "phase": 7,
-      "passes": false,
+      "passes": true,
       "description": "修复亮点库切换到'推荐'Tab时页面反复闪烁的bug，原因可能是useEffect重复触发loading状态",
       "steps": [
         "打开 src/app/highlights/page.tsx，找到推荐Tab的数据加载逻辑",

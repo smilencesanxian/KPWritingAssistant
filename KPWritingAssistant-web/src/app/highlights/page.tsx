@@ -87,6 +87,7 @@ export default function HighlightsPage() {
   const loaderRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef(search);
   const typeRef = useRef(activeType);
+  const hasFetchedRecommendedRef = useRef(false);
 
   searchRef.current = search;
   typeRef.current = activeType;
@@ -171,12 +172,13 @@ export default function HighlightsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, activeType]);
 
-  // Fetch recommended phrases when tab is selected
+  // Fetch recommended phrases when tab is selected (only once)
   useEffect(() => {
-    if (activeType === 'recommended' && Object.keys(recommendedPhrases).length === 0) {
+    if (activeType === 'recommended' && !hasFetchedRecommendedRef.current) {
+      hasFetchedRecommendedRef.current = true;
       fetchRecommendedPhrases();
     }
-  }, [activeType, fetchRecommendedPhrases, recommendedPhrases]);
+  }, [activeType, fetchRecommendedPhrases]);
 
   // Infinite scroll observer
   useEffect(() => {
