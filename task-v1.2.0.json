@@ -721,7 +721,7 @@
       ],
       "priority": "P1",
       "phase": 8,
-      "passes": false,
+      "passes": true,
       "description": "更新批改API和DB访问层，将AI返回的结构化JSON正确解析并写入corrections表新字段",
       "steps": [
         "打开 src/lib/db/corrections.ts，更新 createCorrection() 函数：接收 scoring_comments/correction_steps/structured_suggestions 参数，写入DB对应字段",

@@ -88,6 +88,12 @@ export async function POST(request: NextRequest) {
       improvement_suggestions: typeof correctionResult.improvement_suggestions === 'string'
         ? correctionResult.improvement_suggestions
         : JSON.stringify(correctionResult.improvement_suggestions ?? []),
+      // v1.2.1 新增：结构化批改数据
+      scoring_comments: correctionResult.scoring_overview ?? null,
+      correction_steps: correctionResult.correction_steps ?? null,
+      structured_suggestions: Array.isArray(correctionResult.improvement_suggestions)
+        ? correctionResult.improvement_suggestions
+        : null,
     });
 
     // Save highlights to library and capture their IDs

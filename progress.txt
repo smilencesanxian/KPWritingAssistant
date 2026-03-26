@@ -1,3 +1,36 @@
+## 2026-03-26 - Task 25: F2-Step3 - 批改API + DB访问层 - 写入结构化批改数据
+
+### What was done:
+- **更新 src/lib/db/corrections.ts：**
+  - 扩展 CreateCorrectionInput 接口，添加 scoring_comments、correction_steps、structured_suggestions 字段
+  - 更新 createCorrection() 函数，将新字段写入数据库
+  - 处理向后兼容：fallback 逻辑中排除新字段，避免旧 DB schema 报错
+
+- **更新 src/app/api/correct/route.ts：**
+  - 从 AI 响应中提取 scoring_overview、correction_steps、improvement_suggestions
+  - 将结构化数据传递给 createCorrection()
+  - 确保 improvement_suggestions 数组格式正确转换为 structured_suggestions
+
+- **修复 lint 错误：**
+  - 修复 route.test.ts 中的 `as any` 类型断言为 `as unknown as Request`
+  - 添加 eslint-disable 注释处理未使用变量警告
+
+### Testing:
+- **单元测试 (corrections.test.ts)**: 8/8 通过
+- **单元测试 (llm.test.ts)**: 6/6 通过
+- **集成测试 (route.test.ts)**: 9/9 通过
+- **构建验证**: `npm run build` 成功
+- **代码规范**: `npm run lint` 0 错误（8 个警告为历史遗留）
+- **测试 Agent 结论**: [PASS]
+
+### Notes:
+- 新字段默认值为 null，确保向后兼容旧数据
+- scoring_comments 对应 scoring_overview（包含4个维度的分数和评语）
+- structured_suggestions 对应 improvement_suggestions 数组格式
+- 测试 Agent 修复了 route.test.ts 的 mock 配置和超时设置
+
+---
+
 ## 2026-03-26 - Task 20: B3 - 亮点库'推荐'Tab页面反复闪烁Bug修复
 
 ### What was done:

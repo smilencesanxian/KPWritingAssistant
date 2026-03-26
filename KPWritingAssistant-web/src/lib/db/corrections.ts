@@ -11,6 +11,30 @@ export interface CreateCorrectionInput {
   error_annotations: ErrorAnnotation[];
   overall_comment: string;
   improvement_suggestions: string;
+  // v1.2.1 新增：结构化批改数据
+  scoring_comments?: {
+    content: { score: number; comment: string };
+    communication: { score: number; comment: string };
+    organisation: { score: number; comment: string };
+    language: { score: number; comment: string };
+  } | null;
+  correction_steps?: {
+    step1: string;
+    step2: string;
+    step3: string;
+    step4: Array<{
+      original: string;
+      error_type: string;
+      suggestion: string;
+    }>;
+    step5: string;
+    step6: string;
+  } | null;
+  structured_suggestions?: Array<{
+    icon: string;
+    title: string;
+    detail: string;
+  }> | null;
 }
 
 export async function createCorrection(
@@ -31,6 +55,10 @@ export async function createCorrection(
     overall_comment: data.overall_comment,
     improvement_suggestions: data.improvement_suggestions,
     status: 'completed',
+    // v1.2.1 新增：结构化批改数据
+    scoring_comments: data.scoring_comments ?? null,
+    correction_steps: data.correction_steps ?? null,
+    structured_suggestions: data.structured_suggestions ?? null,
   };
 
   let result = await supabase
@@ -41,7 +69,8 @@ export async function createCorrection(
 
   // If failed due to missing column, retry without organization_score
   if (result.error && result.error.message.includes('organization_score')) {
-    const { organization_score, ...fallbackData } = insertData;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { organization_score, scoring_comments, correction_steps, structured_suggestions, ...fallbackData } = insertData;
     result = await supabase
       .from('corrections')
       .insert(fallbackData)
