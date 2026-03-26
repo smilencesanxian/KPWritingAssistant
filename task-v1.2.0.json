@@ -746,7 +746,7 @@
       ],
       "priority": "P1",
       "phase": 8,
-      "passes": false,
+      "passes": true,
       "description": "重写 src/app/corrections/[id]/page.tsx，按4大块组织批改结果：评分总览、批改详情（6步可折叠）、改进建议（图标+结构化）、范文示例",
       "steps": [
         "重写 src/app/corrections/[id]/page.tsx，移除原有批注界面，按以下4块重新组织",

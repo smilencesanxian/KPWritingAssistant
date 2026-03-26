@@ -3,12 +3,11 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { getCorrectionById, getModelEssaysByCorrectionId } from '@/lib/db/corrections';
 import { getSubmissionById } from '@/lib/db/essays';
-import { getHighlightsBySubmissionId } from '@/lib/db/highlights';
-import Badge from '@/components/ui/Badge';
-import Card from '@/components/ui/Card';
-import AnnotatedEssay from '@/components/correction/AnnotatedEssay';
-import HighlightsList from '@/components/correction/HighlightsList';
 import ModelEssayView from '@/components/correction/ModelEssayView';
+import type { Correction } from '@/types/database';
+import ScoreOverview from './components/ScoreOverview';
+import CorrectionDetails from './components/CorrectionDetails';
+import ImprovementSuggestions from './components/ImprovementSuggestions';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -26,7 +25,7 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
 
   if (!user) redirect('/login');
 
-  let correction;
+  let correction: Correction | null;
   try {
     correction = await getCorrectionById(id);
   } catch {
@@ -42,24 +41,12 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
   }
   if (!submission) notFound();
 
-  const [highlights, modelEssays] = await Promise.all([
-    getHighlightsBySubmissionId(correction.submission_id).catch(() => []),
+  const [modelEssays] = await Promise.all([
     getModelEssaysByCorrectionId(id).catch(() => []),
   ]);
 
-  const {
-    total_score,
-    content_score,
-    communication_score,
-    organization_score,
-    language_score,
-    overall_comment,
-    improvement_suggestions,
-    error_annotations,
-  } = correction;
-
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-4">
+    <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
       {/* Flagged errors banner */}
       {flagged_id && flagged_label && (
         <Link href={`/error-points/${flagged_id}`}>
@@ -84,70 +71,27 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
         </Link>
       )}
 
-      {/* Score section */}
-      <Card>
-        <div className="text-center mb-5">
-          <div className="text-5xl font-bold text-primary-600">
-            {total_score ?? '--'}
-            <span className="text-lg font-normal text-neutral-500 ml-1">分</span>
-          </div>
-          <div className="text-sm text-neutral-400 mt-1">满分20分</div>
-        </div>
-        <div className="grid grid-cols-4 gap-2">
-          <div className="text-center">
-            <div className="text-xs text-neutral-500 mb-1.5">内容</div>
-            <Badge color="blue">{content_score ?? '--'} 分</Badge>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-neutral-500 mb-1.5">沟通</div>
-            <Badge color="green">{communication_score ?? '--'} 分</Badge>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-neutral-500 mb-1.5">组织</div>
-            <Badge color="purple">{organization_score ?? '--'} 分</Badge>
-          </div>
-          <div className="text-center">
-            <div className="text-xs text-neutral-500 mb-1.5">语言</div>
-            <Badge color="orange">{language_score ?? '--'} 分</Badge>
-          </div>
-        </div>
-      </Card>
+      {/* Block 1: Score Overview */}
+      <ScoreOverview
+        totalScore={correction.total_score}
+        scoringComments={correction.scoring_comments}
+      />
 
-      {/* Overall comment */}
-      {overall_comment && (
-        <Card>
-          <h3 className="text-sm font-semibold text-neutral-700 mb-2">总体评语</h3>
-          <p className="text-sm text-neutral-600 leading-relaxed">{overall_comment}</p>
-        </Card>
-      )}
+      {/* Block 2: Correction Details */}
+      <CorrectionDetails
+        correctionSteps={correction.correction_steps}
+      />
 
-      {/* Improvement suggestions */}
-      {improvement_suggestions && (
-        <Card>
-          <h3 className="text-sm font-semibold text-neutral-700 mb-2">改进建议</h3>
-          <p className="text-sm text-neutral-600 leading-relaxed">{improvement_suggestions}</p>
-        </Card>
-      )}
+      {/* Block 3: Improvement Suggestions */}
+      <ImprovementSuggestions
+        structuredSuggestions={correction.structured_suggestions}
+        fallbackSuggestions={correction.improvement_suggestions}
+      />
 
-      {/* Annotated essay */}
-      <div>
-        <h3 className="text-sm font-semibold text-neutral-700 mb-2">原文批注</h3>
-        <AnnotatedEssay
-          text={submission.ocr_text ?? ''}
-          annotations={error_annotations ?? []}
-        />
-        {error_annotations && error_annotations.length > 0 && (
-          <p className="text-xs text-neutral-400 mt-2 text-center">
-            点击红色标注查看详细说明
-          </p>
-        )}
-      </div>
-
-      {/* Highlights */}
-      <HighlightsList highlights={highlights} />
-
-      {/* Model essay section */}
-      <ModelEssayView correctionId={id} initialEssays={modelEssays} />
+      {/* Block 4: Model Essay */}
+      <section data-testid="model-essay">
+        <ModelEssayView correctionId={id} initialEssays={modelEssays} />
+      </section>
     </div>
   );
 }
