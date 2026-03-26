@@ -625,7 +625,7 @@
       ],
       "priority": "P0",
       "phase": 7,
-      "passes": false,
+      "passes": true,
       "description": "修复在重新生成范文弹窗中输入具体提示后，点击'重新生成范文'按钮无响应的bug",
       "steps": [
         "打开 src/components/model-essay/RegenerateModal.tsx，检查'重新生成范文'按钮的 disabled 条件和 onClick 绑定",

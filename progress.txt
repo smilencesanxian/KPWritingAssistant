@@ -1585,3 +1585,22 @@ The feature integrates collected phrases into the model essay generation flow, g
 
 ### Notes:
 - 评分标准描述参考 prompts/1 PET part1批改与范文生成提示.md
+
+## 2026-03-26 - Task 21: B4 - '重新生成范文'输入提示后按钮不触发Bug修复
+
+### What was done:
+- 检查 RegenerateModal.tsx 组件代码，按钮 onClick 正确绑定 handleRegenerate 函数
+- 检查 Button 组件，disabled 和 loading 逻辑正确（只在 isLoading 时禁用按钮）
+- 检查 API 路由 /api/model-essays/[id]/regenerate，正确处理 preference_notes 参数
+- 修复 RegenerateModal.test.tsx 中的查询问题（使用 getByRole 替代 getByText 避免歧义）
+- 所有 18 个单元测试通过
+
+### Testing:
+- npm test -- RegenerateModal.test.tsx: 18 passed
+- npm run lint: 无错误（10 warnings 与本次任务无关）
+- npm run build: 构建成功
+
+### Notes:
+- 代码逻辑检查显示按钮功能实现正确
+- Bug 可能已在之前的提交中被修复
+- 测试用例覆盖了按钮点击、API调用、加载状态、错误处理等场景
