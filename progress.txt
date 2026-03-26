@@ -1533,3 +1533,17 @@ The feature integrates collected phrases into the model essay generation flow, g
 - HTML参考文件已复制到 `src/assets/` 目录，便于后续修改对照
 - 如果HTML模板参数有变动（行数、行高、颜色等），需同步更新 `src/lib/pdf/templates/pet.ts`
 - Cache key从v2升级为v3，旧字帖缓存会自动失效并重新生成
+
+## 2026-03-26 - Task 18: B1 - 题目照片上传提示文字修改
+
+### What was done:
+- 修改 KPWritingAssistant-web/src/app/upload/page.tsx 第662行
+- 将提示文字从"上传题目照片，帮助AI更准确识别题型"改为"上传题目照片，帮助AI更精准批改"
+
+### Testing:
+- npm run lint: 0 errors (10 warnings 均为已有，与本次无关)
+- npm run build: 成功
+- 文字内容验证: 正确
+
+### Notes:
+- 纯文案修改，影响范围极小

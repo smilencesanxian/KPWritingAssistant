@@ -1,44 +1,111 @@
 {
-  "project": "KP作文宝 v1.2.0",
-  "description": "v1.2.0版本：题型识别、范文编辑、推荐句式库、写作导览，同时修复OCR噪音、批改Loading、批注界面、PDF命名、邮件格式、字帖布局等问题",
+  "project": "KP作文宝 v1.2.0/v1.2.1",
+  "description": "v1.2.0版本：题型识别、范文编辑、推荐句式库、写作导览，同时修复OCR噪音、批改Loading、批注界面、PDF命名、邮件格式、字帖布局等问题。v1.2.1版本（Tasks 18-30）：客户意见改进，包含Bug修复、批改结果重设计、字帖优化、智能挖空默写、亮点库/写作导览重设计。",
   "version": "1.2.0",
   "phases": [
     {
       "phase": 1,
       "name": "基础设施（先做，其他依赖）",
-      "tasks": [1, 2, 3]
+      "tasks": [
+        1,
+        2,
+        3
+      ]
     },
     {
       "phase": 2,
       "name": "上传流程重构（P0）",
-      "tasks": [4, 5, 6]
+      "tasks": [
+        4,
+        5,
+        6
+      ]
     },
     {
       "phase": 3,
       "name": "批改体验改进（P1）",
-      "tasks": [7, 8, 9]
+      "tasks": [
+        7,
+        8,
+        9
+      ]
     },
     {
       "phase": 4,
       "name": "PDF & 字帖修复（P1）",
-      "tasks": [10, 11]
+      "tasks": [
+        10,
+        11
+      ]
     },
     {
       "phase": 5,
       "name": "推荐句式库（P1）",
-      "tasks": [12, 13, 14]
+      "tasks": [
+        12,
+        13,
+        14
+      ]
     },
     {
       "phase": 6,
       "name": "写作导览（P2）",
-      "tasks": [15, 16, 17]
+      "tasks": [
+        15,
+        16,
+        17
+      ]
+    },
+    {
+      "phase": 7,
+      "name": "v1.2.1 Bug修复（快速独立）",
+      "tasks": [
+        18,
+        19,
+        20,
+        21,
+        22
+      ]
+    },
+    {
+      "phase": 8,
+      "name": "v1.2.1 批改结果重设计（最大改动，分4步）",
+      "tasks": [
+        23,
+        24,
+        25,
+        26
+      ]
+    },
+    {
+      "phase": 9,
+      "name": "v1.2.1 字帖与默写优化",
+      "tasks": [
+        27,
+        28
+      ]
+    },
+    {
+      "phase": 10,
+      "name": "v1.2.1 依赖外部文件的功能（等文件就绪后执行）",
+      "tasks": [
+        29,
+        30
+      ]
     }
   ],
   "tasks": [
     {
       "id": 1,
       "title": "DB迁移004 + 005：核心字段扩展与新表创建",
-      "feature_ids": ["F1", "F2", "F3", "F4", "B1", "B4"],
+      "feature_ids": [
+        "F1",
+        "F2",
+        "F3",
+        "F4",
+        "B1",
+        "B4"
+      ],
       "priority": "P0",
       "phase": 1,
       "passes": true,
@@ -60,7 +127,12 @@
     {
       "id": 2,
       "title": "更新 types/database.ts：同步新增字段和表的类型定义",
-      "feature_ids": ["F1", "F2", "F3", "F4"],
+      "feature_ids": [
+        "F1",
+        "F2",
+        "F3",
+        "F4"
+      ],
       "priority": "P0",
       "phase": 1,
       "passes": true,
@@ -83,7 +155,12 @@
     {
       "id": 3,
       "title": "更新数据访问层：支持新字段和新表的 CRUD 操作",
-      "feature_ids": ["F1", "F2", "F3", "F4"],
+      "feature_ids": [
+        "F1",
+        "F2",
+        "F3",
+        "F4"
+      ],
       "priority": "P0",
       "phase": 1,
       "passes": true,
@@ -107,7 +184,9 @@
     {
       "id": 4,
       "title": "B1：OCR噪音过滤 cleanOcrText() 函数",
-      "feature_ids": ["B1"],
+      "feature_ids": [
+        "B1"
+      ],
       "priority": "P0",
       "phase": 2,
       "passes": true,
@@ -129,7 +208,9 @@
     {
       "id": 5,
       "title": "F1：题型识别API /api/detect-type",
-      "feature_ids": ["F1"],
+      "feature_ids": [
+        "F1"
+      ],
       "priority": "P0",
       "phase": 2,
       "passes": true,
@@ -152,7 +233,11 @@
     {
       "id": 6,
       "title": "F1 + B1 + B2：上传页面重构（两张照片 + 题型确认 + 新Loading界面）",
-      "feature_ids": ["F1", "B1", "B2"],
+      "feature_ids": [
+        "F1",
+        "B1",
+        "B2"
+      ],
       "priority": "P0",
       "phase": 2,
       "passes": true,
@@ -180,7 +265,9 @@
     {
       "id": 7,
       "title": "B5：修复邮件范文格式（prompts.json）",
-      "feature_ids": ["B5"],
+      "feature_ids": [
+        "B5"
+      ],
       "priority": "P1",
       "phase": 3,
       "passes": true,
@@ -203,7 +290,9 @@
     {
       "id": 8,
       "title": "B3：原文批注界面重设计（AnnotatedEssay 重构）",
-      "feature_ids": ["B3"],
+      "feature_ids": [
+        "B3"
+      ],
       "priority": "P1",
       "phase": 3,
       "passes": true,
@@ -229,10 +318,12 @@
     {
       "id": 9,
       "title": "F2：范文编辑功能（编辑Modal + 重新生成Modal + API）",
-      "feature_ids": ["F2"],
+      "feature_ids": [
+        "F2"
+      ],
       "priority": "P1",
       "phase": 3,
-      "passes": true,,
+      "passes": true,
       "steps": [
         "创建 PUT /api/model-essays/[id]/route.ts：接收 {user_edited_content: string, user_preference_notes?: string}；验证所有权（查询该 model_essay 属于当前登录用户）；更新 model_essays 的 user_edited_content/is_user_edited=true/edit_history（追加新条目）/user_preference_notes；返回更新后的记录",
         "创建 POST /api/model-essays/[id]/regenerate/route.ts：接收 {preference_notes: string}；查询该 essay 的 highlights（用户亮点）；查询用户最近5条 user_preference_notes（getUserPreferenceNotes）；将当前 preference_notes + 历史偏好拼入 model essay prompt；调用 LLM 重新生成范文内容；保存新内容到 model_essays；返回新生成的范文",
@@ -254,7 +345,9 @@
     {
       "id": 10,
       "title": "B4：修复字帖PDF命名格式",
-      "feature_ids": ["B4"],
+      "feature_ids": [
+        "B4"
+      ],
       "priority": "P1",
       "phase": 4,
       "passes": true,
@@ -276,7 +369,9 @@
     {
       "id": 11,
       "title": "B6：字帖布局优化（字体大小、单词位置、行宽利用）",
-      "feature_ids": ["B6"],
+      "feature_ids": [
+        "B6"
+      ],
       "priority": "P1",
       "phase": 4,
       "passes": true,
@@ -300,7 +395,9 @@
     {
       "id": 12,
       "title": "F3：推荐句式API（获取列表 + 收藏到亮点库）",
-      "feature_ids": ["F3"],
+      "feature_ids": [
+        "F3"
+      ],
       "priority": "P1",
       "phase": 5,
       "passes": true,
@@ -322,7 +419,9 @@
     {
       "id": 13,
       "title": "F3：亮点库页面增加推荐Tab",
-      "feature_ids": ["F3"],
+      "feature_ids": [
+        "F3"
+      ],
       "priority": "P1",
       "phase": 5,
       "passes": true,
@@ -349,7 +448,9 @@
     {
       "id": 14,
       "title": "F3：范文生成集成推荐句式",
-      "feature_ids": ["F3"],
+      "feature_ids": [
+        "F3"
+      ],
       "priority": "P1",
       "phase": 5,
       "passes": true,
@@ -371,7 +472,9 @@
     {
       "id": 15,
       "title": "F4：写作导览API（获取树形数据）",
-      "feature_ids": ["F4"],
+      "feature_ids": [
+        "F4"
+      ],
       "priority": "P2",
       "phase": 6,
       "passes": true,
@@ -395,7 +498,9 @@
     {
       "id": 16,
       "title": "F4：写作导览页面（树状列表展示）",
-      "feature_ids": ["F4"],
+      "feature_ids": [
+        "F4"
+      ],
       "priority": "P2",
       "phase": 6,
       "passes": true,
@@ -418,7 +523,9 @@
     {
       "id": 17,
       "title": "F4：底部导航更新（新增写作导览入口）",
-      "feature_ids": ["F4"],
+      "feature_ids": [
+        "F4"
+      ],
       "priority": "P2",
       "phase": 6,
       "passes": true,
@@ -437,6 +544,336 @@
         "active 状态高亮正确",
         "移动端4个导航项布局不拥挤",
         "浏览器测试截图确认UI正确",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 18,
+      "title": "B1: 题目照片上传提示文字修改",
+      "feature_ids": [
+        "B1"
+      ],
+      "priority": "P0",
+      "phase": 7,
+      "passes": true,
+      "description": "将上传页题目照片区域的提示文字从'帮助AI更准确识别题型'改为'帮助AI更精准批改'",
+      "steps": [
+        "打开 src/app/upload/page.tsx，搜索'上传题目照片，帮助AI更准确识别题型'",
+        "将该文字改为'上传题目照片，帮助AI更精准批改'",
+        "运行 npm run build 和 npm run lint 确认无报错",
+        "启动 dev server，进入上传页，截图确认文案已更新"
+      ],
+      "acceptance_criteria": [
+        "上传页题目照片区域显示'上传题目照片，帮助AI更精准批改'",
+        "npm run build 无错误",
+        "npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 19,
+      "title": "B2: 批改中界面 - 修复分数显示(/5非/15) + 加PET评分标准说明",
+      "feature_ids": [
+        "B2"
+      ],
+      "priority": "P0",
+      "phase": 7,
+      "passes": false,
+      "description": "修复批改Loading界面4个维度卡片分数显示错误，并添加PET评分标准说明文字和评分对照表",
+      "steps": [
+        "打开 src/app/upload/page.tsx，找到 correcting 步骤对应的 JSX（约 lines 392-430），检查4个维度卡片的分数显示是否为'/5'还是'/15'，如为'/15'则修复为'/5'",
+        "在'AI 正在批改中'标题下方、维度卡片上方，添加提示文字：'以下为 PET 作文官方评分标准'（灰色小字）",
+        "在4个维度卡片下方添加评分标准对照表：4行（5分/3-4分/1-2分/0分）×2列（分数/标准描述），使用灰色小字体，参照 prompts/1 PET part1批改与范文生成提示.md 中 Content 维度的评分标准描述",
+        "运行 npm run build 和 npm run lint 确认无报错",
+        "启动 dev server，截图批改中界面确认分数显示和新增说明文字正确"
+      ],
+      "acceptance_criteria": [
+        "4个维度卡片显示'/5'而非'/15'",
+        "维度卡片上方有'以下为 PET 作文官方评分标准'提示文字",
+        "卡片下方有4行评分标准对照表",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 20,
+      "title": "B3: 亮点库'推荐'Tab页面反复闪烁Bug修复",
+      "feature_ids": [
+        "B3"
+      ],
+      "priority": "P0",
+      "phase": 7,
+      "passes": false,
+      "description": "修复亮点库切换到'推荐'Tab时页面反复闪烁的bug，原因可能是useEffect重复触发loading状态",
+      "steps": [
+        "打开 src/app/highlights/page.tsx，找到推荐Tab的数据加载逻辑",
+        "分析推荐Tab的 useEffect 依赖项，找出重复触发原因：可能是 activeTab 变化触发重新fetch，而fetch过程中又更新state导致再次触发",
+        "修复方案：用 useRef 记录推荐数据是否已加载（hasFetchedRecommended），已有数据时不重置loading状态；或将推荐数据缓存在组件 state 中，tab切回时直接使用缓存不重新fetch",
+        "确保切换到推荐Tab时：第一次加载显示loading，加载完成后数据稳定显示，再次切回再切换不重新loading",
+        "运行 npm run build 和 npm run lint 确认无报错",
+        "启动 dev server，在亮点库页面反复切换'推荐'Tab，确认无闪烁"
+      ],
+      "acceptance_criteria": [
+        "切换到推荐Tab时，数据加载后稳定显示，无反复闪烁",
+        "再次切换回推荐Tab时，直接显示缓存数据，无loading动画",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 21,
+      "title": "B4: '重新生成范文'输入提示后按钮不触发Bug修复",
+      "feature_ids": [
+        "B4"
+      ],
+      "priority": "P0",
+      "phase": 7,
+      "passes": false,
+      "description": "修复在重新生成范文弹窗中输入具体提示后，点击'重新生成范文'按钮无响应的bug",
+      "steps": [
+        "打开 src/components/model-essay/RegenerateModal.tsx，检查'重新生成范文'按钮的 disabled 条件和 onClick 绑定",
+        "在 textarea onChange 处理中确认 notes state 正确更新",
+        "检查按钮的 disabled 逻辑：只有 isLoading 为 true 时才禁用；检查是否有其他条件意外禁用了按钮",
+        "如发现按钮没有 onClick 或绑定到了错误的函数，修复绑定",
+        "如发现是表单提交问题（如按钮在form里被submit拦截），修复表单处理逻辑",
+        "运行 npm run build 和 npm run lint 确认无报错",
+        "在批改结果页测试：打开重新生成弹窗，输入提示文字，确认按钮可点击并触发请求"
+      ],
+      "acceptance_criteria": [
+        "重新生成弹窗中，无论是否输入提示文字，按钮均可点击（非loading状态下）",
+        "点击按钮后触发重新生成请求",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 22,
+      "title": "B5: Part2拍照OCR乱码 + 生成范文类型错误修复",
+      "feature_ids": [
+        "B5"
+      ],
+      "priority": "P0",
+      "phase": 7,
+      "passes": false,
+      "description": "修复两个关联bug：Part2答题纸OCR识别包含多余乱码（数字/无意义字符）；以及Part2作文错误使用Part1邮件prompt生成范文",
+      "steps": [
+        "打开 src/lib/ocr/ 目录，找到 cleanOcrText() 函数，查看现有的过滤规则",
+        "针对Part2答题纸特征增强过滤规则：过滤侧边CAMBRIDGE ENGLISH水印文字；过滤'Question 1'/'Question 2'等题目标签；过滤独立的数字行（如'119'、'99'）；过滤明显乱码行（短于3个字符且非英文单词的行）",
+        "检查 src/app/api/corrections/route.ts 中 prompt 选择逻辑：找到 getSystemPromptByExamPart() 或类似函数的调用，确认 exam_part 字段正确从请求体传入并使用",
+        "追踪 exam_part 从前端到 API 的完整链路：src/app/upload/page.tsx 提交时是否携带 exam_part；corrections API 是否接收并传递；prompt 选择是否有 fallback 到 part1 的逻辑",
+        "如发现 exam_part 传递断链，在断链处修复；如发现 prompt 选择有错误 fallback，修改为正确的默认值或添加警告日志",
+        "运行 npm run build 和 npm run lint 确认无报错",
+        "上传一张Part2作文照片，确认：OCR文字中无明显乱码；生成的范文是文章或故事类型（非邮件）"
+      ],
+      "acceptance_criteria": [
+        "Part2答题纸OCR结果中无CAMBRIDGE ENGLISH水印文字和独立数字行",
+        "上传Part2作文后，生成范文使用Part2 prompt（文章/故事类型，非邮件格式）",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 23,
+      "title": "F2-Step1: DB Migration 007 + TypeScript类型 - 批改结构化输出字段",
+      "feature_ids": [
+        "F2"
+      ],
+      "priority": "P1",
+      "phase": 8,
+      "passes": false,
+      "description": "为corrections表新增3个JSONB字段，存储结构化批改数据：scoring_comments（各维度评语）、correction_steps（6步详情）、structured_suggestions（改进建议）",
+      "steps": [
+        "新建 supabase/migrations/007_v121_structured_correction.sql，内容：ALTER TABLE corrections ADD COLUMN IF NOT EXISTS scoring_comments JSONB; ALTER TABLE corrections ADD COLUMN IF NOT EXISTS correction_steps JSONB; ALTER TABLE corrections ADD COLUMN IF NOT EXISTS structured_suggestions JSONB;",
+        "在本地执行迁移，确认字段创建成功",
+        "打开 src/types/database.ts，在 Correction 接口中新增3个可选字段：scoring_comments?: { content: {score: number, comment: string}, ca: {score: number, comment: string}, organisation: {score: number, comment: string}, language: {score: number, comment: string} } | null；correction_steps?: { step1: string, step2: string, step3: string, step4: Array<{original: string, error_type: string, suggestion: string}>, step5: string, step6: string } | null；structured_suggestions?: Array<{icon: string, title: string, detail: string}> | null",
+        "运行 npm run build 和 npm run lint 确认无报错"
+      ],
+      "acceptance_criteria": [
+        "migrations/007文件创建，本地DB迁移成功",
+        "Correction TypeScript接口包含3个新的JSONB字段定义",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 24,
+      "title": "F2-Step2: 调整AI批改Prompt输出格式为结构化JSON",
+      "feature_ids": [
+        "F2"
+      ],
+      "priority": "P1",
+      "phase": 8,
+      "passes": false,
+      "description": "修改 src/config/prompts.json 和批改LLM调用函数，让AI以结构化JSON格式输出批改结果，包含评分总览（含维度评语）、6步批改详情、改进建议、亮点、范文",
+      "steps": [
+        "打开 src/config/prompts.json，找到批改相关的 system prompt 配置",
+        "修改 Part1 批改 prompt 的输出格式部分，要求AI输出JSON结构：{ scoring_overview: { content: {score:N, comment:'...'}, ca: {score:N, comment:'...'}, organisation: {score:N, comment:'...'}, language: {score:N, comment:'...'} }, correction_steps: { step1:'内容审查详情', step2:'交际效果审查详情', step3:'组织结构审查详情', step4:[{original:'', error_type:'', suggestion:''}], step5:'亮点分析', step6:'总评' }, improvement_suggestions: [{icon:'emoji', title:'...', detail:'...'}, ...最多3条], highlights: [{text:'...', type:'vocabulary|phrase|sentence', reason:'...'}], model_essay: '完整范文文字' }",
+        "同步修改 Part2 批改 prompt，保持相同的JSON输出结构",
+        "打开 src/lib/ai/ 目录，找到批改LLM调用函数，修改JSON解析逻辑以处理新的响应结构",
+        "确保 model_essay 字段直接提取范文纯文字（不含标注），highlights 数组提取亮点词句",
+        "运行 npm run build 和 npm run lint 确认无报错"
+      ],
+      "acceptance_criteria": [
+        "prompts.json 中批改prompt的输出格式要求包含完整的JSON结构定义",
+        "AI调用函数能正确解析新格式JSON",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 25,
+      "title": "F2-Step3: 批改API + DB访问层 - 写入结构化批改数据",
+      "feature_ids": [
+        "F2"
+      ],
+      "priority": "P1",
+      "phase": 8,
+      "passes": false,
+      "description": "更新批改API和DB访问层，将AI返回的结构化JSON正确解析并写入corrections表新字段",
+      "steps": [
+        "打开 src/lib/db/corrections.ts，更新 createCorrection() 函数：接收 scoring_comments/correction_steps/structured_suggestions 参数，写入DB对应字段",
+        "更新 getCorrectionById() 函数：查询时包含3个新字段，返回完整的结构化数据",
+        "打开 src/app/api/corrections/route.ts，从AI响应中提取新字段：scoring_overview → 拆分为4个score字段+scoring_comments；correction_steps → correction_steps；improvement_suggestions → structured_suggestions",
+        "确保向后兼容：新字段为null时，页面仍能正常显示旧数据（降级展示）",
+        "运行 npm run build 和 npm run lint 确认无报错",
+        "触发一次批改（可用测试数据），检查DB中corrections记录的新字段是否有数据"
+      ],
+      "acceptance_criteria": [
+        "批改完成后，corrections表中 scoring_comments/correction_steps/structured_suggestions 字段有数据",
+        "getCorrectionById 返回包含新字段",
+        "新字段为null时页面不报错（向后兼容）",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 26,
+      "title": "F2-Step4: 批改结果页面重写 - 4大块结构化展示",
+      "feature_ids": [
+        "F2"
+      ],
+      "priority": "P1",
+      "phase": 8,
+      "passes": false,
+      "description": "重写 src/app/corrections/[id]/page.tsx，按4大块组织批改结果：评分总览、批改详情（6步可折叠）、改进建议（图标+结构化）、范文示例",
+      "steps": [
+        "重写 src/app/corrections/[id]/page.tsx，移除原有批注界面，按以下4块重新组织",
+        "Block 1 - 评分总览：4维度表格，列为[维度名、得分/5、评语]；底部显示总分/20；数据来源 scoring_comments",
+        "Block 2 - 批改详情：手风琴式可展开，默认展开；6个步骤各为一个折叠面板；Step4（语言校对）内部用表格展示[原文|问题类型|修改建议]；数据来源 correction_steps；如 correction_steps 为null（旧数据），隐藏此块",
+        "Block 3 - 改进建议：每条建议一行，左侧图标emoji，右侧标题粗体+换行显示详情文字；数据来源 structured_suggestions；如为null，使用原有 improvement_suggestions 文字降级展示（加 whitespace-pre-line 换行处理）",
+        "Block 4 - 范文示例：复用现有 ModelEssay 组件",
+        "确保移动端适配，所有模块间距合理，字体大小适配小屏",
+        "运行 npm run build 和 npm run lint 确认无报错",
+        "用 Playwright 截图确认页面正常渲染，4块内容均可见"
+      ],
+      "acceptance_criteria": [
+        "批改结果页按评分总览/批改详情/改进建议/范文示例4块展示",
+        "评分总览表格显示各维度分数和评语",
+        "批改详情Step4显示语言校对表格",
+        "改进建议结构化展示（非大段文字堆叠）",
+        "范文部分正常显示ModelEssay组件",
+        "移动端布局正常，npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 27,
+      "title": "F3: 字帖PDF排版优化 - 弹性分行和词间距调整",
+      "feature_ids": [
+        "F3"
+      ],
+      "priority": "P1",
+      "phase": 9,
+      "passes": false,
+      "description": "优化字帖PDF排版：不强制空行，每行~10词（弹性）；通过词间距调整避免右侧大空白，使每行视觉美观",
+      "steps": [
+        "打开 src/lib/pdf/renderer.ts，找到段落/行渲染逻辑",
+        "移除段落之间的强制空行插入逻辑（临摹和默写模式均不插入额外空行）",
+        "修改分行算法：每行目标10词，但允许±2词弹性范围（以词为单位换行，不强制截断）；每行最大宽度为答题区宽度95%（留5%边距）",
+        "实现词间距自动调整：渲染每行时，计算该行所有词的总宽度和行可用宽度；如剩余空间在合理范围内（不超过词数×12pt），则均匀分配到词间距；否则正常左对齐；最后一行左对齐不扩展",
+        "运行 npm run build 和 npm run lint 确认无报错",
+        "生成一篇完整字帖PDF，确认：无强制空行；每行词数自然分布；无明显右侧大空白；整体布局美观"
+      ],
+      "acceptance_criteria": [
+        "字帖PDF段落之间无强制空行",
+        "每行词数在8-12词之间自然分布",
+        "未换行处右侧无大空白（词间距自动均匀分配）",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 28,
+      "title": "F4: 默写模式改为智能挖空 - 对易错词/亮点词/高频词填空",
+      "feature_ids": [
+        "F4"
+      ],
+      "priority": "P1",
+      "phase": 9,
+      "passes": false,
+      "description": "将默写模式从全空白改为智能挖空：显示完整范文，但对用户亮点词、易错词和高频PET词汇进行挖空，供孩子填空练习",
+      "steps": [
+        "在 src/lib/pdf/ 目录新增工具函数 gap-fill.ts：定义 PET_HIGH_FREQUENCY_WORDS 常量（约50个常用PET高频词）；实现 getGapFillWords(highlights, errorWords): string[] 函数，合并3类词并去重：用户亮点库的词汇型highlight（type='vocabulary'）的text；易错词列表；高频词列表中出现在范文中的词",
+        "修改 src/lib/pdf/renderer.ts：在 dictation 模式下，不再渲染空白行，而是渲染带挖空的范文文字；逐词扫描范文，如某词（大小写不敏感）在 gapFillWords 中，则渲染为等长下划线；其余词正常渲染；保持原有行高和布局",
+        "更新 generateCopybookPDF() 函数签名，增加 gapFillWords?: string[] 参数并传递给 renderer",
+        "找到字帖生成的API入口，在 dictation 模式时：从DB获取对应correction的highlights和错误词；调用 getGapFillWords() 得到挖空词列表；传入 generateCopybookPDF()",
+        "更新 src/app/copybook/[id]/page.tsx 中 MODE_DESCRIPTIONS.dictation 描述为'答题线上显示范文，请回忆填写挖空的词汇'",
+        "运行 npm run build 和 npm run lint 确认无报错",
+        "生成默写模式字帖，确认范文可见且特定词被替换为下划线"
+      ],
+      "acceptance_criteria": [
+        "默写模式PDF中显示范文文字，而非空白行",
+        "用户亮点词汇在范文中被替换为等长下划线",
+        "高频PET词汇在范文中被挖空",
+        "挖空后的行布局美观，无错位",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 29,
+      "title": "F1: 亮点库推荐功能重设计 - 从独立Tab改为各类目底部推荐区块",
+      "feature_ids": [
+        "F1"
+      ],
+      "priority": "P1",
+      "phase": 10,
+      "passes": false,
+      "dependency_note": "⚠️ 依赖外部文件：需要 'PET写作初始思维导图.md' 提供推荐内容的具体数据。请将该文件放入项目目录（建议放在 KPWritingAssistant-web/docs/ 下），Agent开始此任务前应先检查文件是否存在，若不存在则停止并提示用户提供文件。",
+      "description": "重设计亮点库推荐功能：删除'推荐'独立Tab，改为在词汇/短语/句子各自页面底部加入系统推荐区块。同时从PET写作初始思维导图.md中补充推荐内容种子数据。",
+      "steps": [
+        "首先检查 KPWritingAssistant-web/docs/ 目录下是否存在 'PET写作初始思维导图.md' 文件，若不存在则停止任务，输出阻塞信息并等待用户提供",
+        "解析 PET写作初始思维导图.md 内容，提取各类推荐词汇/短语/句式，补充到 supabase/seeds/ 中的推荐数据种子文件，并执行 DB 更新",
+        "打开 src/app/highlights/page.tsx，删除'推荐'Tab（从 tabs 数组中移除推荐项），确保 tab filter 只剩：全部/词汇/短语/句子",
+        "在词汇/短语/句子各页面内容底部加入推荐区块：标题'系统推荐'（灰色分隔线+标题）；调用 /api/recommended-phrases?type={currentTab} 获取数据；按 essay_type 分组展示（邮件/文章/通用各一组）；每条推荐带'收藏'按钮，点击调用collect API",
+        "处理空状态：当用户该类型highlights为空时，直接展示推荐区块",
+        "运行 npm run build 和 npm run lint 确认无报错"
+      ],
+      "acceptance_criteria": [
+        "PET写作初始思维导图.md 文件存在（否则不执行）",
+        "亮点库 Tab 栏只有：全部/词汇/短语/句子（无推荐Tab）",
+        "每个类型Tab底部有'系统推荐'区块，内容按邮件/文章/通用分组",
+        "点击收藏成功保存到用户亮点库",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 30,
+      "title": "F5: 写作导览知识库完善 - 三类Tab + 系统预置 + 视觉区分 + 手动编辑",
+      "feature_ids": [
+        "F5"
+      ],
+      "priority": "P2",
+      "phase": 10,
+      "passes": false,
+      "dependency_note": "⚠️ 依赖外部文件：需要 'PET写作知识库.html' 提供知识库初始数据。请将该文件放入项目目录（建议放在 KPWritingAssistant-web/docs/ 下），Agent开始此任务前应先检查文件是否存在，若不存在则停止并提示用户提供文件。",
+      "description": "完善写作导览页面：新增邮件/文章/故事三类Tab；从PET写作知识库.html导入系统预置知识；视觉区分用户积累vs系统推荐；支持手动添加/删除；范文生成关联用户认可的知识。",
+      "steps": [
+        "首先检查 KPWritingAssistant-web/docs/ 目录下是否存在 'PET写作知识库.html' 文件，若不存在则停止任务，输出阻塞信息并等待用户提供",
+        "解析 PET写作知识库.html 中的知识结构，设计并创建 .md 格式知识库结构文件（存放在 KPWritingAssistant-web/docs/pet-writing-knowledge-base.md），包含邮件/文章/故事三大类，每类下按功能分节（开篇/结尾/连接词/亮点句式等）",
+        "新建 supabase/migrations/008_v121_writing_guide_story.sql：writing_guide_nodes.essay_type 枚举扩展加入 'story'；新增 is_user_approved BOOLEAN DEFAULT false 字段；插入故事类系统节点种子数据",
+        "更新 src/types/database.ts 中 WritingGuideNode 接口，增加 is_user_approved 字段",
+        "更新 src/lib/db/writing-guide.ts：getWritingGuideTree() 支持 essay_type 过滤参数；新增 approveNode(nodeId, userId) 函数",
+        "重写 src/app/writing-guide/page.tsx：顶部加 Tab（邮件/文章/故事）；用户亮点节点用蓝色/粗体突出显示；系统节点灰色展示；叶节点右侧加+（手动添加）和×（删除）按钮；手动添加弹窗（输入词/句）",
+        "更新 src/app/api/model-essays/[id]/regenerate/route.ts：从 writing_guide_nodes 中获取 is_user_approved=true 的节点，作为范文生成的参考词句偏好",
+        "运行 npm run build 和 npm run lint 确认无报错"
+      ],
+      "acceptance_criteria": [
+        "PET写作知识库.html 文件存在（否则不执行）",
+        "写作导览页顶部有邮件/文章/故事三个Tab",
+        "新用户打开导览页显示系统预置知识库（非空状态）",
+        "用户积累的亮点在导览中视觉突出（蓝色/粗体）",
+        "支持手动添加和删除叶节点",
+        "范文生成时参考用户认可的知识库词句",
         "npm run build 和 npm run lint 无错误"
       ]
     }

@@ -659,7 +659,7 @@ export default function UploadPage() {
         <label className="block text-sm font-medium text-neutral-700 mb-2">
           题目照片 <span className="text-neutral-400 text-xs">（可选）</span>
         </label>
-        <p className="text-xs text-neutral-500 mb-2">上传题目照片，帮助AI更准确识别题型</p>
+        <p className="text-xs text-neutral-500 mb-2">上传题目照片，帮助AI更精准批改</p>
         <div data-testid="question-dropzone">
           <ImageDropzone onFileSelect={handleQuestionFileSelect} disabled={false} />
         </div>
