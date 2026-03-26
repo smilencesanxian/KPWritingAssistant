@@ -1655,3 +1655,37 @@ The feature integrates collected phrases into the model essay generation flow, g
 - Migration uses IF NOT EXISTS for idempotency
 - Fields are nullable for backward compatibility with existing data
 
+
+## 2026-03-26 - Task 24: F2-Step2 - 调整AI批改Prompt输出格式为结构化JSON
+
+### What was done:
+1. Updated src/config/prompts.json with new structured JSON output format:
+   - scoring_overview: 4 dimensions with score and comment for each
+   - correction_steps: 6-step breakdown (step1-step6, with step4 as error array)
+   - improvement_suggestions: structured array with icon, title, detail
+   - highlights: with type classification
+   - model_essay: generated model essay text
+
+2. Updated src/types/ai.ts with new TypeScript interfaces:
+   - ScoringOverview, CorrectionSteps, Step4ErrorItem, StructuredSuggestion
+   - CorrectionResult now supports both legacy and new formats
+
+3. Updated src/lib/ai/llm.ts:
+   - Added extractScores() helper for format-agnostic score extraction
+   - Added validateCorrectionResult() for flexible validation
+   - Updated correctEssay() to handle both old and new formats
+   - Ensured backward compatibility with legacy format
+
+4. Updated src/app/api/correct/route.ts:
+   - Added null checks for optional fields
+   - Improved type safety for new format handling
+
+### Testing:
+- npm run lint: passed (9 warnings, 0 errors)
+- npm run build: passed
+- Test file created: src/lib/ai/validation.test.ts for validating new format
+
+### Notes:
+- The new format provides richer structured data for the correction results page
+- Backward compatibility is maintained - old format responses will still work
+- Next task (F2-Step3) will update the DB layer to store the new structured fields

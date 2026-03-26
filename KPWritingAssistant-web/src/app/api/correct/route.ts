@@ -70,24 +70,33 @@ export async function POST(request: NextRequest) {
     // Call LLM to correct the essay (pass exam_part for part-specific prompts)
     const correctionResult = await correctEssay(submission.ocr_text, effectiveExamPart);
 
+    // Extract scores (handles both new and legacy formats)
+    const scores = correctionResult.scores;
+    if (!scores) {
+      throw new Error('Invalid correction result: missing scores');
+    }
+
     // Save correction record
     const correction = await createCorrection(submission_id, {
-      content_score: correctionResult.scores.content,
-      communication_score: correctionResult.scores.communication,
-      organization_score: correctionResult.scores.organization,
-      language_score: correctionResult.scores.language,
-      total_score: correctionResult.scores.total,
-      error_annotations: correctionResult.error_annotations,
-      overall_comment: correctionResult.overall_comment,
-      improvement_suggestions: correctionResult.improvement_suggestions,
+      content_score: scores.content,
+      communication_score: scores.communication,
+      organization_score: scores.organization,
+      language_score: scores.language,
+      total_score: scores.total,
+      error_annotations: correctionResult.error_annotations ?? [],
+      overall_comment: correctionResult.overall_comment ?? '',
+      improvement_suggestions: typeof correctionResult.improvement_suggestions === 'string'
+        ? correctionResult.improvement_suggestions
+        : JSON.stringify(correctionResult.improvement_suggestions ?? []),
     });
 
     // Save highlights to library and capture their IDs
     let highlightIds: string[] = [];
-    if (correctionResult.highlights.length > 0) {
+    const highlights = correctionResult.highlights ?? [];
+    if (highlights.length > 0) {
       const createdHighlights = await createHighlights(
         user.id,
-        correctionResult.highlights.map((h) => ({ text: h.text, type: h.type })),
+        highlights.map((h) => ({ text: h.text, type: h.type })),
         submission_id
       );
       highlightIds = createdHighlights.map((h) => h.id);
@@ -107,8 +116,8 @@ export async function POST(request: NextRequest) {
     const flagged_errors = await processErrorsFromCorrection(
       user.id,
       submission_id,
-      correctionResult.error_summary,
-      correctionResult.error_annotations
+      correctionResult.error_summary ?? [],
+      correctionResult.error_annotations ?? []
     );
 
     // Mark as completed

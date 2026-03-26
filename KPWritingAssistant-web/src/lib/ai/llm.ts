@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { CorrectionResult, DetectTypeResult } from '@/types/ai';
+import type { CorrectionResult, DetectTypeResult, CorrectionScores } from '@/types/ai';
 import {
   getCorrectionSystemPrompt,
   getModelEssaySystemPrompt,
@@ -23,6 +23,66 @@ function createLLMClient(): OpenAI {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Extract scores from the new structured format (scoring_overview)
+ * or fallback to legacy format (scores)
+ */
+function extractScores(result: CorrectionResult): CorrectionScores {
+  // Try new format first (scoring_overview)
+  if (result.scoring_overview) {
+    const so = result.scoring_overview;
+    return {
+      content: so.content?.score ?? 0,
+      communication: so.communication?.score ?? 0,
+      organization: so.organisation?.score ?? so.language?.score ?? 0, // fallback for compatibility
+      language: so.language?.score ?? 0,
+      total: (so.content?.score ?? 0) + (so.communication?.score ?? 0) +
+             (so.organisation?.score ?? 0) + (so.language?.score ?? 0),
+    };
+  }
+
+  // Fallback to legacy format
+  if (result.scores) {
+    return result.scores;
+  }
+
+  // Default fallback
+  return {
+    content: 0,
+    communication: 0,
+    organization: 0,
+    language: 0,
+    total: 0,
+  };
+}
+
+/**
+ * Validate the correction result structure
+ * Supports both new structured format (v1.2.1) and legacy format (v1.2.0)
+ */
+function validateCorrectionResult(result: CorrectionResult): boolean {
+  // Check for new structured format (v1.2.1)
+  if (result.scoring_overview &&
+    typeof result.scoring_overview.content?.score === 'number' &&
+    typeof result.scoring_overview.communication?.score === 'number' &&
+    typeof result.scoring_overview.language?.score === 'number' &&
+    Array.isArray(result.improvement_suggestions) &&
+    Array.isArray(result.highlights)) {
+    return true;
+  }
+
+  // Check for legacy format (v1.2.0)
+  if (result.scores &&
+    typeof result.scores.total === 'number' &&
+    Array.isArray(result.error_annotations) &&
+    Array.isArray(result.highlights) &&
+    Array.isArray(result.error_summary)) {
+    return true;
+  }
+
+  return false;
 }
 
 export async function correctEssay(
@@ -58,15 +118,40 @@ export async function correctEssay(
 
       const result = JSON.parse(content) as CorrectionResult;
 
-      // Validate required fields
-      if (
-        !result.scores ||
-        typeof result.scores.total !== 'number' ||
-        !Array.isArray(result.error_annotations) ||
-        !Array.isArray(result.highlights) ||
-        !Array.isArray(result.error_summary)
-      ) {
+      // Validate required fields (supports both old and new formats)
+      if (!validateCorrectionResult(result)) {
         throw new Error('Invalid response structure from LLM');
+      }
+
+      // Ensure scores are populated for backward compatibility
+      const scores = extractScores(result);
+      result.scores = scores;
+
+      // For new format, populate legacy fields for backward compatibility
+      if (result.scoring_overview) {
+        // Populate overall_comment from step6 if not present
+        if (!result.overall_comment && result.correction_steps?.step6) {
+          result.overall_comment = result.correction_steps.step6;
+        }
+
+        // Populate legacy improvement_suggestions if not present
+        if (!result.improvement_suggestions && Array.isArray(result.improvement_suggestions)) {
+          // Already in new format, convert to string for backward compatibility
+          const suggestions = result.improvement_suggestions as Array<{ icon: string; title: string; detail: string }>;
+          result.improvement_suggestions = suggestions
+            .map(s => `${s.icon} ${s.title}: ${s.detail}`)
+            .join('\n') as unknown as string;
+        }
+
+        // Ensure error_annotations array exists
+        if (!result.error_annotations) {
+          result.error_annotations = [];
+        }
+
+        // Ensure error_summary array exists
+        if (!result.error_summary) {
+          result.error_summary = [];
+        }
       }
 
       return result;

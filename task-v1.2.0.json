@@ -697,7 +697,7 @@
       ],
       "priority": "P1",
       "phase": 8,
-      "passes": false,
+      "passes": true,
       "description": "修改 src/config/prompts.json 和批改LLM调用函数，让AI以结构化JSON格式输出批改结果，包含评分总览（含维度评语）、6步批改详情、改进建议、亮点、范文",
       "steps": [
         "打开 src/config/prompts.json，找到批改相关的 system prompt 配置",
