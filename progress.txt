@@ -1805,3 +1805,49 @@ The feature integrates collected phrases into the model essay generation flow, g
 - Word spacing adjustment avoids large right-side whitespace
 - Last line always uses left alignment (not justified)
 - No forced empty lines between paragraphs creates more compact layout
+
+## 2026-03-26 - Task 28: F4 默写模式改为智能挖空
+
+### What was done:
+- Created src/lib/pdf/gap-fill.ts with:
+  - PET_HIGH_FREQUENCY_WORDS array (~85 common PET words)
+  - getGapFillWords() - merges highlights, errorWords, and high-frequency words with deduplication
+  - shouldGapWord() - case-insensitive word matching with punctuation handling
+  - createGap() - creates underscores matching word length while preserving punctuation
+
+- Created src/lib/pdf/gap-fill.test.ts with 23 unit tests covering:
+  - Word count validation
+  - Vocabulary type filtering (excludes phrases)
+  - Case-insensitive deduplication
+  - High-frequency word matching in essay
+  - Punctuation handling in words
+  - Empty input handling
+
+- Modified src/lib/pdf/renderer.ts:
+  - Updated renderCopybookPDF() to accept gapFillWords parameter
+  - Added dictation mode logic to replace gap words with underscores
+  - Preserved punctuation around gapped words
+
+- Modified src/lib/pdf/copybook.ts:
+  - Updated generateCopybookPDF() to accept and pass gapFillWords
+
+- Modified src/app/api/generate/copybook/route.ts:
+  - Added logic to fetch user highlights from DB
+  - Extracted error words from correction (both legacy error_annotations and new correction_steps.step4)
+  - Calls getGapFillWords() for dictation mode
+
+- Modified src/app/copybook/[id]/page.tsx:
+  - Updated MODE_DESCRIPTIONS.dictation description
+
+### Testing:
+- All 23 unit tests pass (npm test -- gap-fill.test.ts)
+- npm run lint passes
+- npm run build passes
+
+### Notes:
+- The gap-fill algorithm combines 3 word sources:
+  1. User vocabulary highlights (type='vocabulary')
+  2. Error words from corrections
+  3. PET high-frequency words that appear in the essay
+- Deduplication is case-insensitive
+- Punctuation is preserved around gapped words

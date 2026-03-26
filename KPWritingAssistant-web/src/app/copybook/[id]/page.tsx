@@ -21,7 +21,7 @@ const MODE_LABELS: Record<string, string> = {
 
 const MODE_DESCRIPTIONS: Record<string, string> = {
   tracing: '范文已印在答题线上，请在旁边临摹练习',
-  dictation: '答题线为空白，请根据记忆默写范文',
+  dictation: '范文中的重点词汇已挖空，请根据记忆填空练习',
 };
 
 export default async function CopybookPage({ params }: PageProps) {

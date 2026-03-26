@@ -1,12 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
 import { getCopybookByModelEssayId, createCopybook } from '@/lib/db/copybooks';
+import { getHighlights } from '@/lib/db/highlights';
 import { generateCopybookPDF } from '@/lib/pdf/copybook';
+import { getGapFillWords } from '@/lib/pdf/gap-fill';
 import { uploadCopybookPDF } from '@/lib/storage/upload';
 import { getAllTemplates, getTemplateByExamPart } from '@/lib/pdf/templates';
-import { DEFAULT_TEMPLATE_ID } from '@/lib/pdf/templates';
 import { NextRequest } from 'next/server';
 import type { CopybookMode } from '@/types/pdf';
 import { generateCopybookFileName } from '@/lib/utils/copybook';
+import type { ErrorAnnotation } from '@/types/ai';
 
 const VALID_MODES: CopybookMode[] = ['tracing', 'dictation'];
 
@@ -100,7 +102,54 @@ export async function POST(request: NextRequest) {
   let pdfBuffer: Buffer;
   try {
     const essayContent = (modelEssayData as { content: string }).content;
-    pdfBuffer = await generateCopybookPDF(essayContent, templateId, copybookMode, fontStyle, tracingOpacity, fontSize);
+
+    // For dictation mode, fetch highlights and error words to create gap-fill
+    let gapFillWords: string[] | undefined;
+    if (copybookMode === 'dictation') {
+      // Fetch user highlights (vocabulary type)
+      const { highlights } = await getHighlights(user.id);
+
+      // Fetch error words from correction
+      const { data: correctionData } = await supabase
+        .from('corrections')
+        .select('error_annotations, correction_steps')
+        .eq('id', correction.id)
+        .single();
+
+      const errorWords: string[] = [];
+      if (correctionData) {
+        // Extract error words from error_annotations (legacy format)
+        if (correctionData.error_annotations) {
+          const annotations = correctionData.error_annotations as ErrorAnnotation[];
+          for (const annotation of annotations) {
+            if (annotation.original) {
+              errorWords.push(annotation.original);
+            }
+          }
+        }
+        // Extract error words from correction_steps.step4 (new structured format)
+        if (correctionData.correction_steps?.step4) {
+          for (const error of correctionData.correction_steps.step4) {
+            if (error.original) {
+              errorWords.push(error.original);
+            }
+          }
+        }
+      }
+
+      // Get gap fill words combining highlights, error words, and high-frequency words
+      gapFillWords = getGapFillWords(highlights, errorWords, essayContent);
+    }
+
+    pdfBuffer = await generateCopybookPDF(
+      essayContent,
+      templateId,
+      copybookMode,
+      fontStyle,
+      tracingOpacity,
+      fontSize,
+      gapFillWords
+    );
   } catch (err) {
     console.error('[copybook] PDF generation failed:', err);
     return Response.json({ error: `PDF生成失败: ${err instanceof Error ? err.message : String(err)}` }, { status: 500 });

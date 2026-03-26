@@ -25,12 +25,6 @@ NC='\033[0m'
 # LLM Configuration
 LLM_TYPE="kimi"  # default to kimi
 
-# Claude Code Config paths
-CLAUDE_CONFIG_DIR="$HOME/.claude"
-OFFICIAL_TOKEN_FILE="$CLAUDE_CONFIG_DIR/credentials.official.json"
-KIMI_TOKEN_FILE="$CLAUDE_CONFIG_DIR/credentials.kimi.json"
-ACTIVE_TOKEN_FILE="$CLAUDE_CONFIG_DIR/.credentials.json"
-
 # API Keys (Kimi)
 KIMI_API_KEY="sk-kimi-IbgKnhIbTN9e5cQGcvh6mtH1YRNziYCQ8LNgS8TEZesOvJvpHRbjsoIvaC9usiuc"
 
@@ -47,6 +41,9 @@ LOCK_FILE="/tmp/run-automation-$(cd "$(dirname "$0")" && pwd | tr '/' '_').lock"
 # Background job PID (used by cleanup)
 BG_PID=""
 WATCHDOG_PID=""
+
+# Soft-stop flag: set to 1 to finish current task then exit
+SOFT_STOP=0
 
 acquire_lock() {
     if [ -f "$LOCK_FILE" ]; then
@@ -115,42 +112,36 @@ cleanup() {
         kill -9 "$BG_PID" 2>/dev/null || true
         wait "$BG_PID" 2>/dev/null || true
     fi
+    rm -f "$STOP_FILE" 2>/dev/null || true
     release_lock
     exit $exit_code
 }
 
+# Soft-stop handler: finish current task then exit gracefully
+handle_soft_stop() {
+    SOFT_STOP=1
+    echo -e "\n${YELLOW}[SOFT-STOP]${NC} Signal received — will stop after current task completes."
+    echo -e "${YELLOW}[SOFT-STOP]${NC} Press Ctrl+C again to force-stop immediately."
+}
+
 trap cleanup INT TERM EXIT
+trap handle_soft_stop USR1
 
 # Function to setup environment for different LLM types
+# NOTE: Only sets environment variables — never touches .credentials.json
+# to avoid invalidating the official token.
 setup_llm_environment() {
     local llm_type=$1
-
-    # Ensure config directory exists
-    if [ ! -d "$CLAUDE_CONFIG_DIR" ]; then
-        mkdir -p "$CLAUDE_CONFIG_DIR" && chmod 755 "$CLAUDE_CONFIG_DIR"
-    fi
 
     case "$llm_type" in
         official)
             echo -e "${BLUE}[INFO]${NC} Setting up Claude Official environment..."
-            # Create/restore official token
-            if [ -f "$OFFICIAL_TOKEN_FILE" ]; then
-                cp "$OFFICIAL_TOKEN_FILE" "$ACTIVE_TOKEN_FILE" -f
-            fi
-            # Set official API environment
             export https_proxy="$PROXY_URL"
             export ANTHROPIC_BASE_URL="https://api.anthropic.com"
-            export ANTHROPIC_AUTH_TOKEN=""
+            unset ANTHROPIC_AUTH_TOKEN
             ;;
         kimi)
             echo -e "${BLUE}[INFO]${NC} Setting up Kimi environment..."
-            # Create kimi token file if not exists
-            if [ ! -f "$KIMI_TOKEN_FILE" ]; then
-                > "$KIMI_TOKEN_FILE" && chmod 644 "$KIMI_TOKEN_FILE"
-            fi
-            # Use empty kimi token
-            cp "$KIMI_TOKEN_FILE" "$ACTIVE_TOKEN_FILE" -f
-            # Set kimi API environment
             unset https_proxy
             export ANTHROPIC_BASE_URL="https://api.kimi.com/coding/"
             export ANTHROPIC_AUTH_TOKEN="$KIMI_API_KEY"
@@ -179,12 +170,15 @@ log() {
 }
 
 count_remaining_tasks() {
+    local count=0
     if [ -f "task-v1.2.0.json" ]; then
-        local count=$(grep -c '"passes": false' task-v1.2.0.json 2>/dev/null || echo "0")
-        echo "$count"
-    else
-        echo "0"
+        count=$(grep -c '"passes": false' task-v1.2.0.json 2>/dev/null | head -1)
     fi
+    # Ensure we output a valid number (default to 0 if empty or invalid)
+    if ! [[ "$count" =~ ^[0-9]+$ ]]; then
+        count=0
+    fi
+    echo "$count"
 }
 
 # Parse arguments
@@ -221,6 +215,9 @@ setup_llm_environment "$LLM_TYPE"
 
 LOG_DIR="./automation-logs"
 mkdir -p "$LOG_DIR"
+STOP_FILE="$LOG_DIR/STOP"
+# Clean up any leftover stop file from a previous run
+rm -f "$STOP_FILE" 2>/dev/null || true
 
 # Clean up old log files before starting
 cleanup_logs "$LOG_DIR"
@@ -237,6 +234,12 @@ log "INFO" "Starting automation with $TOTAL_RUNS runs"
 log "INFO" "LLM Type: $LLM_TYPE"
 log "INFO" "ANTHROPIC_BASE_URL: $ANTHROPIC_BASE_URL"
 log "INFO" "Log file: $LOG_FILE"
+log "INFO" "PID: $$"
+echo -e "${CYAN}  Soft-stop methods (finish current task then exit):${NC}"
+echo -e "${CYAN}    kill -USR1 $$${NC}          (send signal)"
+echo -e "${CYAN}    touch $STOP_FILE${NC}  (create stop file)"
+echo -e "${CYAN}  Hard-stop: Ctrl+C (immediate, current task aborted)${NC}"
+echo ""
 
 if [ ! -f "task-v1.2.0.json" ]; then
     log "ERROR" "task-v1.2.0.json not found! Please run this script from the project root."
@@ -262,6 +265,14 @@ for ((run=1; run<=TOTAL_RUNS; run++)); do
     echo "========================================"
     log "PROGRESS" "Run $run of $TOTAL_RUNS (LLM: $LLM_TYPE)"
     echo "========================================"
+
+    # Check for soft-stop (signal or touch file) before starting a new run
+    if [ "$run" -gt 1 ]; then
+        if [ "$SOFT_STOP" -eq 1 ] || [ -f "$STOP_FILE" ]; then
+            log "INFO" "Soft-stop: previous task completed. Stopping before run $run."
+            break
+        fi
+    fi
 
     REMAINING=$(count_remaining_tasks)
 

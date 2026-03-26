@@ -10,6 +10,7 @@
 import PDFDocument from 'pdfkit';
 import path from 'path';
 import type { CopybookTemplate, CopybookMode } from '@/types/pdf';
+import { shouldGapWord, createGap } from './gap-fill';
 
 const FONTS_DIR = path.join(process.cwd(), 'src/assets/fonts');
 const GOCHI_HAND_PATH = path.join(FONTS_DIR, 'GochiHand-Regular.ttf');
@@ -174,7 +175,8 @@ function drawAnswerContainer(
   startY: number,
   answerAreaX: number,
   answerAreaWidth: number,
-  customFontSize?: number
+  customFontSize?: number,
+  gapFillWords?: string[]
 ): number {
   const {
     linesPerPage, lineHeight, headerText, headerBgColor, headerFontSize, defaultFontSize,
@@ -262,6 +264,48 @@ function drawAnswerContainer(
         .font(resolveFontName(fontStyle))
         .fillColor(tracingColor)
         .text(pageLines[i], textX, textY, {
+          width: availableWidth,
+          lineBreak: false,
+          ...(wordSpacing !== undefined ? { wordSpacing } : {}),
+        });
+    }
+
+    // Dictation mode: render essay text with gaps for specific words
+    if (mode === 'dictation' && pageLines[i] && gapFillWords && gapFillWords.length > 0) {
+      // Position text near the bottom of the line so it sits on the baseline
+      const textY = lineY + lineHeight - contentFontSize - 2;
+      const textX = answerAreaX + 6;
+      const availableWidth = answerAreaWidth - 12;
+
+      // Process each word: replace gapped words with underscores
+      const words = pageLines[i].split(' ').filter(Boolean);
+      const processedWords = words.map(word => {
+        if (shouldGapWord(word, gapFillWords)) {
+          return createGap(word);
+        }
+        return word;
+      });
+
+      const processedLine = processedWords.join(' ');
+
+      // Check if this is the last line with content
+      const isLastLine = !pageLines.slice(i + 1).some(line => line && line.trim() !== '');
+
+      // Calculate word spacing adjustment
+      let wordSpacing: number | undefined;
+      if (!isLastLine && processedWords.length > 1) {
+        doc.fontSize(contentFontSize).font(resolveFontName(fontStyle));
+        const extraSpacing = justifyLine(doc, processedWords, availableWidth, 12);
+        if (extraSpacing !== null && extraSpacing > 0) {
+          wordSpacing = extraSpacing;
+        }
+      }
+
+      doc
+        .fontSize(contentFontSize)
+        .font(resolveFontName(fontStyle))
+        .fillColor('#1a1a1a')
+        .text(processedLine, textX, textY, {
           width: availableWidth,
           lineBreak: false,
           ...(wordSpacing !== undefined ? { wordSpacing } : {}),
@@ -471,7 +515,8 @@ export async function renderCopybookPDF(
   mode: CopybookMode,
   fontStyle: string = 'gochi-hand',
   tracingOpacity: number = 30,
-  customFontSize?: number
+  customFontSize?: number,
+  gapFillWords?: string[]
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 0, autoFirstPage: true });
@@ -505,11 +550,14 @@ export async function renderCopybookPDF(
     }
     const tracingColor = mode === 'tracing' ? opacityToTracingColor(tracingOpacity) : '#1a1a1a';
     const usableWidth = answerAreaWidth - 12; // minus left/right padding
-    const allLines = mode === 'tracing'
+    // Wrap text for both tracing and dictation modes
+    const allLines = (mode === 'tracing' || mode === 'dictation')
       ? wrapTextWithFontMetrics(doc, essayText, usableWidth, contentFontSize, fontName, 10)
       : [];
 
-    const pageCount = mode === 'tracing' ? Math.max(1, Math.ceil(allLines.length / linesPerPage)) : 1;
+    const pageCount = (mode === 'tracing' || mode === 'dictation')
+      ? Math.max(1, Math.ceil(allLines.length / linesPerPage))
+      : 1;
 
     for (let page = 0; page < pageCount; page++) {
       if (page > 0) doc.addPage({ size: 'A4', margin: 0 });
@@ -538,7 +586,8 @@ export async function renderCopybookPDF(
         containerStartY,
         answerAreaX,
         answerAreaWidth,
-        customFontSize
+        customFontSize,
+        gapFillWords
       );
 
       if (template.showExaminerTable) {

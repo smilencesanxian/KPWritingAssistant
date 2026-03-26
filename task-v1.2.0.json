@@ -800,7 +800,7 @@
       ],
       "priority": "P1",
       "phase": 9,
-      "passes": false,
+      "passes": true,
       "description": "将默写模式从全空白改为智能挖空：显示完整范文，但对用户亮点词、易错词和高频PET词汇进行挖空，供孩子填空练习",
       "steps": [
         "在 src/lib/pdf/ 目录新增工具函数 gap-fill.ts：定义 PET_HIGH_FREQUENCY_WORDS 常量（约50个常用PET高频词）；实现 getGapFillWords(highlights, errorWords): string[] 函数，合并3类词并去重：用户亮点库的词汇型highlight（type='vocabulary'）的text；易错词列表；高频词列表中出现在范文中的词",

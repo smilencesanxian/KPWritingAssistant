@@ -8,8 +8,9 @@ export async function generateCopybookPDF(
   mode: CopybookMode = 'tracing',
   fontStyle: string = 'hengshui',
   tracingOpacity: number = 30,
-  fontSize?: number
+  fontSize?: number,
+  gapFillWords?: string[]
 ): Promise<Buffer> {
   const template = getTemplate(templateId);
-  return renderCopybookPDF(essayText, template, mode, fontStyle, tracingOpacity, fontSize);
+  return renderCopybookPDF(essayText, template, mode, fontStyle, tracingOpacity, fontSize, gapFillWords);
 }
