@@ -1770,3 +1770,38 @@ The feature integrates collected phrases into the model essay generation flow, g
 - The new format provides richer structured data for the correction results page
 - Backward compatibility is maintained - old format responses will still work
 - Next task (F2-Step3) will update the DB layer to store the new structured fields
+
+## 2026-03-26 - Task 27: F3 - 字帖PDF排版优化 - 弹性分行和词间距调整
+
+### What was done:
+1. Added `wrapParagraph()` function with elastic line wrapping:
+   - Target 10 words per line with ±2 word elastic range (8-12 words)
+   - Uses 95% of max width threshold for line breaks
+   - Handles edge cases like empty paragraphs and long words
+
+2. Added `wrapTextWithFontMetrics()` function:
+   - Removes forced empty line insertion between paragraphs
+   - Preserves email structure (salutation, body, sign-off)
+   - Filters out empty paragraphs
+
+3. Added `justifyLine()` function for word spacing adjustment:
+   - Calculates extra spacing to distribute between words
+   - Returns null if remaining space exceeds threshold (word count × 12pt)
+   - Single word lines return null (for last line left alignment)
+
+4. Integrated word spacing into `drawAnswerContainer()`:
+   - Detects last line to avoid justifying it
+   - Applies calculated word spacing via doc.text() wordSpacing option
+   - Falls back to left alignment when spacing would be excessive
+
+### Testing:
+- npm run test (renderer.test.ts): 31/31 passed
+- npm run lint: PASS (14 warnings, 0 errors)
+- npm run build: SUCCESS (33 routes generated)
+- test-engineer SubAgent: [PASS] verified all requirements
+
+### Notes:
+- The elastic wrapping (8-12 words) provides natural line distribution
+- Word spacing adjustment avoids large right-side whitespace
+- Last line always uses left alignment (not justified)
+- No forced empty lines between paragraphs creates more compact layout

@@ -241,6 +241,22 @@ function drawAnswerContainer(
       const textX = answerAreaX + 6;
       const availableWidth = answerAreaWidth - 12;
 
+      // Check if this is the last line with content
+      const isLastLine = !pageLines.slice(i + 1).some(line => line && line.trim() !== '');
+
+      // Split line into words and calculate word spacing adjustment
+      const words = pageLines[i].split(' ').filter(Boolean);
+      let wordSpacing: number | undefined;
+
+      // Only justify if not the last line and has multiple words
+      if (!isLastLine && words.length > 1) {
+        doc.fontSize(contentFontSize).font(resolveFontName(fontStyle));
+        const extraSpacing = justifyLine(doc, words, availableWidth, 12);
+        if (extraSpacing !== null && extraSpacing > 0) {
+          wordSpacing = extraSpacing;
+        }
+      }
+
       doc
         .fontSize(contentFontSize)
         .font(resolveFontName(fontStyle))
@@ -248,6 +264,7 @@ function drawAnswerContainer(
         .text(pageLines[i], textX, textY, {
           width: availableWidth,
           lineBreak: false,
+          ...(wordSpacing !== undefined ? { wordSpacing } : {}),
         });
     }
   }
@@ -322,14 +339,24 @@ function drawBarcode(doc: PDFKit.PDFDocument, pageWidth: number, pageHeight: num
 
 /**
  * Wraps a single paragraph of words into lines fitting within maxWidth,
- * targeting ~targetWordsPerLine words per line.
+ * targeting ~targetWordsPerLine words per line with elastic range (target-2 to target+2).
+ *
+ * Algorithm:
+ * 1. Target words per line: targetWordsPerLine (default 10)
+ * 2. Elastic range: [target-2, target+2] = [8, 12] for target 10
+ * 3. Line breaks occur when:
+ *    - Adding next word would exceed maxWidth * 0.95 (95% of line width)
+ *    - Current line has reached maxWordsPerLine (12 for target 10)
+ *    - It's the last word
  */
-function wrapParagraph(
+export function wrapParagraph(
   doc: PDFKit.PDFDocument,
   paragraph: string,
   maxWidth: number,
   targetWordsPerLine: number
 ): string[] {
+  const minWordsPerLine = Math.max(1, targetWordsPerLine - 2); // Minimum 8 for target 10
+  const maxWordsPerLine = targetWordsPerLine + 2; // Maximum 12 for target 10
   const words = paragraph.split(/\s+/).filter(Boolean);
   if (words.length === 0) return [];
   const lines: string[] = [];
@@ -339,10 +366,11 @@ function wrapParagraph(
     currentLine.push(words[i]);
     const testLine = currentLine.join(' ');
     const nextWord = words[i + 1];
-    const wouldExceedWidth = nextWord && doc.widthOfString(testLine + ' ' + nextWord) > maxWidth;
-    const reachedTargetCount = currentLine.length >= targetWordsPerLine;
+    const wouldExceedWidth = nextWord && doc.widthOfString(testLine + ' ' + nextWord) > maxWidth * 0.95; // 95% of max width
+    const reachedMaxCount = currentLine.length >= maxWordsPerLine;
+    const isLastWord = i === words.length - 1;
 
-    if (wouldExceedWidth || reachedTargetCount || i === words.length - 1) {
+    if (wouldExceedWidth || reachedMaxCount || isLastWord) {
       lines.push(testLine);
       currentLine = [];
     }
@@ -358,9 +386,9 @@ function wrapParagraph(
 /**
  * Wraps essay text into lines for tracing, preserving the original line/paragraph
  * structure (e.g. email salutation, body paragraphs, sign-off).
- * Each non-empty source line is wrapped independently; blank lines become empty slots.
+ * Each non-empty source line is wrapped independently; blank lines are filtered out.
  */
-function wrapTextWithFontMetrics(
+export function wrapTextWithFontMetrics(
   doc: PDFKit.PDFDocument,
   text: string,
   maxWidth: number,
@@ -376,8 +404,8 @@ function wrapTextWithFontMetrics(
   for (const sourceLine of sourceLines) {
     const trimmed = sourceLine.trim();
     if (trimmed === '') {
-      // Blank line → empty slot to preserve visual separation
-      lines.push('');
+      // Skip blank lines - no empty slots inserted
+      continue;
     } else {
       const wrapped = wrapParagraph(doc, trimmed, maxWidth, targetWordsPerLine);
       lines.push(...wrapped);
@@ -394,6 +422,47 @@ function opacityToTracingColor(opacity: number): string {
   const gray = Math.round(255 * (1 - clamped / 100));
   const hex = gray.toString(16).padStart(2, '0');
   return `#${hex}${hex}${hex}`;
+}
+
+/**
+ * Calculates extra spacing to distribute between words for justified alignment.
+ * Returns null if the remaining space is too large to justify (exceeds threshold).
+ *
+ * @param doc - PDFKit document
+ * @param words - Array of words in the line
+ * @param lineWidth - Available width for the line
+ * @param maxExtraSpacePerWord - Maximum extra space per word (default 12pt)
+ * @returns Extra spacing to add between words, or null to use left alignment
+ */
+export function justifyLine(
+  doc: PDFKit.PDFDocument,
+  words: string[],
+  lineWidth: number,
+  maxExtraSpacePerWord: number = 12
+): number | null {
+  // Single word or empty line cannot be justified
+  if (words.length <= 1) {
+    return null;
+  }
+
+  // Calculate total width of words
+  const totalWordWidth = words.reduce((sum, word) => {
+    return sum + doc.widthOfString(word);
+  }, 0);
+
+  // Calculate remaining space
+  const spaceCount = words.length - 1;
+  const remainingSpace = lineWidth - totalWordWidth;
+
+  // Check if remaining space is within reasonable range
+  const maxJustifiableSpace = words.length * maxExtraSpacePerWord;
+  if (remainingSpace > maxJustifiableSpace) {
+    return null; // Too much space, use left alignment
+  }
+
+  // Calculate extra spacing per gap
+  const extraSpacing = remainingSpace / spaceCount;
+  return extraSpacing;
 }
 
 export async function renderCopybookPDF(

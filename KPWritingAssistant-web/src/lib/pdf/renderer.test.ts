@@ -6,6 +6,7 @@
  * 2. Text Y-coordinate calculation (baseline positioning)
  * 3. Text wrapping logic (target words per line, width constraints)
  * 4. Edge cases (empty text, single word, paragraph breaks)
+ * 5. Task 27: 弹性分行和词间距调整
  */
 
 import type { CopybookTemplate } from '@/types/pdf';
@@ -68,7 +69,7 @@ jest.mock('pdfkit', () => {
 });
 
 // Import after mocking
-import { renderCopybookPDF } from './renderer';
+import { renderCopybookPDF, wrapParagraph, wrapTextWithFontMetrics, justifyLine } from './renderer';
 
 describe('renderer', () => {
   const mockTemplate: CopybookTemplate = {
@@ -409,6 +410,251 @@ describe('renderer', () => {
 
       // widthOfString is called during text wrapping
       expect(mockWidthOfString).toHaveBeenCalled();
+    });
+  });
+});
+
+// ============================================================================
+// Task 27: 字帖PDF排版优化 - 弹性分行和词间距调整
+// ============================================================================
+
+describe('Task 27: 弹性分行和词间距调整', () => {
+  // Helper to create a mock PDFKit document with configurable word widths
+  const createMockDoc = (wordWidths: Record<string, number> = {}) => {
+    const defaultWidth = 30; // smaller default width per word in pt (was 50)
+    return {
+      widthOfString: (text: string) => {
+        const words = text.split(' ');
+        return words.reduce((sum, word) => {
+          return sum + (wordWidths[word] || defaultWidth);
+        }, 0) + (words.length - 1) * 5; // 5pt for space
+      },
+      fontSize: () => ({ font: () => {} }),
+      font: () => {},
+    } as unknown as PDFKit.PDFDocument;
+  };
+
+  describe('UT-027-001: 正常段落分行 - 词数正好是10的倍数', () => {
+    it('should split 30 words into multiple lines', () => {
+      const doc = createMockDoc();
+      const words = Array.from({ length: 30 }, (_, i) => `word${i}`);
+      const paragraph = words.join(' ');
+      const lines = wrapParagraph(doc, paragraph, 600, 10);
+
+      // Should create multiple lines
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      // Each line should have at most 12 words (max elastic)
+      lines.forEach(line => {
+        const wordCount = line.split(' ').length;
+        expect(wordCount).toBeLessThanOrEqual(12);
+      });
+      // Total words should be preserved
+      const totalWords = lines.reduce((sum, line) => sum + line.split(' ').length, 0);
+      expect(totalWords).toBe(30);
+    });
+  });
+
+  describe('UT-027-002: 弹性分行 - 8词行(最小弹性)', () => {
+    it('should keep 8 words on a single line', () => {
+      const doc = createMockDoc();
+      const words = Array.from({ length: 8 }, (_, i) => `word${i}`);
+      const paragraph = words.join(' ');
+      const lines = wrapParagraph(doc, paragraph, 600, 10);
+
+      expect(lines).toHaveLength(1);
+      expect(lines[0].split(' ')).toHaveLength(8);
+    });
+  });
+
+  describe('UT-027-003: 弹性分行 - 12词行(最大弹性)', () => {
+    it('should keep 12 words on a single line', () => {
+      const doc = createMockDoc();
+      const words = Array.from({ length: 12 }, (_, i) => `word${i}`);
+      const paragraph = words.join(' ');
+      const lines = wrapParagraph(doc, paragraph, 600, 10);
+
+      expect(lines).toHaveLength(1);
+      expect(lines[0].split(' ')).toHaveLength(12);
+    });
+  });
+
+  describe('UT-027-004: 弹性分行 - 少于8词的行', () => {
+    it('should keep short sentences (5 words) on single line', () => {
+      const doc = createMockDoc();
+      const paragraph = 'The quick brown fox jumps';
+      const lines = wrapParagraph(doc, paragraph, 600, 10);
+
+      expect(lines).toHaveLength(1);
+      expect(lines[0].split(' ')).toHaveLength(5);
+    });
+  });
+
+  describe('UT-027-005: 弹性分行 - 超过12词强制换行', () => {
+    it('should break lines when exceeding 12 words', () => {
+      const doc = createMockDoc();
+      const words = Array.from({ length: 15 }, (_, i) => `word${i}`);
+      const paragraph = words.join(' ');
+      const lines = wrapParagraph(doc, paragraph, 600, 10);
+
+      expect(lines.length).toBeGreaterThanOrEqual(2);
+      lines.forEach(line => {
+        const wordCount = line.split(' ').length;
+        expect(wordCount).toBeLessThanOrEqual(12);
+      });
+    });
+  });
+
+  describe('UT-027-006: 空段落处理', () => {
+    it('should return empty array for empty string', () => {
+      const doc = createMockDoc();
+      const lines = wrapParagraph(doc, '', 600, 10);
+      expect(lines).toEqual([]);
+    });
+  });
+
+  describe('UT-027-007: 只有空白字符的段落', () => {
+    it('should return empty array for whitespace-only string', () => {
+      const doc = createMockDoc();
+      const lines = wrapParagraph(doc, '   \t\n  ', 600, 10);
+      expect(lines).toEqual([]);
+    });
+  });
+
+  describe('UT-027-008: 很长的单词不截断', () => {
+    it('should not break long words', () => {
+      const doc = createMockDoc();
+      const longWord = 'supercalifragilisticexpialidocious';
+      const paragraph = `The ${longWord} is long`;
+      const lines = wrapParagraph(doc, paragraph, 200, 10);
+
+      const allText = lines.join(' ');
+      expect(allText).toContain(longWord);
+    });
+  });
+
+  describe('UT-027-009: 移除强制空行 - 单段落', () => {
+    it('should not insert empty lines for single paragraph', () => {
+      const doc = createMockDoc();
+      const text = 'This is a single paragraph with some words.';
+      const lines = wrapTextWithFontMetrics(doc, text, 600, 16, 'GochiHand', 10);
+
+      const emptyLines = lines.filter(line => line === '');
+      expect(emptyLines).toHaveLength(0);
+    });
+  });
+
+  describe('UT-027-010: 移除强制空行 - 多段落', () => {
+    it('should not insert empty lines between paragraphs', () => {
+      const doc = createMockDoc();
+      const text = 'First paragraph here.\n\nSecond paragraph here.';
+      const lines = wrapTextWithFontMetrics(doc, text, 600, 16, 'GochiHand', 10);
+
+      const emptyLines = lines.filter(line => line === '');
+      expect(emptyLines).toHaveLength(0);
+    });
+  });
+
+  describe('UT-027-011: 邮件格式保留 - 称呼+正文+落款', () => {
+    it('should preserve email structure without extra blank lines', () => {
+      const doc = createMockDoc();
+      const text = 'Dear Sir or Madam,\n\nI am writing to...\n\nYours faithfully,';
+      const lines = wrapTextWithFontMetrics(doc, text, 600, 16, 'GochiHand', 10);
+
+      expect(lines.length).toBeGreaterThan(0);
+      const emptyLines = lines.filter(line => line === '');
+      expect(emptyLines).toHaveLength(0);
+    });
+  });
+
+  describe('UT-027-012: 空段落过滤', () => {
+    it('should filter out empty paragraphs', () => {
+      const doc = createMockDoc();
+      const text = 'Paragraph one.\n\n\n\nParagraph two.';
+      const lines = wrapTextWithFontMetrics(doc, text, 600, 16, 'GochiHand', 10);
+
+      const emptyLines = lines.filter(line => line === '');
+      expect(emptyLines).toHaveLength(0);
+      expect(lines.some(line => line.includes('Paragraph one'))).toBe(true);
+      expect(lines.some(line => line.includes('Paragraph two'))).toBe(true);
+    });
+  });
+
+  describe('UT-027-013: 合理剩余空间 - 均匀分配', () => {
+    it('should calculate extra spacing for reasonable remaining space', () => {
+      const doc = createMockDoc({
+        'word': 40,
+        'a': 10,
+        'the': 20,
+        'quick': 50,
+        'brown': 50,
+        'fox': 35,
+      });
+      const words = ['word', 'word', 'word', 'word'];
+      const lineWidth = 200;
+      // 4 words * 40 = 160, 3 spaces * 5 = 15, total = 175
+      // Remaining: 200 - 175 = 25, divided by 3 gaps = ~8.3 per gap
+      // Max extra: 4 * 12 = 48, 25 < 48, so should justify
+
+      const extraSpacing = justifyLine(doc, words, lineWidth, 12);
+      expect(extraSpacing).not.toBeNull();
+      expect(extraSpacing!).toBeGreaterThan(0);
+    });
+  });
+
+  describe('UT-027-014: 剩余空间过大 - 不扩展', () => {
+    it('should return null when remaining space exceeds threshold', () => {
+      const doc = createMockDoc({
+        'a': 10,
+      });
+      const words = ['a', 'a', 'a'];
+      const lineWidth = 500;
+      // 3 words * 10 = 30, 2 spaces * 5 = 10, total = 40
+      // Remaining: 500 - 40 = 460
+      // Max extra: 3 * 12 = 36, 460 > 36
+
+      const extraSpacing = justifyLine(doc, words, lineWidth, 12);
+      expect(extraSpacing).toBeNull();
+    });
+  });
+
+  describe('UT-027-015: 最后一行 - 始终左对齐', () => {
+    it('should return null for single word line (simulating last line)', () => {
+      const doc = createMockDoc();
+      const words = ['word'];
+      const lineWidth = 300;
+
+      const extraSpacing = justifyLine(doc, words, lineWidth, 12);
+      expect(extraSpacing).toBeNull();
+    });
+  });
+
+  describe('Integration: 完整文本排版流程', () => {
+    it('should process a typical essay correctly', () => {
+      const doc = createMockDoc();
+      const essay = `Dear Sir or Madam,
+
+I am writing to express my interest in the position advertised. I believe I have the skills and experience needed for this role.
+
+Yours faithfully,
+Student`;
+
+      const lines = wrapTextWithFontMetrics(doc, essay, 600, 16, 'GochiHand', 10);
+
+      // Should have multiple lines of content
+      expect(lines.length).toBeGreaterThanOrEqual(3);
+      const emptyLines = lines.filter(line => line === '');
+      expect(emptyLines).toHaveLength(0);
+
+      // Each line should have reasonable word count (1-12 words)
+      lines.forEach(line => {
+        const wordCount = line.split(' ').length;
+        expect(wordCount).toBeGreaterThanOrEqual(1);
+        expect(wordCount).toBeLessThanOrEqual(12);
+      });
+
+      const allText = lines.join(' ');
+      expect(allText).toContain('Dear Sir or Madam');
+      expect(allText).toContain('Yours faithfully');
     });
   });
 });

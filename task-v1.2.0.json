@@ -775,7 +775,7 @@
       ],
       "priority": "P1",
       "phase": 9,
-      "passes": false,
+      "passes": true,
       "description": "优化字帖PDF排版：不强制空行，每行~10词（弹性）；通过词间距调整避免右侧大空白，使每行视觉美观",
       "steps": [
         "打开 src/lib/pdf/renderer.ts，找到段落/行渲染逻辑",
