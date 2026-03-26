@@ -675,7 +675,7 @@
       ],
       "priority": "P1",
       "phase": 8,
-      "passes": false,
+      "passes": true,
       "description": "为corrections表新增3个JSONB字段，存储结构化批改数据：scoring_comments（各维度评语）、correction_steps（6步详情）、structured_suggestions（改进建议）",
       "steps": [
         "新建 supabase/migrations/007_v121_structured_correction.sql，内容：ALTER TABLE corrections ADD COLUMN IF NOT EXISTS scoring_comments JSONB; ALTER TABLE corrections ADD COLUMN IF NOT EXISTS correction_steps JSONB; ALTER TABLE corrections ADD COLUMN IF NOT EXISTS structured_suggestions JSONB;",

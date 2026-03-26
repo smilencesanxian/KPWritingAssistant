@@ -1631,3 +1631,27 @@ The feature integrates collected phrases into the model essay generation flow, g
 - OCR过滤规则经过优化，避免误删中文内容
 - exam_part 传递链路已加固，有适当的回退和日志记录
 - 后续可通过日志监控 exam_part 异常情况
+
+## 2026-03-26 - Task 23: F2-Step1: DB Migration 007 + TypeScript类型 - 批改结构化输出字段
+
+### What was done:
+- Created migration file `supabase/migrations/007_v121_structured_correction.sql`
+  - Added 3 new JSONB columns: scoring_comments, correction_steps, structured_suggestions
+  - Added GIN indexes for efficient JSONB queries
+- Updated `src/types/database.ts` Correction interface
+  - Added scoring_comments with 4-dimension score/comment structure
+  - Added correction_steps with step1-6 structure (step4 as array)
+  - Added structured_suggestions as array of icon/title/detail objects
+  - All fields marked as optional (? and | null) for backward compatibility
+
+### Testing:
+- npm run build: SUCCESS (24 static pages generated)
+- npm run lint: PASS (no errors, 9 pre-existing warnings)
+- Unit tests: 157/157 passed
+- test-engineer SubAgent: [PASS] verified all requirements
+
+### Notes:
+- Changed 'ca' to 'communication' in scoring_comments type to match existing field naming convention (communication_score)
+- Migration uses IF NOT EXISTS for idempotency
+- Fields are nullable for backward compatibility with existing data
+

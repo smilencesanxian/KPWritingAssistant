@@ -27,6 +27,30 @@ export interface Correction {
   improvement_suggestions: string | null;
   status: string;
   created_at: string;
+  // v1.2.1 新增字段：结构化批改数据
+  scoring_comments?: {
+    content: { score: number; comment: string };
+    communication: { score: number; comment: string };
+    organisation: { score: number; comment: string };
+    language: { score: number; comment: string };
+  } | null;
+  correction_steps?: {
+    step1: string;
+    step2: string;
+    step3: string;
+    step4: Array<{
+      original: string;
+      error_type: string;
+      suggestion: string;
+    }>;
+    step5: string;
+    step6: string;
+  } | null;
+  structured_suggestions?: Array<{
+    icon: string;
+    title: string;
+    detail: string;
+  }> | null;
 }
 
 export interface EditHistoryItem {
