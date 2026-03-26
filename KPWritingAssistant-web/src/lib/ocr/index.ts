@@ -16,6 +16,7 @@ export async function recognizeHandwriting(imageBase64: string): Promise<OcrResu
 /**
  * 清洗OCR文本，过滤拍照App产生的噪音文字
  * 如：'3张'、'2页'、'第1张'、'共5张'等
+ * 同时过滤Part2答题纸特有的噪音：CAMBRIDGE ENGLISH水印、Question标签、独立数字行等
  */
 export function cleanOcrText(text: string): string {
   if (!text) return '';
@@ -39,6 +40,36 @@ export function cleanOcrText(text: string): string {
 
   // 过滤纯数字+'页'的噪音
   cleaned = cleaned.replace(/\d+页/g, '');
+
+  // Part2答题纸特有噪音过滤
+  // 过滤 CAMBRIDGE ENGLISH 水印（不区分大小写，整行匹配）
+  cleaned = cleaned.replace(/^[\s]*CAMBRIDGE ENGLISH[\s]*$/gim, '');
+
+  // 过滤 Question 1 / Question 2 标签（不区分大小写，整行匹配）
+  cleaned = cleaned.replace(/^[\s]*Question\s+[12][\s]*$/gim, '');
+
+  // 过滤独立的数字行（纯数字，通常是页码或题号，如 "119", "99"）
+  cleaned = cleaned.replace(/^[\s]*\d+[\s]*$/gm, '');
+
+  // 过滤明显乱码行（短于3个字符且只包含ASCII字符且非英文单词的行，保留常见短单词和单字母如 I, a, b, c 等）
+  // 注意：不过滤包含非ASCII字符（如中文）的行，避免误删有效内容
+  const commonShortWords = new Set(['i', 'a', 'an', 'go', 'to', 'in', 'on', 'at', 'by', 'up', 'ok', 'oh', 'ah', 'no', 'so', 'if', 'we', 'he', 'me', 'my', 'us', 'do', 'be', 'is', 'am', 'it', 'as', 'of', 'or', 'ex']);
+  cleaned = cleaned
+    .split('\n')
+    .map((line) => {
+      const trimmed = line.trim();
+      // 如果行长度为1且是单个字母，保留（可能是选项A、B、C等）
+      if (trimmed.length === 1 && /^[a-zA-Z]$/.test(trimmed)) {
+        return line;
+      }
+      // 如果行长度小于3、只包含ASCII字符、且不是常见短单词，则过滤掉
+      // 包含非ASCII字符（如中文）的行不过滤
+      if (trimmed.length > 0 && trimmed.length < 3 && /^[\x00-\x7F]+$/.test(trimmed) && !commonShortWords.has(trimmed.toLowerCase())) {
+        return '';
+      }
+      return line;
+    })
+    .join('\n');
 
   // 过滤连续超过3个的空白行，压缩为最多2个换行
   cleaned = cleaned.replace(/\n{3,}/g, '\n\n');

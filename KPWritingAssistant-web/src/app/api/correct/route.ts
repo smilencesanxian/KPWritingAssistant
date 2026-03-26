@@ -57,8 +57,18 @@ export async function POST(request: NextRequest) {
   await updateSubmissionStatus(submission_id, 'processing');
 
   try {
+    // Determine exam_part: prefer submission's stored value, fallback to request parameter for backward compatibility
+    const effectiveExamPart = submission.exam_part ?? (typeof exam_part === 'string' ? exam_part : null);
+
+    // Log warning if exam_part is missing (helps debug prompt selection issues)
+    if (!effectiveExamPart) {
+      console.warn(`[Correct API] Missing exam_part for submission ${submission_id}, will use default Part1 prompt`);
+    } else if (effectiveExamPart !== 'part1' && effectiveExamPart !== 'part2') {
+      console.warn(`[Correct API] Invalid exam_part "${effectiveExamPart}" for submission ${submission_id}, will use default Part1 prompt`);
+    }
+
     // Call LLM to correct the essay (pass exam_part for part-specific prompts)
-    const correctionResult = await correctEssay(submission.ocr_text, submission.exam_part);
+    const correctionResult = await correctEssay(submission.ocr_text, effectiveExamPart);
 
     // Save correction record
     const correction = await createCorrection(submission_id, {

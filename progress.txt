@@ -1604,3 +1604,30 @@ The feature integrates collected phrases into the model essay generation flow, g
 - 代码逻辑检查显示按钮功能实现正确
 - Bug 可能已在之前的提交中被修复
 - 测试用例覆盖了按钮点击、API调用、加载状态、错误处理等场景
+
+## 2026-03-26 - Task 22: B5 - Part2拍照OCR乱码 + 生成范文类型错误修复
+
+### What was done:
+1. **OCR乱码修复** (src/lib/ocr/index.ts):
+   - 添加 CAMBRIDGE ENGLISH 水印过滤（整行匹配，不区分大小写）
+   - 添加 Question 1 / Question 2 标签过滤（整行匹配，不区分大小写）
+   - 添加独立数字行过滤（纯数字行如页码"119"）
+   - 添加乱码行过滤（短于3个字符的ASCII乱码，保留常见短单词如 I, a, an 等，保留中文内容）
+   - 保留单字母（可能是选项A、B、C等）
+
+2. **范文类型错误修复** (src/app/api/correct/route.ts):
+   - 添加 exam_part 回退逻辑：优先使用 submission.exam_part，如为空则使用请求参数
+   - 添加缺失/无效 exam_part 的警告日志以便调试
+
+3. **调试日志增强** (src/lib/ai/prompts.ts):
+   - 在 getModelEssaySystemPrompt 中添加无效 exam_part 的警告日志
+
+### Testing:
+- npm test: 157 个单元测试全部通过
+- npm run lint: 0 errors (9 warnings 与本次任务无关)
+- npm run build: 构建成功
+
+### Notes:
+- OCR过滤规则经过优化，避免误删中文内容
+- exam_part 传递链路已加固，有适当的回退和日志记录
+- 后续可通过日志监控 exam_part 异常情况

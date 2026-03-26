@@ -70,6 +70,10 @@ export function getModelEssaySystemPrompt(examPart?: string | null): string {
   if (examPart === 'part2') {
     return config.modelEssay.part2SystemPrompt || config.modelEssay.systemPrompt;
   }
+  // Log warning if exam_part is missing or invalid
+  if (examPart && examPart !== 'part1') {
+    console.warn(`[Prompts] Unexpected exam_part "${examPart}", using Part1 prompt`);
+  }
   return config.modelEssay.part1SystemPrompt || config.modelEssay.systemPrompt;
 }
 

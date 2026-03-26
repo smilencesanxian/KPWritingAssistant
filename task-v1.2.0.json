@@ -650,7 +650,7 @@
       ],
       "priority": "P0",
       "phase": 7,
-      "passes": false,
+      "passes": true,
       "description": "修复两个关联bug：Part2答题纸OCR识别包含多余乱码（数字/无意义字符）；以及Part2作文错误使用Part1邮件prompt生成范文",
       "steps": [
         "打开 src/lib/ocr/ 目录，找到 cleanOcrText() 函数，查看现有的过滤规则",
