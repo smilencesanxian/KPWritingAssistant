@@ -577,7 +577,7 @@
       ],
       "priority": "P0",
       "phase": 7,
-      "passes": false,
+      "passes": true,
       "description": "修复批改Loading界面4个维度卡片分数显示错误，并添加PET评分标准说明文字和评分对照表",
       "steps": [
         "打开 src/app/upload/page.tsx，找到 correcting 步骤对应的 JSX（约 lines 392-430），检查4个维度卡片的分数显示是否为'/5'还是'/15'，如为'/15'则修复为'/5'",

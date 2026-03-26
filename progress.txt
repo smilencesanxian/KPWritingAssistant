@@ -1547,3 +1547,18 @@ The feature integrates collected phrases into the model essay generation flow, g
 
 ### Notes:
 - 纯文案修改，影响范围极小
+
+## 2026-03-26 - Task 19: B2 - 批改中界面修复
+
+### What was done:
+- 确认4个维度卡片分数已正确显示"/5"（非"/15"）
+- 在"AI 正在批改中"标题下方添加灰色提示文字"以下为 PET 作文官方评分标准"
+- 在维度卡片下方添加4行评分标准对照表（5分/3-4分/1-2分/0分）
+
+### Testing:
+- 代码静态验证通过
+- npm run lint: 0 errors
+- npm run build: 成功
+
+### Notes:
+- 评分标准描述参考 prompts/1 PET part1批改与范文生成提示.md

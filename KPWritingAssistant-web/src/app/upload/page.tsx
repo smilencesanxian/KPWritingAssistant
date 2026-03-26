@@ -410,8 +410,11 @@ export default function UploadPage() {
 
         <p className="text-lg font-semibold text-neutral-800 mb-2">AI 正在批改中</p>
 
+        {/* Scoring standard hint */}
+        <p className="text-xs text-neutral-400 mt-6 mb-0">以下为 PET 作文官方评分标准</p>
+
         {/* Scoring dimension cards */}
-        <div className="grid grid-cols-2 gap-4 mt-8 max-w-md w-full">
+        <div className="grid grid-cols-2 gap-4 mt-3 max-w-md w-full">
           {scoringDimensions.map((dim) => (
             <div
               key={dim.key}
@@ -425,6 +428,36 @@ export default function UploadPage() {
               <p className="text-xs text-neutral-500">{dim.description}</p>
             </div>
           ))}
+        </div>
+
+        {/* Scoring reference table */}
+        <div className="mt-4 max-w-md w-full text-left">
+          <table className="w-full text-xs text-neutral-500 border-collapse">
+            <thead>
+              <tr className="border-b border-neutral-200">
+                <th className="py-1.5 pr-3 font-medium text-neutral-600 w-16">分数</th>
+                <th className="py-1.5 font-medium text-neutral-600">标准描述</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b border-neutral-100">
+                <td className="py-1.5 pr-3 font-medium">5分</td>
+                <td className="py-1.5">完整覆盖所有要点，表达地道，格式规范</td>
+              </tr>
+              <tr className="border-b border-neutral-100">
+                <td className="py-1.5 pr-3 font-medium">3-4分</td>
+                <td className="py-1.5">覆盖大部分要点，偶有语法或格式问题</td>
+              </tr>
+              <tr className="border-b border-neutral-100">
+                <td className="py-1.5 pr-3 font-medium">1-2分</td>
+                <td className="py-1.5">要点遗漏较多，语法错误明显</td>
+              </tr>
+              <tr>
+                <td className="py-1.5 pr-3 font-medium">0分</td>
+                <td className="py-1.5">几乎未覆盖要点或完全偏题</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     );
