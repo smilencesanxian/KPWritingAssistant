@@ -34,7 +34,18 @@ export async function createHighlights(
 
   if (uniqueHighlights.length === 0) return [];
 
-  const rows = uniqueHighlights.map((h) => ({
+  // Pre-link each highlight to knowledge base before writing
+  const highlightsWithLinks = await Promise.all(
+    uniqueHighlights.map(async (h) => {
+      const phraseId = h.recommended_phrase_id ?? await tryLinkToKnowledgeBase(h.text, supabase);
+      return {
+        ...h,
+        recommended_phrase_id: phraseId,
+      };
+    })
+  );
+
+  const rows = highlightsWithLinks.map((h) => ({
     user_id: userId,
     text: h.text,
     type: h.type,
@@ -130,7 +141,11 @@ export async function getHighlightsBySubmissionId(
 export async function addHighlightManually(
   userId: string,
   text: string,
-  type: string
+  type: string,
+  options?: {
+    knowledge_essay_type?: 'email' | 'article' | 'story' | 'general';
+    recommended_phrase_id?: string;
+  }
 ): Promise<Highlight> {
   const supabase = await createClient();
 
@@ -143,11 +158,22 @@ export async function addHighlightManually(
     .maybeSingle();
 
   if (existing) {
-    // If type changed, update it; otherwise return existing
+    // If type changed or options changed, update it; otherwise return existing
+    const updates: Partial<Highlight> = {};
     if (existing.type !== type) {
+      updates.type = type as 'vocabulary' | 'phrase' | 'sentence';
+    }
+    if (options?.knowledge_essay_type !== undefined && existing.knowledge_essay_type !== options.knowledge_essay_type) {
+      updates.knowledge_essay_type = options.knowledge_essay_type;
+    }
+    if (options?.recommended_phrase_id !== undefined && existing.recommended_phrase_id !== options.recommended_phrase_id) {
+      updates.recommended_phrase_id = options.recommended_phrase_id;
+    }
+
+    if (Object.keys(updates).length > 0) {
       const { data: updated, error: updateError } = await supabase
         .from('highlights_library')
-        .update({ type })
+        .update(updates)
         .eq('id', existing.id)
         .select()
         .single();
@@ -167,6 +193,8 @@ export async function addHighlightManually(
       text: text.trim(),
       type,
       source_submission_id: null,
+      knowledge_essay_type: options?.knowledge_essay_type ?? null,
+      recommended_phrase_id: options?.recommended_phrase_id ?? null,
     })
     .select()
     .single();

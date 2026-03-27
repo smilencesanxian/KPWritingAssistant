@@ -881,7 +881,7 @@
       "feature_ids": ["KB"],
       "priority": "P1",
       "phase": 11,
-      "passes": false,
+      "passes": true,
       "description": "更新 /api/recommended-phrases 支持按分组返回知识库数据；更新 /api/highlights 的 POST 接口支持传入 knowledge_essay_type 字段，并在创建 highlight 时调用 tryLinkToKnowledgeBase() 自动写入 recommended_phrase_id（写入时预关联，保证 is_in_highlights 无需运行时扫描）。同时在批改提取 highlights 的入口处也加入同样的预关联调用。",
       "steps": [
         "修改 src/app/api/recommended-phrases/route.ts：GET handler 新增 URL 参数判断，当 searchParams.get('grouped') === 'true' 时，获取 essayType 参数，调用 getKnowledgeBase(essayType, user.id) 并返回结果；保持原有非 grouped 逻辑不变",

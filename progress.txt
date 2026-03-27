@@ -1920,3 +1920,36 @@ The feature integrates collected phrases into the model essay generation flow, g
 - Seed data exceeds the requirement of 50 records (73 total)
 - All four essay types (email/article/story/general) are covered
 - Categories follow the mapping defined in the task requirements
+
+## 2026-03-27 - Task 33: KB-3 - 更新API路由（知识库分组查询 + 用户自定义添加）
+
+### What was done:
+1. **Updated src/app/api/recommended-phrases/route.ts**:
+   - Added authentication check for all requests
+   - Added `grouped=true` URL parameter support
+   - When `grouped=true`, validates `essayType` parameter and calls `getKnowledgeBase(essayType, user.id)`
+   - Returns `{sections: [...]}` format for grouped queries
+   - Added 'story' to VALID_ESSAY_TYPES
+   - Preserved existing non-grouped logic for backward compatibility
+
+2. **Updated src/app/api/highlights/route.ts**:
+   - Added extraction of `knowledge_essay_type` from request body
+   - Added validation for `knowledge_essay_type` against VALID_ESSAY_TYPES
+   - Calls `tryLinkToKnowledgeBase(text)` before creating highlight to pre-link to knowledge base
+   - Passes both `knowledge_essay_type` and `recommended_phrase_id` to `addHighlightManually`
+
+3. **Updated src/lib/db/highlights.ts**:
+   - Updated `addHighlightManually()` to accept optional `options` parameter with `knowledge_essay_type` and `recommended_phrase_id`
+   - Updated function to handle updates to existing highlights when options change
+   - Updated `createHighlights()` to call `tryLinkToKnowledgeBase()` for each highlight before batch writing
+   - Exported `tryLinkToKnowledgeBase` function for use in API routes
+
+### Testing:
+- npm run lint: Passed (0 errors in modified files)
+- npm run build: Passed
+- Test Agent verification: [PASS] - Code implementation verified
+
+### Notes:
+- The migration file 008_knowledge_base_expand.sql exists with the required `knowledge_essay_type` column
+- Database migration needs to be applied to local Supabase instance for full E2E testing
+- Implementation follows the "write-time pre-linking" approach for optimal query performance

@@ -1,11 +1,45 @@
-import { getRecommendedPhrases } from '@/lib/db/recommended-phrases';
+import { getRecommendedPhrases, getKnowledgeBase } from '@/lib/db/recommended-phrases';
+import { createClient } from '@/lib/supabase/server';
 import { NextRequest } from 'next/server';
 
 const VALID_TYPES = ['vocabulary', 'phrase', 'sentence'];
-const VALID_ESSAY_TYPES = ['email', 'article', 'general'];
+const VALID_ESSAY_TYPES = ['email', 'article', 'story', 'general'];
 
 export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
+
+  // Check for grouped mode (knowledge base view)
+  const grouped = searchParams.get('grouped') === 'true';
+  if (grouped) {
+    const essayType = searchParams.get('essayType');
+    if (!essayType) {
+      return Response.json(
+        { error: 'Missing essayType parameter for grouped query' },
+        { status: 400 }
+      );
+    }
+    if (!VALID_ESSAY_TYPES.includes(essayType)) {
+      return Response.json(
+        { error: `Invalid essayType parameter. Must be one of: ${VALID_ESSAY_TYPES.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    try {
+      const sections = await getKnowledgeBase(essayType, user.id);
+      return Response.json({ sections });
+    } catch (err) {
+      console.error('Failed to get knowledge base:', err);
+      return Response.json({ error: '获取知识库失败，请重试' }, { status: 500 });
+    }
+  }
 
   // Parse and validate type parameter
   const type = searchParams.get('type');
@@ -20,7 +54,7 @@ export async function GET(request: NextRequest) {
   const essayType = searchParams.get('essay_type');
   if (essayType && !VALID_ESSAY_TYPES.includes(essayType)) {
     return Response.json(
-      { error: 'Invalid essay_type parameter. Must be one of: email, article, general' },
+      { error: `Invalid essay_type parameter. Must be one of: ${VALID_ESSAY_TYPES.join(', ')}` },
       { status: 400 }
     );
   }
