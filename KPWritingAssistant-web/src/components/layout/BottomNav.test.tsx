@@ -26,7 +26,7 @@ const expectedNavItems = [
   { href: '/', label: '首页' },
   { href: '/history', label: '历史' },
   { href: '/highlights', label: '亮点库' },
-  { href: '/writing-guide', label: '导览' },
+  { href: '/writing-guide', label: '知识库' },
   { href: '/error-points', label: '易错点' },
   { href: '/profile', label: '我的' },
 ];
@@ -43,7 +43,7 @@ describe('BottomNav - Navigation Items Configuration', () => {
 
   it('UT-001: should include all required navigation items in correct order', () => {
     const labels = expectedNavItems.map(item => item.label);
-    expect(labels).toEqual(['首页', '历史', '亮点库', '导览', '易错点', '我的']);
+    expect(labels).toEqual(['首页', '历史', '亮点库', '知识库', '易错点', '我的']);
   });
 
   it('UT-001: should have correct hrefs for all items', () => {
@@ -55,17 +55,17 @@ describe('BottomNav - Navigation Items Configuration', () => {
 describe('BottomNav - Guide Navigation Item', () => {
   it('UT-002: should have guide item at index 3 (between highlights and error-points)', () => {
     const guideItem = expectedNavItems[3];
-    expect(guideItem.label).toBe('导览');
+    expect(guideItem.label).toBe('知识库');
     expect(guideItem.href).toBe('/writing-guide');
   });
 
   it('UT-002: guide item should be positioned after highlights', () => {
     expect(expectedNavItems[2].label).toBe('亮点库');
-    expect(expectedNavItems[3].label).toBe('导览');
+    expect(expectedNavItems[3].label).toBe('知识库');
   });
 
   it('UT-002: guide item should be positioned before error-points', () => {
-    expect(expectedNavItems[3].label).toBe('导览');
+    expect(expectedNavItems[3].label).toBe('知识库');
     expect(expectedNavItems[4].label).toBe('易错点');
   });
 });
@@ -104,8 +104,8 @@ describe('BottomNav - Active State Logic', () => {
       { pathname: '/history', expectedActive: '历史' },
       { pathname: '/history/123', expectedActive: '历史' },
       { pathname: '/highlights', expectedActive: '亮点库' },
-      { pathname: '/writing-guide', expectedActive: '导览' },
-      { pathname: '/writing-guide/section/1', expectedActive: '导览' },
+      { pathname: '/writing-guide', expectedActive: '知识库' },
+      { pathname: '/writing-guide/section/1', expectedActive: '知识库' },
       { pathname: '/error-points', expectedActive: '易错点' },
       { pathname: '/profile', expectedActive: '我的' },
     ];
@@ -139,6 +139,6 @@ describe('BottomNav - Icon Configuration', () => {
     // This is a placeholder to verify icon exists in implementation
     const guideItem = expectedNavItems.find(item => item.href === '/writing-guide');
     expect(guideItem).toBeDefined();
-    expect(guideItem?.label).toBe('导览');
+    expect(guideItem?.label).toBe('知识库');
   });
 });

@@ -76,8 +76,17 @@ export async function POST(request: NextRequest) {
   const { highlights } = await getHighlights(user.id, { limit: 50 });
   const highlightTexts = highlights.map((h) => h.text);
 
-  // Get user's collected system phrases to guide the model essay generation
-  const collectedPhrases = await getCollectedSystemPhrases(user.id);
+  // Get user's collected system phrases and user KB phrases, filtered by essay type
+  const allPhrases = await getCollectedSystemPhrases(user.id);
+  const isEmail = submissionData.exam_part === 'part1';
+  const collectedPhrases = allPhrases
+    .filter((p) => {
+      const et = p.knowledge_essay_type;
+      if (!et) return true;
+      if (isEmail) return et === 'email' || et === 'general';
+      return et === 'article' || et === 'story' || et === 'general';
+    })
+    .map((p) => p.text);
 
   // Generate model essay (pass exam_part and question_type for part-specific prompts)
   const content = await generateModelEssay(

@@ -933,7 +933,7 @@
       "feature_ids": ["KB"],
       "priority": "P1",
       "phase": 11,
-      "passes": false,
+      "passes": true,
       "description": "将底部导航'导览'改名为'知识库'并更新图标。扩展范文生成逻辑：在生成前，按作文类型过滤用户认可的知识库词句（包含收藏的系统条目和手动添加的用户条目），作为软性参考注入 Prompt。",
       "steps": [
         "修改 src/components/layout/BottomNav.tsx：找到 writing-guide 的导航项，将 label 从'导览'改为'知识库'；将图标 SVG 替换为更贴合'知识库'概念的图标（例如书本/灯泡图标，保持描边风格与其他图标一致）",

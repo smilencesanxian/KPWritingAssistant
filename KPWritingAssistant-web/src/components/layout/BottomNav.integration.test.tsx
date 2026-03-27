@@ -42,7 +42,7 @@ const MockBottomNav = ({ pathname }: { pathname: string }) => {
     { href: '/', label: '首页' },
     { href: '/history', label: '历史' },
     { href: '/highlights', label: '亮点库' },
-    { href: '/writing-guide', label: '导览' },
+    { href: '/writing-guide', label: '知识库' },
     { href: '/error-points', label: '易错点' },
     { href: '/profile', label: '我的' },
   ];
@@ -84,7 +84,7 @@ describe('BottomNav Integration - Component Rendering', () => {
     expect(screen.getByText('首页')).toBeInTheDocument();
     expect(screen.getByText('历史')).toBeInTheDocument();
     expect(screen.getByText('亮点库')).toBeInTheDocument();
-    expect(screen.getByText('导览')).toBeInTheDocument();
+    expect(screen.getByText('知识库')).toBeInTheDocument();
     expect(screen.getByText('易错点')).toBeInTheDocument();
     expect(screen.getByText('我的')).toBeInTheDocument();
   });
@@ -104,7 +104,7 @@ describe('BottomNav Integration - Component Rendering', () => {
     const items = Array.from(navContainer.children);
 
     expect(items[2]).toHaveTextContent('亮点库');
-    expect(items[3]).toHaveTextContent('导览');
+    expect(items[3]).toHaveTextContent('知识库');
     expect(items[4]).toHaveTextContent('易错点');
   });
 });
@@ -113,7 +113,7 @@ describe('BottomNav Integration - Navigation Links', () => {
   it('IT-001: guide item should have correct href attribute', () => {
     render(<MockBottomNav pathname="/" />);
 
-    const guideLink = screen.getByText('导览').closest('a');
+    const guideLink = screen.getByText('知识库').closest('a');
     expect(guideLink).toHaveAttribute('href', '/writing-guide');
   });
 
@@ -124,7 +124,7 @@ describe('BottomNav Integration - Navigation Links', () => {
       { label: '首页', href: '/' },
       { label: '历史', href: '/history' },
       { label: '亮点库', href: '/highlights' },
-      { label: '导览', href: '/writing-guide' },
+      { label: '知识库', href: '/writing-guide' },
       { label: '易错点', href: '/error-points' },
       { label: '我的', href: '/profile' },
     ];
@@ -140,7 +140,7 @@ describe('BottomNav Integration - Active State Styling', () => {
   it('should apply active styling to current page', () => {
     render(<MockBottomNav pathname="/writing-guide" />);
 
-    const guideLink = screen.getByText('导览').closest('a');
+    const guideLink = screen.getByText('知识库').closest('a');
     expect(guideLink).toHaveClass('text-primary-600');
     expect(guideLink).toHaveAttribute('data-active', 'true');
   });
@@ -156,7 +156,7 @@ describe('BottomNav Integration - Active State Styling', () => {
   it('should handle active state for guide sub-routes', () => {
     render(<MockBottomNav pathname="/writing-guide/topic/123" />);
 
-    const guideLink = screen.getByText('导览').closest('a');
+    const guideLink = screen.getByText('知识库').closest('a');
     expect(guideLink).toHaveClass('text-primary-600');
     expect(guideLink).toHaveAttribute('data-active', 'true');
   });
@@ -189,7 +189,7 @@ describe('BottomNav Integration - Accessibility', () => {
   it('all navigation items should be visible', () => {
     render(<MockBottomNav pathname="/" />);
 
-    const labels = ['首页', '历史', '亮点库', '导览', '易错点', '我的'];
+    const labels = ['首页', '历史', '亮点库', '知识库', '易错点', '我的'];
     labels.forEach(label => {
       expect(screen.getByText(label)).toBeVisible();
     });

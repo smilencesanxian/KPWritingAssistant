@@ -206,21 +206,38 @@ export async function addHighlightManually(
   return data as Highlight;
 }
 
-export async function getCollectedSystemPhrases(userId: string): Promise<string[]> {
+export async function getCollectedSystemPhrases(
+  userId: string
+): Promise<Array<{ text: string; knowledge_essay_type: string | null }>> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  const { data: systemData, error: systemError } = await supabase
     .from('highlights_library')
-    .select('text')
+    .select('text, knowledge_essay_type')
     .eq('user_id', userId)
     .eq('source', 'system')
     .order('created_at', { ascending: false });
 
-  if (error) {
-    throw new Error(`Failed to get collected system phrases: ${error.message}`);
+  if (systemError) {
+    throw new Error(`Failed to get collected system phrases: ${systemError.message}`);
   }
 
-  return (data ?? []).map((h) => h.text);
+  const { data: userKbData, error: userKbError } = await supabase
+    .from('highlights_library')
+    .select('text, knowledge_essay_type')
+    .eq('user_id', userId)
+    .eq('source', 'user')
+    .not('knowledge_essay_type', 'is', null)
+    .order('created_at', { ascending: false });
+
+  if (userKbError) {
+    throw new Error(`Failed to get user knowledge phrases: ${userKbError.message}`);
+  }
+
+  return [...(systemData ?? []), ...(userKbData ?? [])] as Array<{
+    text: string;
+    knowledge_essay_type: string | null;
+  }>;
 }
 
 // v1.2.1 新增：写入时预关联知识库
