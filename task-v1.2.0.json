@@ -857,7 +857,7 @@
       "feature_ids": ["KB"],
       "priority": "P1",
       "phase": 11,
-      "passes": false,
+      "passes": true,
       "description": "更新 TypeScript 类型定义，在 recommended-phrases.ts 中新增 getKnowledgeBase() 函数。采用写入时预关联方案：is_in_highlights 通过 recommended_phrase_id 做 ID 索引查询（而非运行时 ILIKE 扫描），性能优先。同时在 highlights.ts 中新增 tryLinkToKnowledgeBase() 辅助函数，供 highlight 创建时调用，实现一次性关联。",
       "steps": [
         "更新 src/types/database.ts：为 RecommendedPhrase 类型新增 category: string | null 和 level: 'basic' | 'advanced' | null 字段；为 Highlight 类型新增 knowledge_essay_type: string | null 字段",

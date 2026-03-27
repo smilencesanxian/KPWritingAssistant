@@ -194,3 +194,28 @@ export async function getCollectedSystemPhrases(userId: string): Promise<string[
 
   return (data ?? []).map((h) => h.text);
 }
+
+// v1.2.1 新增：写入时预关联知识库
+export async function tryLinkToKnowledgeBase(
+  text: string,
+  supabaseClient?: Awaited<ReturnType<typeof createClient>>
+): Promise<string | null> {
+  const supabase = supabaseClient ?? (await createClient());
+
+  const trimmedText = text.trim();
+  if (!trimmedText) return null;
+
+  // 使用 ilike 进行大小写不敏感匹配，但要求完整文本匹配
+  const { data, error } = await supabase
+    .from('recommended_phrases')
+    .select('id')
+    .ilike('text', trimmedText)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to link to knowledge base: ${error.message}`);
+  }
+
+  return data?.id ?? null;
+}

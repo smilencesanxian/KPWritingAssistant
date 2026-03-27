@@ -107,3 +107,183 @@ export async function isCollected(
 
   return data !== null;
 }
+
+// v1.2.1 新增：知识库相关类型和函数
+
+export interface KnowledgeItem {
+  id: string;
+  text: string;
+  type: 'vocabulary' | 'phrase' | 'sentence';
+  level: 'basic' | 'advanced' | null;
+  category: string | null;
+  source: 'system' | 'user';
+  is_collected: boolean;
+  is_in_highlights: boolean;
+  highlight_id?: string | null;
+}
+
+export interface KnowledgeSection {
+  category: string;
+  category_label: string;
+  items: KnowledgeItem[];
+}
+
+// 分类标签映射
+export const CATEGORY_LABELS: Record<string, string> = {
+  opening: '开篇引入',
+  opinion: '观点表达',
+  connector: '逻辑连接',
+  detail: '细节描述',
+  closing: '结尾升华',
+  title: '标题设计',
+  plot: '情节发展',
+  emotion: '情感表达',
+  emotion_vocab: '情绪词汇',
+  action_vocab: '动作词汇',
+  adverb: '程度副词',
+  complex_sentence: '高级句式',
+};
+
+export function getCategoryLabel(category: string | null): string {
+  if (!category) return '其他';
+  return CATEGORY_LABELS[category] || category;
+}
+
+export async function getKnowledgeBase(
+  essayType: string,
+  userId: string
+): Promise<KnowledgeSection[]> {
+  const supabase = await createClient();
+
+  // 1. 查询系统推荐短语（匹配指定类型或 general）
+  const { data: phrases, error: phrasesError } = await supabase
+    .from('recommended_phrases')
+    .select('*')
+    .eq('is_active', true)
+    .or(`essay_type.eq.${essayType},essay_type.eq.general`)
+    .order('sort_order', { ascending: true });
+
+  if (phrasesError) {
+    throw new Error(`Failed to get recommended phrases: ${phrasesError.message}`);
+  }
+
+  // 2. 查询用户 highlights 中所有有 recommended_phrase_id 的条目
+  const { data: highlights, error: highlightsError } = await supabase
+    .from('highlights_library')
+    .select('*')
+    .eq('user_id', userId)
+    .not('recommended_phrase_id', 'is', null);
+
+  if (highlightsError) {
+    throw new Error(`Failed to get highlights: ${highlightsError.message}`);
+  }
+
+  // 3. 构建 Map 用于 O(1) 状态查找
+  // Map<phraseId, { source, id }>
+  const highlightMap = new Map<string, { source: 'system' | 'user'; id: string }>();
+  for (const h of highlights ?? []) {
+    if (h.recommended_phrase_id) {
+      highlightMap.set(h.recommended_phrase_id, {
+        source: h.source,
+        id: h.id,
+      });
+    }
+  }
+
+  // 4. 处理系统推荐条目
+  const systemItems: KnowledgeItem[] = (phrases ?? []).map((phrase) => {
+    const highlightInfo = highlightMap.get(phrase.id);
+    return {
+      id: phrase.id,
+      text: phrase.text,
+      type: phrase.type,
+      level: phrase.level,
+      category: phrase.category,
+      source: 'system',
+      is_collected: highlightInfo?.source === 'system',
+      is_in_highlights: highlightInfo?.source === 'user',
+      highlight_id: highlightInfo?.id || null,
+    };
+  });
+
+  // 5. 查询并追加用户自定义条目
+  // 用户自定义：source='user' 且 recommended_phrase_id IS NULL 且 knowledge_essay_type 匹配
+  const { data: userCustomHighlights, error: userError } = await supabase
+    .from('highlights_library')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('source', 'user')
+    .is('recommended_phrase_id', null)
+    .eq('knowledge_essay_type', essayType);
+
+  if (userError) {
+    throw new Error(`Failed to get user custom highlights: ${userError.message}`);
+  }
+
+  const userItems: KnowledgeItem[] = (userCustomHighlights ?? []).map((h) => ({
+    id: h.id,
+    text: h.text,
+    type: h.type,
+    level: null,
+    category: null,
+    source: 'user',
+    is_collected: false,
+    is_in_highlights: true,
+    highlight_id: h.id,
+  }));
+
+  // 6. 合并所有条目
+  const allItems = [...systemItems, ...userItems];
+
+  // 7. 按 category 分组
+  const grouped = new Map<string, KnowledgeItem[]>();
+  for (const item of allItems) {
+    const category = item.category || 'other';
+    if (!grouped.has(category)) {
+      grouped.set(category, []);
+    }
+    grouped.get(category)!.push(item);
+  }
+
+  // 8. 构建结果数组，保持特定分类顺序
+  const categoryOrder = [
+    'opening',
+    'opinion',
+    'connector',
+    'detail',
+    'closing',
+    'title',
+    'plot',
+    'emotion',
+    'emotion_vocab',
+    'action_vocab',
+    'adverb',
+    'complex_sentence',
+    'other',
+  ];
+
+  const result: KnowledgeSection[] = [];
+  for (const category of categoryOrder) {
+    const items = grouped.get(category);
+    if (items && items.length > 0) {
+      result.push({
+        category,
+        category_label: getCategoryLabel(category),
+        items,
+      });
+    }
+  }
+
+  // 添加未在预定义顺序中的分类
+  for (const [category, items] of grouped.entries()) {
+    if (!categoryOrder.includes(category)) {
+      result.push({
+        category,
+        category_label: getCategoryLabel(category),
+        items,
+      });
+    }
+  }
+
+  return result;
+}

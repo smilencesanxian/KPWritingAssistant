@@ -1,4 +1,43 @@
-## 2026-03-26 - Task 26: F2-Step4 - 批改结果页面重写 - 4大块结构化展示
+## 2026-03-27 - Task 32: KB-2 - 更新类型定义 + DB模块新增 getKnowledgeBase 函数
+
+### What was done:
+- **更新 TypeScript 类型定义 (src/types/database.ts)：**
+  - `RecommendedPhrase` 新增 `category: string | null` 和 `level: 'basic' | 'advanced' | null` 字段
+  - `Highlight` 新增 `knowledge_essay_type: string | null` 字段
+
+- **新增知识库类型和常量 (src/lib/db/recommended-phrases.ts)：**
+  - `KnowledgeItem` 接口：包含 id, text, type, level, category, source, is_collected, is_in_highlights
+  - `KnowledgeSection` 接口：包含 category, category_label, items
+  - `CATEGORY_LABELS` 常量：12个预定义分类的中文映射
+  - `getCategoryLabel()` 辅助函数
+
+- **实现 getKnowledgeBase() 函数：**
+  - 采用写入时预关联方案：is_in_highlights 通过 recommended_phrase_id ID 索引查询（无 ILIKE 扫描）
+  - 查询指定 essay_type 和 'general' 类型的系统推荐短语
+  - 查询用户 highlights 中所有有 recommended_phrase_id 的条目，构建 Map 进行 O(1) 状态查找
+  - 正确区分 is_collected（source='system'）和 is_in_highlights（source='user'）
+  - 追加用户自定义条目（source='user' 且 recommended_phrase_id IS NULL）
+  - 按 category 分组并附加中文标签
+  - 返回按预定义顺序排列的 KnowledgeSection[] 数组
+
+- **实现 tryLinkToKnowledgeBase() 函数 (src/lib/db/highlights.ts)：**
+  - 使用 ilike 进行大小写不敏感的精确文本匹配
+  - 找到匹配返回 phrase.id，未找到返回 null
+  - 支持传入 supabaseClient 参数，用于写入时预关联
+
+### Testing:
+- **TypeScript 编译**: ✅ 通过 (`npm run build` 成功)
+- **代码规范**: ✅ 通过 (`npm run lint` 0 新错误)
+- **单元测试**: ✅ 261/261 通过
+- **类型定义**: 新增字段均为可选（`| null`），保持向后兼容
+
+### Notes:
+- 性能优化：使用 Map 进行 O(1) ID 查找，避免运行时 ILIKE 扫描
+- 分类顺序固定：opening → opinion → connector → detail → closing → title → plot → emotion → emotion_vocab → action_vocab → adverb → complex_sentence → other
+- 用户自定义条目追加在系统条目之后，按创建时间排序
+
+---
+
 
 ### What was done:
 - **重写 src/app/corrections/[id]/page.tsx：**

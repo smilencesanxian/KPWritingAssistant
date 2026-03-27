@@ -83,6 +83,8 @@ export interface Highlight {
   // v1.2.0 新增字段
   source: 'user' | 'system';
   recommended_phrase_id: string | null;
+  // v1.2.1 新增字段
+  knowledge_essay_type: string | null;
 }
 
 export interface ErrorPoint {
@@ -130,6 +132,9 @@ export interface RecommendedPhrase {
   is_active: boolean;
   sort_order: number;
   created_at: string;
+  // v1.2.1 新增字段
+  category: string | null;
+  level: 'basic' | 'advanced' | null;
 }
 
 // v1.2.0 新增：写作导览节点
