@@ -1851,3 +1851,33 @@ The feature integrates collected phrases into the model essay generation flow, g
   3. PET high-frequency words that appear in the essay
 - Deduplication is case-insensitive
 - Punctuation is preserved around gapped words
+
+## 2026-03-27 - Task 31: KB-1 DB迁移008 - 知识库表结构扩展 + 系统初始知识种子数据
+
+### What was done:
+- Created supabase/migrations/008_knowledge_base_expand.sql with:
+  - Added category TEXT field to recommended_phrases table
+  - Added level TEXT field with CHECK (level IN ('basic', 'advanced')) constraint
+  - Updated essay_type constraint to support 'story' type
+  - Added knowledge_essay_type TEXT field to highlights_library table
+  - Created indexes for new fields
+
+- Inserted 73 seed data records covering all four essay types:
+  - Email (28 records): opening(5), opinion(5), connector(8), detail(5), closing(5)
+  - Article (12 records): title(4), opening(4), closing(4)
+  - Story (12 records): opening(3), plot(5), emotion(4)
+  - General (21 records): emotion_vocab(6), action_vocab(5), adverb(5), complex_sentence(5)
+
+- Used IF NOT EXISTS for all ALTER statements to ensure idempotency
+- Used ON CONFLICT DO NOTHING for all INSERT statements to prevent duplicate data
+
+### Testing:
+- npm run build passes
+- npm run lint passes (0 errors, 13 pre-existing warnings)
+- Test engineer verification: [PASS] - All 13 test cases passed
+
+### Notes:
+- Migration is idempotent - can be run multiple times safely
+- Seed data exceeds the requirement of 50 records (73 total)
+- All four essay types (email/article/story/general) are covered
+- Categories follow the mapping defined in the task requirements

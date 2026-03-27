@@ -86,11 +86,14 @@
       ]
     },
     {
-      "phase": 10,
-      "name": "v1.2.1 依赖外部文件的功能（等文件就绪后执行）",
+      "phase": 11,
+      "name": "v1.2.2 PET写作知识库（系统预置+用户管理+范文集成）",
       "tasks": [
-        29,
-        30
+        31,
+        32,
+        33,
+        34,
+        35
       ]
     }
   ],
@@ -820,60 +823,130 @@
       ]
     },
     {
-      "id": 29,
-      "title": "F1: 亮点库推荐功能重设计 - 从独立Tab改为各类目底部推荐区块",
-      "feature_ids": [
-        "F1"
-      ],
+      "id": 31,
+      "title": "KB-1: DB迁移008 - 知识库表结构扩展 + 系统初始知识种子数据",
+      "feature_ids": ["KB"],
       "priority": "P1",
-      "phase": 10,
-      "passes": false,
-      "dependency_note": "⚠️ 依赖外部文件：需要 'PET写作初始思维导图.md' 提供推荐内容的具体数据。请将该文件放入项目目录（建议放在 KPWritingAssistant-web/docs/ 下），Agent开始此任务前应先检查文件是否存在，若不存在则停止并提示用户提供文件。",
-      "description": "重设计亮点库推荐功能：删除'推荐'独立Tab，改为在词汇/短语/句子各自页面底部加入系统推荐区块。同时从PET写作初始思维导图.md中补充推荐内容种子数据。",
+      "phase": 11,
+      "passes": true,
+      "description": "扩展 recommended_phrases 表，新增 category（功能分类）和 level（基础/高级）字段，支持 story 类型，并向 highlights_library 新增 knowledge_essay_type 字段用于用户手动添加的知识条目。同时插入约60条来自 PET写作知识库.html 的系统初始知识数据。",
       "steps": [
-        "首先检查 KPWritingAssistant-web/docs/ 目录下是否存在 'PET写作初始思维导图.md' 文件，若不存在则停止任务，输出阻塞信息并等待用户提供",
-        "解析 PET写作初始思维导图.md 内容，提取各类推荐词汇/短语/句式，补充到 supabase/seeds/ 中的推荐数据种子文件，并执行 DB 更新",
-        "打开 src/app/highlights/page.tsx，删除'推荐'Tab（从 tabs 数组中移除推荐项），确保 tab filter 只剩：全部/词汇/短语/句子",
-        "在词汇/短语/句子各页面内容底部加入推荐区块：标题'系统推荐'（灰色分隔线+标题）；调用 /api/recommended-phrases?type={currentTab} 获取数据；按 essay_type 分组展示（邮件/文章/通用各一组）；每条推荐带'收藏'按钮，点击调用collect API",
-        "处理空状态：当用户该类型highlights为空时，直接展示推荐区块",
+        "新建 supabase/migrations/008_knowledge_base_expand.sql",
+        "添加字段：ALTER TABLE recommended_phrases ADD COLUMN IF NOT EXISTS category TEXT，ADD COLUMN IF NOT EXISTS level TEXT CHECK (level IN ('basic', 'advanced'))",
+        "更新 essay_type 约束支持 story：先 ALTER TABLE recommended_phrases DROP CONSTRAINT recommended_phrases_essay_type_check，再 ADD CONSTRAINT CHECK (essay_type IN ('email', 'article', 'story', 'general'))",
+        "为 highlights_library 新增字段：ALTER TABLE highlights_library ADD COLUMN IF NOT EXISTS knowledge_essay_type TEXT CHECK (knowledge_essay_type IN ('email', 'article', 'story', 'general'))",
+        "插入邮件类种子数据（essay_type='email'）：opening/opinion/connector/detail/closing 各分 basic 和 advanced 两级，共约20条；具体内容参考 docs/PET写作知识库.html",
+        "插入文章类种子数据（essay_type='article'）：title/opening/closing 分级，共约8条",
+        "插入故事类种子数据（essay_type='story'）：opening/plot/emotion 分级，共约8条",
+        "插入通用种子数据（essay_type='general'）：emotion_vocab/action_vocab/adverb/complex_sentence 分级，共约16条",
+        "在本地执行迁移，验证字段存在且种子数据插入成功（SELECT count(*) FROM recommended_phrases WHERE category IS NOT NULL）",
         "运行 npm run build 和 npm run lint 确认无报错"
       ],
       "acceptance_criteria": [
-        "PET写作初始思维导图.md 文件存在（否则不执行）",
-        "亮点库 Tab 栏只有：全部/词汇/短语/句子（无推荐Tab）",
-        "每个类型Tab底部有'系统推荐'区块，内容按邮件/文章/通用分组",
-        "点击收藏成功保存到用户亮点库",
+        "recommended_phrases 表有 category 和 level 字段",
+        "highlights_library 表有 knowledge_essay_type 字段",
+        "essay_type 支持 'story' 值",
+        "SELECT count(*) FROM recommended_phrases WHERE category IS NOT NULL 返回 ≥ 50",
+        "种子数据覆盖邮件/文章/故事/通用四类",
         "npm run build 和 npm run lint 无错误"
       ]
     },
     {
-      "id": 30,
-      "title": "F5: 写作导览知识库完善 - 三类Tab + 系统预置 + 视觉区分 + 手动编辑",
-      "feature_ids": [
-        "F5"
-      ],
-      "priority": "P2",
-      "phase": 10,
+      "id": 32,
+      "title": "KB-2: 更新类型定义 + DB模块新增 getKnowledgeBase 函数（写入时预关联方案）",
+      "feature_ids": ["KB"],
+      "priority": "P1",
+      "phase": 11,
       "passes": false,
-      "dependency_note": "⚠️ 依赖外部文件：需要 'PET写作知识库.html' 提供知识库初始数据。请将该文件放入项目目录（建议放在 KPWritingAssistant-web/docs/ 下），Agent开始此任务前应先检查文件是否存在，若不存在则停止并提示用户提供文件。",
-      "description": "完善写作导览页面：新增邮件/文章/故事三类Tab；从PET写作知识库.html导入系统预置知识；视觉区分用户积累vs系统推荐；支持手动添加/删除；范文生成关联用户认可的知识。",
+      "description": "更新 TypeScript 类型定义，在 recommended-phrases.ts 中新增 getKnowledgeBase() 函数。采用写入时预关联方案：is_in_highlights 通过 recommended_phrase_id 做 ID 索引查询（而非运行时 ILIKE 扫描），性能优先。同时在 highlights.ts 中新增 tryLinkToKnowledgeBase() 辅助函数，供 highlight 创建时调用，实现一次性关联。",
       "steps": [
-        "首先检查 KPWritingAssistant-web/docs/ 目录下是否存在 'PET写作知识库.html' 文件，若不存在则停止任务，输出阻塞信息并等待用户提供",
-        "解析 PET写作知识库.html 中的知识结构，设计并创建 .md 格式知识库结构文件（存放在 KPWritingAssistant-web/docs/pet-writing-knowledge-base.md），包含邮件/文章/故事三大类，每类下按功能分节（开篇/结尾/连接词/亮点句式等）",
-        "新建 supabase/migrations/008_v121_writing_guide_story.sql：writing_guide_nodes.essay_type 枚举扩展加入 'story'；新增 is_user_approved BOOLEAN DEFAULT false 字段；插入故事类系统节点种子数据",
-        "更新 src/types/database.ts 中 WritingGuideNode 接口，增加 is_user_approved 字段",
-        "更新 src/lib/db/writing-guide.ts：getWritingGuideTree() 支持 essay_type 过滤参数；新增 approveNode(nodeId, userId) 函数",
-        "重写 src/app/writing-guide/page.tsx：顶部加 Tab（邮件/文章/故事）；用户亮点节点用蓝色/粗体突出显示；系统节点灰色展示；叶节点右侧加+（手动添加）和×（删除）按钮；手动添加弹窗（输入词/句）",
-        "更新 src/app/api/model-essays/[id]/regenerate/route.ts：从 writing_guide_nodes 中获取 is_user_approved=true 的节点，作为范文生成的参考词句偏好",
+        "更新 src/types/database.ts：为 RecommendedPhrase 类型新增 category: string | null 和 level: 'basic' | 'advanced' | null 字段；为 Highlight 类型新增 knowledge_essay_type: string | null 字段",
+        "在 src/lib/db/recommended-phrases.ts 新增接口定义：KnowledgeItem（含 id/text/type/level/category/source/is_collected/is_in_highlights/highlight_id?）和 KnowledgeSection（含 category/category_label/items）",
+        "实现 getKnowledgeBase(essayType: string, userId: string): Promise<KnowledgeSection[]>：查询 recommended_phrases（essay_type = essayType OR essay_type = 'general'），按 sort_order 排序；查询当前用户 highlights_library 中所有 recommended_phrase_id IS NOT NULL 的条目，构建 Map<phraseId, {source, id}>；对每条推荐短语：is_collected = Map 中存在且 source='system'；is_in_highlights = Map 中存在且 source='user'（来自批改自然积累）；两种标记均通过 ID 索引查找，无 ILIKE；追加用户自定义条目（source='user'，knowledge_essay_type = essayType）；按 category 分组，附加 category_label 中文映射；返回有序的 KnowledgeSection 数组",
+        "定义 CATEGORY_LABELS 常量映射（opening→开篇引入，opinion→观点表达，connector→逻辑连接，detail→细节描述，closing→结尾升华，title→标题设计，plot→情节发展，emotion→情感表达，emotion_vocab→情绪词汇，action_vocab→动作词汇，adverb→程度副词，complex_sentence→高级句式）",
+        "在 src/lib/db/highlights.ts 新增 tryLinkToKnowledgeBase(text: string, supabaseClient): Promise<string | null>：用 .eq('text', text.trim()) 精确查询 recommended_phrases（大小写不敏感可用 .ilike）；找到则返回该 phrase 的 id，未找到返回 null；此函数仅在写入时调用一次，不在读取路径调用",
         "运行 npm run build 和 npm run lint 确认无报错"
       ],
       "acceptance_criteria": [
-        "PET写作知识库.html 文件存在（否则不执行）",
-        "写作导览页顶部有邮件/文章/故事三个Tab",
-        "新用户打开导览页显示系统预置知识库（非空状态）",
-        "用户积累的亮点在导览中视觉突出（蓝色/粗体）",
-        "支持手动添加和删除叶节点",
-        "范文生成时参考用户认可的知识库词句",
+        "TypeScript 类型定义包含新增字段，无类型错误",
+        "getKnowledgeBase() 函数中 is_in_highlights 通过 recommended_phrase_id ID 匹配，无 ILIKE 查询",
+        "tryLinkToKnowledgeBase() 函数存在，返回 phraseId 或 null",
+        "用户自定义条目（source='user'，knowledge_essay_type 有值）正确追加到对应分类末尾",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 33,
+      "title": "KB-3: 更新API路由（知识库分组查询 + 用户自定义添加）",
+      "feature_ids": ["KB"],
+      "priority": "P1",
+      "phase": 11,
+      "passes": false,
+      "description": "更新 /api/recommended-phrases 支持按分组返回知识库数据；更新 /api/highlights 的 POST 接口支持传入 knowledge_essay_type 字段，并在创建 highlight 时调用 tryLinkToKnowledgeBase() 自动写入 recommended_phrase_id（写入时预关联，保证 is_in_highlights 无需运行时扫描）。同时在批改提取 highlights 的入口处也加入同样的预关联调用。",
+      "steps": [
+        "修改 src/app/api/recommended-phrases/route.ts：GET handler 新增 URL 参数判断，当 searchParams.get('grouped') === 'true' 时，获取 essayType 参数，调用 getKnowledgeBase(essayType, user.id) 并返回结果；保持原有非 grouped 逻辑不变",
+        "修改 src/app/api/highlights/route.ts 的 POST handler（用户手动添加）：从 body 中提取 knowledge_essay_type 字段（可选）；调用 tryLinkToKnowledgeBase(text) 获取 phraseId（可能为 null）；将 knowledge_essay_type 和 recommended_phrase_id 一并写入 highlights_library；其余逻辑不变",
+        "找到 AI 批改后自动提取并保存 highlights 的代码入口（位于 src/lib/db/highlights.ts 的 createHighlights() 或相关调用处）；在批量写入前，对每条 highlight 调用 tryLinkToKnowledgeBase(text) 获取 phraseId，并写入 recommended_phrase_id 字段",
+        "验证 GET /api/recommended-phrases?essayType=email&grouped=true 返回包含 sections 数组的 JSON，每个 section 有 category、category_label、items",
+        "验证：手动添加一条与系统知识文字相同的 highlight 后，数据库中该条目的 recommended_phrase_id 有值；在知识库页面该条目显示金色 🌟 标识",
+        "运行 npm run build 和 npm run lint 确认无报错"
+      ],
+      "acceptance_criteria": [
+        "GET /api/recommended-phrases?essayType=email&grouped=true 返回分组数据（需登录）",
+        "POST /api/highlights 创建 highlight 时自动尝试写入 recommended_phrase_id",
+        "批改自动提取的 highlights 也会自动关联 recommended_phrase_id（如文字匹配）",
+        "knowledge_essay_type 字段正确写入数据库",
+        "已有的 API 行为不受影响（非 grouped 查询正常工作）",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 34,
+      "title": "KB-4: 重写写作导览页面为知识库页面（三类Tab + 分类卡片 + 收藏/删除/添加）",
+      "feature_ids": ["KB"],
+      "priority": "P1",
+      "phase": 11,
+      "passes": false,
+      "description": "完全重写 /writing-guide 页面为知识库页面。三类Tab（邮件/文章/故事）切换，每类下按功能分类展示系统知识和用户收藏。系统条目可收藏，与亮点库重合的用金色标识突出，用户自定义条目可删除，支持手动添加。",
+      "steps": [
+        "完全重写 src/app/writing-guide/page.tsx：改为 Server Component，页面标题改为'写作知识库'，引入并渲染 KnowledgeBaseContent 客户端组件",
+        "新建 src/components/writing-guide/KnowledgeBaseContent.tsx（客户端）：管理当前 Tab 状态（email/article/story）；通过 useEffect 调用 /api/recommended-phrases?essayType=xxx&grouped=true 获取数据；渲染三个 Tab 切换按钮；渲染对应 Tab 的 CategorySection 列表；右下角 FAB 按钮（+ 添加自定义）",
+        "新建 src/components/writing-guide/CategorySection.tsx：手风琴折叠/展开（默认全部展开）；标题显示 category_label；列表渲染 KnowledgeItem",
+        "新建 src/components/writing-guide/KnowledgeItem.tsx：左侧显示 [基础] 灰色 Badge 或 [高级★] 橙色 Badge；如果 is_in_highlights=true，在文本前显示 🌟 金色图标（突出标识与亮点库重合）；如果 is_collected=true，右侧显示蓝色 ✓ 已收藏按钮；如果系统条目未收藏，显示 + 按钮，点击调用 POST /api/recommended-phrases/[id]/collect，乐观更新状态；如果是用户自定义条目（source='user'），右侧显示红色 × 按钮，点击调用 DELETE /api/highlights/[id]，从列表移除",
+        "新建 src/components/writing-guide/AddKnowledgeModal.tsx：输入框（知识内容）、类型选择（词汇/短语/句子）、作文类型选择（邮件/文章/故事，默认当前Tab）；提交调用 POST /api/highlights 传入 knowledge_essay_type；成功后关闭弹窗并刷新数据",
+        "删除旧的 src/components/writing-guide/WritingGuideTree.tsx 引用（保留文件不删）",
+        "在浏览器中测试：三类Tab切换正常；收藏系统条目后变为已收藏状态；亮点库里有的词句显示金色标识；手动添加条目后出现在列表并可删除",
+        "运行 npm run build 和 npm run lint 确认无报错"
+      ],
+      "acceptance_criteria": [
+        "访问 /writing-guide 显示'写作知识库'页面，有三类Tab",
+        "每类Tab下展示对应的功能分类手风琴，系统条目可见",
+        "点击 + 收藏成功，按钮变为已收藏状态，亮点库页面同步出现该条目",
+        "亮点库中已有的词句在知识库中显示金色 🌟 标识",
+        "点击 + 添加自定义，成功添加后条目出现在页面，可点击 × 删除",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 35,
+      "title": "KB-5: 底部导航改名 + 范文生成注入用户认可知识",
+      "feature_ids": ["KB"],
+      "priority": "P1",
+      "phase": 11,
+      "passes": false,
+      "description": "将底部导航'导览'改名为'知识库'并更新图标。扩展范文生成逻辑：在生成前，按作文类型过滤用户认可的知识库词句（包含收藏的系统条目和手动添加的用户条目），作为软性参考注入 Prompt。",
+      "steps": [
+        "修改 src/components/layout/BottomNav.tsx：找到 writing-guide 的导航项，将 label 从'导览'改为'知识库'；将图标 SVG 替换为更贴合'知识库'概念的图标（例如书本/灯泡图标，保持描边风格与其他图标一致）",
+        "修改 src/lib/db/highlights.ts 中的 getCollectedSystemPhrases(userId) 函数：现有逻辑查询 source='system' 的条目；在此基础上追加查询 source='user' 且 knowledge_essay_type IS NOT NULL 的条目；两类合并返回文本列表",
+        "修改 src/app/api/generate/model-essay/route.ts：在调用 getCollectedSystemPhrases() 后，根据当前 submissionData.exam_part（part1=email, part2=article/story）对结果做类型过滤；仅将匹配 essay_type 的知识词句注入 Prompt，避免邮件类生成时混入故事类表达",
+        "确认 src/lib/ai/llm.ts 中 generateModelEssay() 函数的 collectedPhrases 参数已被正确使用（已有逻辑，确认即可，不需大改）",
+        "在浏览器中验证：底部导航第三项显示'知识库'新图标；收藏几条知识库词句后重新生成范文，观察范文中是否出现收藏的表达",
+        "运行 npm run build 和 npm run lint 确认无报错"
+      ],
+      "acceptance_criteria": [
+        "底部导航第三项显示'知识库'文字和新图标",
+        "getCollectedSystemPhrases() 返回包含用户手动添加的 knowledge_essay_type 条目",
+        "范文生成时注入的词句与作文类型匹配（邮件类不混入故事类表达）",
         "npm run build 和 npm run lint 无错误"
       ]
     }
