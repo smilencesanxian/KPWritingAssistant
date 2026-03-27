@@ -67,8 +67,13 @@ export async function createCorrection(
     .select()
     .single();
 
-  // If failed due to missing column, retry without organization_score
-  if (result.error && result.error.message.includes('organization_score')) {
+  // If failed due to missing column, retry without organization_score or v1.2.1 columns
+  if (result.error && (
+    result.error.message.includes('organization_score') ||
+    result.error.message.includes('correction_steps') ||
+    result.error.message.includes('scoring_comments') ||
+    result.error.message.includes('structured_suggestions')
+  )) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { organization_score, scoring_comments, correction_steps, structured_suggestions, ...fallbackData } = insertData;
     result = await supabase

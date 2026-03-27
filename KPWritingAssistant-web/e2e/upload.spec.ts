@@ -1,6 +1,6 @@
 import { test, expect, Page, Route } from '@playwright/test';
 
-const BASE = 'http://localhost:3001';
+const BASE = 'http://localhost:3000';
 
 /**
  * Upload Page E2E Tests - Task 6
@@ -468,7 +468,7 @@ test.describe('上传页面 - Step 4: 批改Loading', () => {
 
     // Check for dimension descriptions
     await expect(page.locator('text=/完整覆盖要点/')).toBeVisible();
-    await expect(page.locator('text=/格式规范/')).toBeVisible();
+    await expect(page.locator('p', { hasText: '格式规范' }).first()).toBeVisible();
     await expect(page.locator('text=/分段清晰/')).toBeVisible();
     await expect(page.locator('text=/词汇丰富/')).toBeVisible();
   });

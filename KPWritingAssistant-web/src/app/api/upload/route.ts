@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import { getSignedUrl } from '@/lib/storage/upload';
 import { NextRequest } from 'next/server';
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
@@ -50,7 +50,12 @@ export async function POST(request: NextRequest) {
 
   const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-  const { error: uploadError } = await supabase.storage
+  // In E2E mode, use service role key to bypass Storage RLS
+  const storageClient = process.env.E2E_BYPASS_AUTH === 'true' && process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    : supabase;
+
+  const { error: uploadError } = await storageClient.storage
     .from('essay-images')
     .upload(storagePath, fileBuffer, {
       contentType: file.type,
@@ -64,7 +69,11 @@ export async function POST(request: NextRequest) {
 
   let url: string;
   try {
-    url = await getSignedUrl('essay-images', storagePath, 3600);
+    const { data: signedData, error: signedError } = await storageClient.storage
+      .from('essay-images')
+      .createSignedUrl(storagePath, 3600);
+    if (signedError || !signedData) throw signedError ?? new Error('no data');
+    url = signedData.signedUrl;
   } catch (err) {
     console.error('Signed URL error:', err);
     return Response.json({ error: '获取图片链接失败' }, { status: 500 });

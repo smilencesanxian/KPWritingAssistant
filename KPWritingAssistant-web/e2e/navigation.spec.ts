@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:3001';
+const BASE = 'http://localhost:3000';
 
 test.describe('导航和页面加载', () => {
   test('404 页面正常显示', async ({ page }) => {

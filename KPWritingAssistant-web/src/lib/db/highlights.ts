@@ -218,7 +218,20 @@ export async function getCollectedSystemPhrases(
     .eq('source', 'system')
     .order('created_at', { ascending: false });
 
+  // If knowledge_essay_type column doesn't exist (migration 008 not applied), fall back to text-only
   if (systemError) {
+    if (systemError.message.includes('knowledge_essay_type')) {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('highlights_library')
+        .select('text')
+        .eq('user_id', userId)
+        .eq('source', 'system')
+        .order('created_at', { ascending: false });
+      if (fallbackError) {
+        throw new Error(`Failed to get collected system phrases: ${fallbackError.message}`);
+      }
+      return (fallbackData ?? []).map((r) => ({ text: r.text, knowledge_essay_type: null }));
+    }
     throw new Error(`Failed to get collected system phrases: ${systemError.message}`);
   }
 
@@ -230,7 +243,14 @@ export async function getCollectedSystemPhrases(
     .not('knowledge_essay_type', 'is', null)
     .order('created_at', { ascending: false });
 
+  // If knowledge_essay_type column doesn't exist, user KB phrases without type filter = empty list
   if (userKbError) {
+    if (userKbError.message.includes('knowledge_essay_type')) {
+      return (systemData ?? []).map((r) => ({
+        text: r.text,
+        knowledge_essay_type: (r as { text: string; knowledge_essay_type?: string | null }).knowledge_essay_type ?? null,
+      }));
+    }
     throw new Error(`Failed to get user knowledge phrases: ${userKbError.message}`);
   }
 

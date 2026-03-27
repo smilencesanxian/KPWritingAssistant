@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:3001';
+const BASE = 'http://localhost:3000';
 
 test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
   test.beforeEach(async ({ page }) => {
@@ -12,7 +12,7 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
   test.describe('E2E-001: 底部导航显示6个导航项', () => {
     test('should display all 6 navigation items', async ({ page }) => {
       // Get all navigation items
-      const navItems = page.locator('nav a, nav button, nav [role="link"]').filter({ hasText: /^(首页|历史|亮点库|导览|易错点|我的)$/ });
+      const navItems = page.locator('nav a, nav button, nav [role="link"]').filter({ hasText: /^(首页|历史|亮点库|知识库|易错点|我的)$/ });
 
       // Should have exactly 6 items
       await expect(navItems).toHaveCount(6);
@@ -21,7 +21,7 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
       await expect(page.getByText('首页')).toBeVisible();
       await expect(page.getByText('历史')).toBeVisible();
       await expect(page.getByText('亮点库')).toBeVisible();
-      await expect(page.getByText('导览')).toBeVisible();
+      await expect(page.getByText('知识库')).toBeVisible();
       await expect(page.getByText('易错点')).toBeVisible();
       await expect(page.getByText('我的')).toBeVisible();
     });
@@ -37,17 +37,17 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
       const texts = await navLinks.allTextContents();
       const cleanTexts = texts.map(t => t.trim()).filter(t => t.length > 0);
 
-      // Verify order: 首页, 历史, 亮点库, 导览, 易错点, 我的
+      // Verify order: 首页, 历史, 亮点库, 知识库, 易错点, 我的
       expect(cleanTexts).toContain('首页');
       expect(cleanTexts).toContain('历史');
       expect(cleanTexts).toContain('亮点库');
-      expect(cleanTexts).toContain('导览');
+      expect(cleanTexts).toContain('知识库');
       expect(cleanTexts).toContain('易错点');
       expect(cleanTexts).toContain('我的');
 
       // Verify relative positions
       const highlightsIndex = cleanTexts.indexOf('亮点库');
-      const guideIndex = cleanTexts.indexOf('导览');
+      const guideIndex = cleanTexts.indexOf('知识库');
       const errorPointsIndex = cleanTexts.indexOf('易错点');
 
       expect(guideIndex).toBeGreaterThan(highlightsIndex);
@@ -58,7 +58,7 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
   test.describe('E2E-002: 点击导览跳转到写作导览页', () => {
     test('clicking guide nav item navigates to /writing-guide', async ({ page }) => {
       // Find and click the guide navigation item
-      const guideNav = page.getByText('导览').first();
+      const guideNav = page.getByText('知识库').first();
       await expect(guideNav).toBeVisible();
 
       await guideNav.click();
@@ -72,7 +72,7 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
 
     test('guide nav item has correct href', async ({ page }) => {
       // Find the guide link
-      const guideLink = page.locator('a', { hasText: '导览' }).first();
+      const guideLink = page.locator('a', { hasText: '知识库' }).first();
 
       // Verify href attribute
       await expect(guideLink).toHaveAttribute('href', '/writing-guide');
@@ -86,7 +86,7 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
       await page.waitForLoadState('networkidle');
 
       // Find the guide nav item
-      const guideNav = page.locator('a', { hasText: '导览' }).first();
+      const guideNav = page.locator('a', { hasText: '知识库' }).first();
 
       // Verify it's visible
       await expect(guideNav).toBeVisible();
@@ -115,7 +115,7 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
 
       // If the page has sub-navigation, test it
       // Otherwise, just verify the main page works
-      const guideNav = page.locator('a', { hasText: '导览' }).first();
+      const guideNav = page.locator('a', { hasText: '知识库' }).first();
       await expect(guideNav).toBeVisible();
     });
 
@@ -150,7 +150,7 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
       await expect(nav).toBeVisible();
 
       // Get all nav items
-      const navItems = nav.locator('a, button, [role="link"]').filter({ hasText: /^(首页|历史|亮点库|导览|易错点|我的)$/ });
+      const navItems = nav.locator('a, button, [role="link"]').filter({ hasText: /^(首页|历史|亮点库|知识库|易错点|我的)$/ });
       const count = await navItems.count();
       expect(count).toBe(6);
 
@@ -202,7 +202,7 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
       await page.waitForLoadState('networkidle');
 
       // Check all nav labels are visible
-      const labels = ['首页', '历史', '亮点库', '导览', '易错点', '我的'];
+      const labels = ['首页', '历史', '亮点库', '知识库', '易错点', '我的'];
       for (const label of labels) {
         const element = page.getByText(label).first();
         await expect(element).toBeVisible();
@@ -265,7 +265,7 @@ test.describe('底部导航栏 - 写作导览入口 (Task 17)', () => {
         { label: '首页', url: '/' },
         { label: '历史', url: '/history' },
         { label: '亮点库', url: '/highlights' },
-        { label: '导览', url: '/writing-guide' },
+        { label: '知识库', url: '/writing-guide' },
         { label: '易错点', url: '/error-points' },
         { label: '我的', url: '/profile' },
       ];

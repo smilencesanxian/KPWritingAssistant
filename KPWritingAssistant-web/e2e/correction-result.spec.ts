@@ -10,6 +10,12 @@ const BASE = 'http://localhost:3000';
  * 2. 向后兼容（处理null新字段）
  * 3. 移动端响应式布局
  * 4. 边界条件和错误处理
+ *
+ * ⚠️ 注意：该页面为 Next.js Server Component，数据在服务端通过 Supabase 直接查询。
+ * page.route() 只能拦截浏览器端请求，无法拦截服务端的 Supabase 调用。
+ * 因此，依赖 page.route() mock 数据的测试（E2E-001~E2E-015, E2E-017）
+ * 需要真实的 Supabase 测试数据才能运行，当前标记为 skip。
+ * 若需启用，可将页面改为通过 API 路由客户端获取数据，或在 Supabase 中插入测试数据。
  */
 
 // ─── 辅助函数：设置登录状态 ────────────────────────────────────────────────────
@@ -25,7 +31,7 @@ async function setupAuth(page: import('@playwright/test').Page, userId: string =
 
 // ─── 基础渲染测试 ─────────────────────────────────────────────────────────────
 
-test.describe('批改结果页面 - 基础渲染', () => {
+test.describe.skip('批改结果页面 - 基础渲染', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
   });
@@ -365,7 +371,7 @@ test.describe('批改结果页面 - 基础渲染', () => {
 
 // ─── 向后兼容测试 ─────────────────────────────────────────────────────────────
 
-test.describe('批改结果页面 - 向后兼容', () => {
+test.describe.skip('批改结果页面 - 向后兼容', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
   });
@@ -597,7 +603,7 @@ test.describe('批改结果页面 - 向后兼容', () => {
 
 // ─── 响应式测试 ───────────────────────────────────────────────────────────────
 
-test.describe('批改结果页面 - 响应式布局', () => {
+test.describe.skip('批改结果页面 - 响应式布局', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
   });
@@ -732,7 +738,7 @@ test.describe('批改结果页面 - 响应式布局', () => {
 
 // ─── 边界条件测试 ─────────────────────────────────────────────────────────────
 
-test.describe('批改结果页面 - 边界条件', () => {
+test.describe.skip('批改结果页面 - 边界条件', () => {
   test.beforeEach(async ({ page }) => {
     await setupAuth(page);
   });
@@ -911,7 +917,7 @@ test.describe('批改结果页面 - 边界条件', () => {
 // ─── 错误处理测试 ─────────────────────────────────────────────────────────────
 
 test.describe('批改结果页面 - 错误处理', () => {
-  test('E2E-015: 无效批改ID返回404', async ({ page }) => {
+  test.skip('E2E-015: 无效批改ID返回404', async ({ page }) => {
     await setupAuth(page);
 
     await page.route('**/rest/v1/corrections**', async (route) => {
@@ -936,7 +942,7 @@ test.describe('批改结果页面 - 错误处理', () => {
     await expect(page).toHaveURL(`${BASE}/login`, { timeout: 8000 });
   });
 
-  test('E2E-017: 访问他人批改记录返回404', async ({ page }) => {
+  test.skip('E2E-017: 访问他人批改记录返回404', async ({ page }) => {
     await setupAuth(page, 'user-a-id');
 
     await page.route('**/rest/v1/corrections**', async (route) => {

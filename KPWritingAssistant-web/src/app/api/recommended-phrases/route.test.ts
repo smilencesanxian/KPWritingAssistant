@@ -9,6 +9,17 @@ import { NextRequest } from 'next/server';
 // Mock the database module
 jest.mock('@/lib/db/recommended-phrases');
 
+// Mock supabase server client to avoid cookies() request-scope error
+jest.mock('@/lib/supabase/server', () => ({
+  createClient: jest.fn().mockResolvedValue({
+    auth: {
+      getUser: jest.fn().mockResolvedValue({
+        data: { user: { id: 'test-user-id', email: 'test@example.com' } },
+      }),
+    },
+  }),
+}));
+
 const mockedGetRecommendedPhrases = getRecommendedPhrases as jest.MockedFunction<typeof getRecommendedPhrases>;
 
 describe('GET /api/recommended-phrases', () => {

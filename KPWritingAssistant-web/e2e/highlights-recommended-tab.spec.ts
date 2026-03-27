@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE = 'http://localhost:3001';
+const BASE = 'http://localhost:3000';
 
 /**
  * E2E 测试：亮点库"推荐"Tab 闪烁 Bug 修复验证

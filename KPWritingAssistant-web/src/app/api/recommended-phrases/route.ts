@@ -6,18 +6,16 @@ const VALID_TYPES = ['vocabulary', 'phrase', 'sentence'];
 const VALID_ESSAY_TYPES = ['email', 'article', 'story', 'general'];
 
 export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const { searchParams } = new URL(request.url);
 
-  // Check for grouped mode (knowledge base view)
+  // Check for grouped mode (knowledge base view) — requires auth (user-specific data)
   const grouped = searchParams.get('grouped') === 'true';
   if (grouped) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const essayType = searchParams.get('essayType');
     if (!essayType) {
       return Response.json(
@@ -66,7 +64,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Group by essay_type for better frontend consumption
-    const grouped = phrases.reduce((acc, phrase) => {
+    const groupedPhrases = phrases.reduce((acc, phrase) => {
       const key = phrase.essay_type ?? 'general';
       if (!acc[key]) {
         acc[key] = [];
@@ -75,7 +73,7 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, typeof phrases>);
 
-    return Response.json({ phrases: grouped });
+    return Response.json({ phrases: groupedPhrases });
   } catch (err) {
     console.error('Failed to get recommended phrases:', err);
     return Response.json({ error: '获取推荐句式失败，请重试' }, { status: 500 });

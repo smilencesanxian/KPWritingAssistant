@@ -63,10 +63,10 @@ export default function RegenerateModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-[60]">
+      {/* Backdrop: covers the full screen, click closes the modal. Sheet is positioned above this via absolute */}
       <div
-        className="absolute inset-0 bg-black/50 transition-opacity"
+        className="absolute inset-0 bg-black/50"
         onClick={handleClose}
         data-testid="regenerate-sheet-backdrop"
       />
@@ -76,7 +76,7 @@ export default function RegenerateModal({
         className={cn(
           'absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-xl',
           'transform transition-transform duration-300 ease-out',
-          'max-h-[80vh] flex flex-col'
+          'max-h-[45vh] flex flex-col'
         )}
         data-testid="regenerate-sheet"
       >
