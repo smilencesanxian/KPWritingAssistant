@@ -906,7 +906,7 @@
       "feature_ids": ["KB"],
       "priority": "P1",
       "phase": 11,
-      "passes": false,
+      "passes": true,
       "description": "完全重写 /writing-guide 页面为知识库页面。三类Tab（邮件/文章/故事）切换，每类下按功能分类展示系统知识和用户收藏。系统条目可收藏，与亮点库重合的用金色标识突出，用户自定义条目可删除，支持手动添加。",
       "steps": [
         "完全重写 src/app/writing-guide/page.tsx：改为 Server Component，页面标题改为'写作知识库'，引入并渲染 KnowledgeBaseContent 客户端组件",
