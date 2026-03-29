@@ -1,4 +1,37 @@
-## 2026-03-27 - Task 35: KB-5 - 底部导航改名 + 范文生成注入用户认可知识
+## 2026-03-29 - 将所有AI提示词输出改为中文
+
+### What was done:
+- **修改 `src/config/prompts.json`**:
+  - `correction.systemPrompt`: 添加"重要：输出语言要求"段落，明确以下字段必须使用中文：
+    - `scoring_overview` 中各维度的 `comment`（评语）
+    - `correction_steps` 中 step1-6 的批改详情
+    - `improvement_suggestions` 中的 `title` 和 `detail`（改进建议标题和详情）
+    - `highlights` 中的 `reason`（亮点分析原因）
+    - `suggestion`（修改建议说明）
+  - `correction.part1ExtraGuidance`: 添加中文输出要求说明
+  - `correction.part2ExtraGuidance`: 添加中文输出要求说明
+  - `detectType.systemPrompt`: 明确 `topic` 和 `essay_type_label` 必须使用中文
+
+- **保留英文的字段**（按需求）：
+  - `model_essay`（范文内容）- 必须用英文写作
+  - `highlights.text`（原文片段）- 保留学生原文
+  - `correction_steps.step4.original`（原文错误片段）- 保留学生原文
+  - `error_type`（错误类型标识）- 使用英文标识如 spelling, tense 等
+
+### Testing:
+- **单元测试**: ✅ 274/274 通过
+- **Lint 检查**: ✅ 通过（14 个警告均为既有问题，与本次修改无关）
+- **构建验证**: ✅ `npm run build` 成功
+- **JSON 验证**: ✅ `prompts.json` 格式合法
+
+### Notes:
+- 所有修改集中在 `prompts.json` 配置文件中，无需修改业务代码
+- 通过在 systemPrompt 中明确标注各字段语言要求，确保AI输出符合预期
+- 范文（model_essay）仍保持英文，因为PET考试要求学生用英文写作
+
+---
+
+
 
 ### What was done:
 - **BottomNav.tsx**: 将 writing-guide 导航项 label 从'导览'改为'知识库'，更新图标 SVG 为书本图标（BookOpen 风格，描边风格一致）
