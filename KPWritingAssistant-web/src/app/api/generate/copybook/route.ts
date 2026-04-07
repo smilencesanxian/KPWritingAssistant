@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
   // Encode opacity into cache key (appended to fontStyle) so different opacities don't share cache
   // v3: bumped to invalidate old PDFs when template auto-selection was introduced
-  const cacheKey = copybookMode === 'tracing' ? `v4_${fontStyle}@${tracingOpacity}` : `v4_${fontStyle}`;
+  const cacheKey = copybookMode === 'tracing' ? `v5_${fontStyle}@${tracingOpacity}` : `v5_${fontStyle}`;
 
   // Cache check: (model_essay_id, template_id, mode, cacheKey)
   const existing = await getCopybookByModelEssayId(model_essay_id, user.id, templateId, copybookMode, cacheKey);

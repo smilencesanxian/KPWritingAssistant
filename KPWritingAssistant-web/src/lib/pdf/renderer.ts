@@ -474,14 +474,18 @@ function opacityToTracingColor(opacity: number): string {
 }
 
 /**
- * Calculates extra spacing to distribute between words for justified alignment.
- * Returns null if the remaining space is too large to justify (exceeds threshold).
+ * Calculates EXTRA word spacing to add on top of PDFKit's default spacing for justified alignment.
  *
- * @param doc - PDFKit document
+ * Bug fix: PDFKit's wordSpacing option adds to the default space width, not replaces it.
+ * So we must measure the full line width (including default spaces) to compute the
+ * remaining space correctly. Using only the sum of individual word widths underestimates
+ * the actual rendered width, causing ~30pt overflow per line → PDFKit wraps to 2 lines.
+ *
+ * @param doc - PDFKit document (font/size must already be set)
  * @param words - Array of words in the line
  * @param lineWidth - Available width for the line
- * @param maxExtraSpacePerWord - Maximum extra space per word (default 12pt)
- * @returns Extra spacing to add between words, or null to use left alignment
+ * @param maxExtraSpacePerWord - Maximum EXTRA space per word beyond default (default 12pt)
+ * @returns Extra spacing per gap to add via wordSpacing option, or null to use left alignment
  */
 export function justifyLine(
   doc: PDFKit.PDFDocument,
@@ -489,29 +493,23 @@ export function justifyLine(
   lineWidth: number,
   maxExtraSpacePerWord: number = 12
 ): number | null {
-  // Single word or empty line cannot be justified
-  if (words.length <= 1) {
-    return null;
-  }
+  if (words.length <= 1) return null;
 
-  // Calculate total width of words
-  const totalWordWidth = words.reduce((sum, word) => {
-    return sum + doc.widthOfString(word);
-  }, 0);
-
-  // Calculate remaining space
   const spaceCount = words.length - 1;
-  const remainingSpace = lineWidth - totalWordWidth;
 
-  // Check if remaining space is within reasonable range
-  const maxJustifiableSpace = words.length * maxExtraSpacePerWord;
-  if (remainingSpace > maxJustifiableSpace) {
-    return null; // Too much space, use left alignment
-  }
+  // Measure actual rendered width INCLUDING default inter-word spaces.
+  // This is the key fix: widthOfString(words.join(' ')) accounts for default space widths,
+  // whereas summing individual word widths does NOT.
+  const actualLineWidth = doc.widthOfString(words.join(' '));
+  const remainingSpace = lineWidth - actualLineWidth;
 
-  // Calculate extra spacing per gap
-  const extraSpacing = remainingSpace / spaceCount;
-  return extraSpacing;
+  // If text already fills the line (or overflows), no justification
+  if (remainingSpace <= 0) return null;
+
+  // Don't over-justify - if there's too much remaining space, use left alignment
+  if (remainingSpace / spaceCount > maxExtraSpacePerWord) return null;
+
+  return remainingSpace / spaceCount;
 }
 
 export async function renderCopybookPDF(
