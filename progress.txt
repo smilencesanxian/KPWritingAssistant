@@ -273,3 +273,22 @@
 - 搜索采用客户端过滤（数据已全量加载），无需额外API请求
 - incrementHighlightUsageCount 是非阻塞的，失败不影响范文生成
 - migration 009 需在生产环境手动执行
+
+## 2026-04-07 - Task 43: FB-8 知识库推荐功能
+
+### What was done:
+- recommended-phrases.ts: 新增 getRecommendation(essayType, category, userId) 函数，返回2条用户未收藏的随机素材
+- 新建 src/app/api/knowledge-base/recommend/route.ts: GET API，接受 essayType 和 category 参数
+- KnowledgeBaseContent.tsx: 
+  - 新增"推荐素材"浮动按钮（琥珀色，灯泡图标）
+  - 点击后弹出底部面板，可选素材分类（开篇/观点/连接词等）
+  - 点击"为我推荐2条"获取推荐结果
+  - 每条推荐结果可点击"采纳"直接收藏
+
+### Testing:
+- npm run build: 通过
+- npx jest recommended-phrases|knowledge: 22/22 通过
+
+### Notes:
+- 推荐结果从用户未收藏的 recommended_phrases 中随机取2条
+- 采纳后调用现有 handleCollect() 流程，与普通收藏完全一致

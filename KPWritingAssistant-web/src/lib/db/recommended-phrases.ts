@@ -291,3 +291,54 @@ export async function getKnowledgeBase(
 
   return result;
 }
+
+/** 推荐功能：根据作文类型和素材分类，返回2条用户尚未收藏的推荐素材 */
+export async function getRecommendation(
+  essayType: string,
+  category: string | null,
+  userId: string
+): Promise<KnowledgeItem[]> {
+  const supabase = await createClient();
+
+  // 获取用户已收藏的 recommended_phrase_id 列表
+  const { data: collected } = await supabase
+    .from('highlights_library')
+    .select('recommended_phrase_id')
+    .eq('user_id', userId)
+    .eq('source', 'system')
+    .not('recommended_phrase_id', 'is', null);
+
+  const collectedIds = new Set((collected ?? []).map((h) => h.recommended_phrase_id as string));
+
+  // 查询匹配类型和分类的未收藏条目
+  let query = supabase
+    .from('recommended_phrases')
+    .select('*')
+    .eq('is_active', true)
+    .or(`essay_type.eq.${essayType},essay_type.eq.general`)
+    .limit(30);
+
+  if (category) {
+    query = query.eq('category', category);
+  }
+
+  const { data: phrases, error } = await query;
+  if (error) throw new Error(`Failed to get recommendations: ${error.message}`);
+
+  const uncollected = (phrases ?? []).filter((p) => !collectedIds.has(p.id));
+
+  // 随机取2条
+  const shuffled = uncollected.sort(() => Math.random() - 0.5).slice(0, 2);
+
+  return shuffled.map((phrase) => ({
+    id: phrase.id,
+    text: phrase.text,
+    type: phrase.type,
+    level: phrase.level,
+    category: phrase.category,
+    source: 'system' as const,
+    is_collected: false,
+    is_in_highlights: false,
+    usage_count: 0,
+  }));
+}
