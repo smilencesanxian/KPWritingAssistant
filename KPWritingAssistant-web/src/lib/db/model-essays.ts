@@ -46,10 +46,14 @@ export async function updateModelEssay(
     .update(updateData)
     .eq('id', id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     throw new Error(`Failed to update model essay: ${error.message}`);
+  }
+
+  if (!result) {
+    throw new Error('范文不存在或更新失败');
   }
 
   return result as ModelEssay;

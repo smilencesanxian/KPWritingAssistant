@@ -1041,7 +1041,7 @@
       "feature_ids": ["FB-0405"],
       "priority": "P0",
       "phase": 12,
-      "passes": false,
+      "passes": true,
       "description": "目前生成的范文经常超过150词，原因是prompt中字数要求表述不够强硬。需加强prompt约束，同时修复编辑范文保存时的报错（Cannot coerce to single JSON object）",
       "steps": [
         "打开 src/config/prompts.json，在 part1SystemPrompt（line 19）末尾追加：'\\n\\n【字数硬性限制】生成的范文（不含称呼行和落款行）严格控制在100-110词之间，超过110词必须删减内容，绝对不超过120词。'",

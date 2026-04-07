@@ -208,3 +208,18 @@
 ### Notes:
 - cleanMarkdown 同时处理 **bold**、*italic*、# 标题三种格式
 - 历史数据通过前端展示层兜底清理，不需要数据库迁移
+
+## 2026-04-07 - Task 39: FB-4 范文字数约束加强 + 保存报错修复
+
+### What was done:
+- prompts.json part1SystemPrompt: 追加【字数硬性限制】，100-110词，绝对不超过120词
+- prompts.json part2SystemPrompt 文章类第8条: 同样加强字数约束
+- prompts.json part2SystemPrompt 故事类第9条: 同样加强字数约束
+- model-essays.ts: .single() 改为 .maybeSingle()，并增加空结果处理，修复保存报错
+
+### Testing:
+- npm run build: 通过
+- npm run lint: 0 errors
+
+### Notes:
+- 原因: Supabase .single() 在0行时抛出 "Cannot coerce to single JSON" 错误，.maybeSingle() 返回 null 而不是报错
