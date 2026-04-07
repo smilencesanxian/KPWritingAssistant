@@ -423,42 +423,15 @@ export default function UploadPage() {
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-neutral-700">{dim.title}</span>
-                <span className="text-sm font-bold text-primary-600">/5</span>
+                <span className="text-xs text-neutral-400">满分5分</span>
               </div>
               <p className="text-xs text-neutral-500">{dim.description}</p>
             </div>
           ))}
         </div>
 
-        {/* Scoring reference table */}
-        <div className="mt-4 max-w-md w-full text-left">
-          <table className="w-full text-xs text-neutral-500 border-collapse">
-            <thead>
-              <tr className="border-b border-neutral-200">
-                <th className="py-1.5 pr-3 font-medium text-neutral-600 w-16">分数</th>
-                <th className="py-1.5 font-medium text-neutral-600">标准描述</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr className="border-b border-neutral-100">
-                <td className="py-1.5 pr-3 font-medium">5分</td>
-                <td className="py-1.5">完整覆盖所有要点，表达地道，格式规范</td>
-              </tr>
-              <tr className="border-b border-neutral-100">
-                <td className="py-1.5 pr-3 font-medium">3-4分</td>
-                <td className="py-1.5">覆盖大部分要点，偶有语法或格式问题</td>
-              </tr>
-              <tr className="border-b border-neutral-100">
-                <td className="py-1.5 pr-3 font-medium">1-2分</td>
-                <td className="py-1.5">要点遗漏较多，语法错误明显</td>
-              </tr>
-              <tr>
-                <td className="py-1.5 pr-3 font-medium">0分</td>
-                <td className="py-1.5">几乎未覆盖要点或完全偏题</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        {/* Scoring summary */}
+        <p className="mt-4 text-xs text-neutral-500">四个维度各 5 分，满分 20 分</p>
       </div>
     );
   }

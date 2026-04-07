@@ -168,3 +168,18 @@
   - Step 4（语言校对）内部用表格展示[原文|问题类型|修改建议]
   - 支持"全部展开/收起"功能
   - 向后兼容：correction_steps为null时隐藏整个块
+
+## 2026-04-07 - Task 36: FB-1 等待页面分数展示优化
+
+### What was done:
+- upload/page.tsx: 将4个维度卡的"/5"改为"满分5分"（text-xs text-neutral-400样式）
+- upload/page.tsx: 删除下方分数标准表格，替换为一行说明"四个维度各 5 分，满分 20 分"
+
+### Testing:
+- npm run build: 通过
+- npm run lint: 0 errors
+- npx jest src/app/upload/page.test.tsx: 27/27 通过
+
+### Notes:
+- 用户反馈"/5"紧贴数字被误读为"15"，改为文字描述更清晰
+- 分数标准表格无维度注明让用户困惑，删除后改为简洁总分说明

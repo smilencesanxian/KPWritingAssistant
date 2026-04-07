@@ -95,6 +95,26 @@
         34,
         35
       ]
+    },
+    {
+      "phase": 12,
+      "name": "v1.2.3 Beta测试反馈修复（0405）",
+      "tasks": [
+        36,
+        37,
+        38,
+        39,
+        40,
+        41
+      ]
+    },
+    {
+      "phase": 13,
+      "name": "v1.2.3 知识库功能增强（搜索+统计+推荐）",
+      "tasks": [
+        42,
+        43
+      ]
     }
   ],
   "tasks": [
@@ -947,6 +967,183 @@
         "底部导航第三项显示'知识库'文字和新图标",
         "getCollectedSystemPhrases() 返回包含用户手动添加的 knowledge_essay_type 条目",
         "范文生成时注入的词句与作文类型匹配（邮件类不混入故事类表达）",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 36,
+      "title": "FB-1: 等待页面分数展示优化（'/5'误读 + 分数标准表格）",
+      "feature_ids": ["FB-0405"],
+      "priority": "P1",
+      "phase": 12,
+      "passes": true,
+      "description": "修复'AI正在批改中'等待页面的两个展示问题：① 每个维度卡右上角的'/5'紧贴数字，用户误读为'15'；② 下方分数标准表格未注明适用维度，让用户误以为是某一个维度的标准",
+      "steps": [
+        "打开 src/app/upload/page.tsx，定位 line 426：将 <span className='...'>/5</span> 改为 <span className='...'>满分5分</span>，并调整样式使其更清晰",
+        "定位 line 413-461（分数标准提示+表格区域）：删除整个 <table> 及其父容器，替换为一行简洁说明：<p>四个维度各 5 分，满分 20 分</p>",
+        "运行 npm run build 确认无TypeScript编译错误",
+        "运行 npm run lint 确认无lint错误",
+        "使用 MCP Playwright 打开上传页面，触发批改等待状态，截图确认4个框不再有歧义，分数说明清晰"
+      ],
+      "acceptance_criteria": [
+        "4个维度卡显示'满分5分'，不再显示'/5'",
+        "下方分数标准表格已移除，替换为简短的满分说明文字",
+        "npm run build 和 npm run lint 无错误",
+        "UI截图确认等待页面显示清晰"
+      ]
+    },
+    {
+      "id": 37,
+      "title": "FB-2: 语言校对无问题时显示正面提示而非'暂无数据'",
+      "feature_ids": ["FB-0405"],
+      "priority": "P1",
+      "phase": 12,
+      "passes": false,
+      "description": "当语言校对（Step 4）无错误时，当前显示'暂无语言校对数据'，让用户误以为是加载失败。应改为正面的表扬性提示",
+      "steps": [
+        "打开 src/app/corrections/[id]/components/CorrectionDetails.tsx，定位 line 164-165",
+        "将 '暂无语言校对数据' 改为 '✓ 语言表达较好，未发现明显语法或拼写问题'",
+        "同时将样式从 text-neutral-400 italic 改为 text-green-600 以体现正面反馈",
+        "运行 npm run build 确认无编译错误",
+        "运行 npm run lint 确认无lint错误"
+      ],
+      "acceptance_criteria": [
+        "语言校对无数据时显示绿色的正面提示文字",
+        "不再显示'暂无语言校对数据'",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 38,
+      "title": "FB-3: 清理范文中的Markdown符号（**标题** 等）",
+      "feature_ids": ["FB-0405"],
+      "priority": "P0",
+      "phase": 12,
+      "passes": false,
+      "description": "LLM有时对范文标题输出 **标题** 这类Markdown格式，但代码没有后处理清理，导致**符号直接显示在UI和字帖中。需要在生成后和展示时两处清理",
+      "steps": [
+        "在 src/lib/ai/llm.ts 中，在 generateModelEssay() 函数返回结果前（约 line 198 的 .trim() 之后），添加 cleanMarkdown 清理函数：去除 **text** 中的 **；去除 *text* 中的 *；去除行首的 # 标题符号",
+        "在 src/components/correction/ModelEssayView.tsx 的 displayContent 计算处，对已存储的旧数据也应用相同的清理逻辑（防止历史数据仍显示**符号）",
+        "在 src/lib/pdf/renderer.ts 的 wrapTextWithFontMetrics() 函数入口处，对 text 参数做同样的清理（确保字帖PDF中无Markdown符号）",
+        "运行 npm run build 确认无编译错误",
+        "运行 npm run lint 确认无lint错误"
+      ],
+      "acceptance_criteria": [
+        "重新生成范文后，范文标题不含 ** 符号",
+        "旧的含**的范文在页面展示时也不显示**",
+        "字帖PDF中不出现**符号",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 39,
+      "title": "FB-4: 加强范文字数约束（严格控制100-110词，禁止超过120词）",
+      "feature_ids": ["FB-0405"],
+      "priority": "P0",
+      "phase": 12,
+      "passes": false,
+      "description": "目前生成的范文经常超过150词，原因是prompt中字数要求表述不够强硬。需加强prompt约束，同时修复编辑范文保存时的报错（Cannot coerce to single JSON object）",
+      "steps": [
+        "打开 src/config/prompts.json，在 part1SystemPrompt（line 19）末尾追加：'\\n\\n【字数硬性限制】生成的范文（不含称呼行和落款行）严格控制在100-110词之间，超过110词必须删减内容，绝对不超过120词。'",
+        "同样在 part2SystemPrompt（line 20）中，将现有的字数要求描述改为更强硬的措辞：'【字数硬性限制】范文正文（不含标题行）严格控制在100-110词之间，超过110词必须删减，绝对不超过120词。文章类标题不计入字数。'",
+        "修复编辑范文保存报错：打开 src/lib/db/model-essays.ts，将 line 45-49 的 .select().single() 改为 .select().maybeSingle()，并在结果为 null 时返回友好错误提示",
+        "运行 npm run build 确认无编译错误",
+        "运行 npm run lint 确认无lint错误",
+        "测试：重新生成范文并确认字数在100-120词范围内；测试编辑范文保存功能不再报错"
+      ],
+      "acceptance_criteria": [
+        "新生成的范文字数在100-120词之间（极少情况可超出但不超过130词）",
+        "编辑范文并点击保存后不再出现 'Cannot coerce to single JSON object' 错误",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 40,
+      "title": "FB-5: 字帖限制为1页 + 确认Part2 article答题纸正确",
+      "feature_ids": ["FB-0405"],
+      "priority": "P0",
+      "phase": 12,
+      "passes": false,
+      "description": "① 字帖（描红/默写模式）目前可超过1页，用户要求严格限制为1页，超出内容截断；② 确认Part2 article是否使用了错误的Part1答题纸模板，并修复",
+      "steps": [
+        "打开 src/lib/pdf/renderer.ts，定位 line 554-560（wrapTextWithFontMetrics 和 pageCount 计算）",
+        "将 pageCount 计算改为固定值1：const pageCount = 1; 并在 allLines 的 slice 处只取第一页的行数：allLines.slice(0, linesPerPage)",
+        "打开 src/app/api/generate/copybook/route.ts，检查 line 90 附近 getTemplateByExamPart() 调用，确认 exam_part 字段传入正确（part2 → pet-part2 模板）",
+        "检查 src/lib/pdf/templates/index.ts 的 getTemplateByExamPart() 函数，确认 part2 返回 pet-part2 模板ID",
+        "若发现Part2 article仍使用了pet（part1）模板，排查数据库中 exam_part 字段是否正确写入，修复相关逻辑",
+        "运行 npm run build 确认无编译错误",
+        "运行 npm run lint 确认无lint错误",
+        "测试：生成Part2 article的字帖，确认只有1页，答题纸格式为Part2格式（有Part2表头和checkbox）"
+      ],
+      "acceptance_criteria": [
+        "字帖PDF严格为1页，长范文内容被截断而不是延伸到第2页",
+        "Part2 article生成的字帖使用pet-part2答题纸格式",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 41,
+      "title": "FB-6: 批改输出分条目展示（解决大段文字可读性差问题）",
+      "feature_ids": ["FB-0405"],
+      "priority": "P1",
+      "phase": 12,
+      "passes": false,
+      "description": "批改输出的Step1/2/3/5/6目前是大段连续文字，可读性差。需从Prompt层要求分条目输出，并在前端做对应的解析渲染",
+      "steps": [
+        "打开 src/config/prompts.json，修改 systemPrompt 中对 step1/2/3/5/6 格式的要求：step1要求按'• 要点：评价'格式分条；step3要求按'• 分段/连接词/逻辑'三方面分条；step5要求每个亮点一行（格式：✓ 原文片段 - 中文说明）；step6要求分两段：整体评价 + 改进要点（分条）",
+        "打开 src/app/corrections/[id]/components/CorrectionDetails.tsx，修改 line 166-171 的大段文字渲染逻辑：检测文字中是否含有 '•' 或 '✓' 条目符；如果有，将文本按行分割并渲染为 <ul><li> 列表；如果没有，保持原 whitespace-pre-line 展示",
+        "运行 npm run build 确认无编译错误",
+        "运行 npm run lint 确认无lint错误",
+        "测试：提交新作文批改，查看各Step的展示是否已经是分条目的列表形式"
+      ],
+      "acceptance_criteria": [
+        "Step1/2/3/5/6的内容以分条目列表形式展示，而非连续大段文字",
+        "条目符 • 和 ✓ 被正确解析为列表项而非原始字符",
+        "无条目符的旧数据仍能正常展示（向后兼容）",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 42,
+      "title": "FB-7: 知识库搜索功能 + 运用次数统计展示",
+      "feature_ids": ["FB-0405-KB"],
+      "priority": "P2",
+      "phase": 13,
+      "passes": false,
+      "description": "在现有知识库页面（/writing-guide）新增：① 全文搜索已有内容；② 每条素材展示运用次数（即该素材被注入范文生成的次数）",
+      "steps": [
+        "在知识库页面（src/app/writing-guide/page.tsx 或 KnowledgeBaseContent.tsx）顶部新增搜索框，用户输入时实时过滤当前展示的素材列表",
+        "在数据库的 highlights_library 表中新增 usage_count 字段（整数，默认0），每次生成范文时该素材被注入，则对应increment",
+        "在知识库条目组件（KnowledgeItem.tsx）中展示 usage_count：如 '已用 3 次'，0次时不显示",
+        "更新 src/app/api/generate/model-essay/route.ts：在注入知识库素材后，对被使用的素材调用 incrementUsageCount()",
+        "运行 npm run build 和 npm run lint 确认无错误",
+        "测试：搜索知识库内容功能正常；生成范文后回到知识库查看使用次数是否增加"
+      ],
+      "acceptance_criteria": [
+        "知识库页面有搜索框，输入内容可实时过滤素材列表",
+        "每条素材显示运用次数（被范文生成使用的次数）",
+        "npm run build 和 npm run lint 无错误"
+      ]
+    },
+    {
+      "id": 43,
+      "title": "FB-8: 知识库推荐功能（根据作文类型推荐2条素材供用户采纳）",
+      "feature_ids": ["FB-0405-KB"],
+      "priority": "P2",
+      "phase": 13,
+      "passes": false,
+      "description": "新增知识库推荐功能：用户设置作文类型和素材功能需求后，从系统知识库中推荐2条相关素材，用户采纳后保存到知识库中，用于指导后续范文生成",
+      "steps": [
+        "在知识库页面新增'推荐'按钮，点击弹出推荐选项：选择作文类型（邮件/文章/故事）和素材功能（开头句/结尾句/过渡词/细节描写/etc）",
+        "新建 /api/knowledge-base/recommend 接口：根据 essayType 和 phraseFunction 参数，从 recommended_phrases 表中筛选2条未被用户收藏的素材返回",
+        "推荐结果以弹窗展示，每条素材显示内容和使用示例，用户可点击'采纳'将其加入知识库（调用collect接口）",
+        "运行 npm run build 和 npm run lint 确认无错误",
+        "测试：触发推荐请求后返回2条相关素材；采纳后知识库页面出现该素材"
+      ],
+      "acceptance_criteria": [
+        "知识库有推荐入口，用户可选择条件触发推荐",
+        "推荐结果返回2条相关素材，可单独采纳",
+        "采纳的素材出现在知识库中并参与后续范文生成",
         "npm run build 和 npm run lint 无错误"
       ]
     }
