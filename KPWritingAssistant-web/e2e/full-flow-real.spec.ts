@@ -86,6 +86,55 @@ test.describe('Part1 完整批改流程（邮件类）', () => {
     await expect(page.locator('[data-testid="model-essay"]')).toBeVisible({ timeout: 10000 });
   });
 
+  test('FLOW-003B: 范文字数在合理范围内（60-150词，PET Part1 邮件）', async ({ page }) => {
+    await page.context().addCookies([{ name: 'x-e2e-user-id', value: '00000000-0000-0000-0000-000000000001', domain: 'localhost', path: '/' }]);
+    await page.goto(`${BASE}/corrections/${correctionId}`);
+
+    // 等待范文生成完毕（loading 消失）
+    await expect(page.locator('[data-testid="model-essay"]')).toBeVisible({ timeout: 30000 });
+
+    // 读取页面显示的词数（"共 N 词"）
+    const wordCountText = await page.locator('p:has-text("共") >> text=/共 \\d+ 词/').first().textContent({ timeout: 10000 });
+    const match = wordCountText?.match(/共\s+(\d+)\s+词/);
+    expect(match, `找不到词数显示，实际文本：${wordCountText}`).toBeTruthy();
+
+    const wordCount = parseInt(match![1], 10);
+    expect(wordCount, `范文字数 ${wordCount} 超出 PET Part1 范围（60-150词）`).toBeGreaterThanOrEqual(60);
+    expect(wordCount, `范文字数 ${wordCount} 超出 PET Part1 范围（60-150词）`).toBeLessThanOrEqual(150);
+  });
+
+  test('FLOW-003C: 编辑范文并保存成功（无报错）', async ({ page }) => {
+    await page.context().addCookies([{ name: 'x-e2e-user-id', value: '00000000-0000-0000-0000-000000000001', domain: 'localhost', path: '/' }]);
+    await page.goto(`${BASE}/corrections/${correctionId}`);
+
+    // 等待范文区域加载
+    await expect(page.locator('[data-testid="edit-essay-button"]')).toBeVisible({ timeout: 30000 });
+    await page.locator('[data-testid="edit-essay-button"]').click();
+
+    // 编辑模态框打开
+    await expect(page.locator('[data-testid="edit-essay-textarea"]')).toBeVisible({ timeout: 5000 });
+
+    // 修改内容（追加标记，方便验证是否保存）
+    const textarea = page.locator('[data-testid="edit-essay-textarea"]');
+    const original = await textarea.inputValue();
+    await textarea.fill(original + ' [E2E-edit]');
+
+    // 监听 API 响应
+    const saveResponsePromise = page.waitForResponse(
+      res => res.url().includes('/api/model-essays/') && res.request().method() === 'PUT',
+      { timeout: 10000 }
+    );
+
+    await page.locator('[data-testid="save-edit-button"]').click();
+    const saveResponse = await saveResponsePromise;
+
+    // 关键断言：保存请求成功（2xx），无报错
+    expect(saveResponse.status(), '保存范文应成功（2xx）').toBeLessThan(300);
+
+    // 确认错误提示未出现
+    await expect(page.locator('[data-testid="edit-error"]')).not.toBeVisible();
+  });
+
   test('FLOW-004: 重新生成弹窗 - 打开后输入偏好并触发 API', async ({ page }) => {
     await page.context().addCookies([{ name: 'x-e2e-user-id', value: '00000000-0000-0000-0000-000000000001', domain: 'localhost', path: '/' }]);
     await page.goto(`${BASE}/corrections/${correctionId}`);
