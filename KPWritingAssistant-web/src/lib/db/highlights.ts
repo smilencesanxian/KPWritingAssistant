@@ -208,12 +208,12 @@ export async function addHighlightManually(
 
 export async function getCollectedSystemPhrases(
   userId: string
-): Promise<Array<{ text: string; knowledge_essay_type: string | null }>> {
+): Promise<Array<{ id: string; text: string; knowledge_essay_type: string | null }>> {
   const supabase = await createClient();
 
   const { data: systemData, error: systemError } = await supabase
     .from('highlights_library')
-    .select('text, knowledge_essay_type')
+    .select('id, text, knowledge_essay_type')
     .eq('user_id', userId)
     .eq('source', 'system')
     .order('created_at', { ascending: false });
@@ -223,21 +223,21 @@ export async function getCollectedSystemPhrases(
     if (systemError.message.includes('knowledge_essay_type')) {
       const { data: fallbackData, error: fallbackError } = await supabase
         .from('highlights_library')
-        .select('text')
+        .select('id, text')
         .eq('user_id', userId)
         .eq('source', 'system')
         .order('created_at', { ascending: false });
       if (fallbackError) {
         throw new Error(`Failed to get collected system phrases: ${fallbackError.message}`);
       }
-      return (fallbackData ?? []).map((r) => ({ text: r.text, knowledge_essay_type: null }));
+      return (fallbackData ?? []).map((r) => ({ id: r.id, text: r.text, knowledge_essay_type: null }));
     }
     throw new Error(`Failed to get collected system phrases: ${systemError.message}`);
   }
 
   const { data: userKbData, error: userKbError } = await supabase
     .from('highlights_library')
-    .select('text, knowledge_essay_type')
+    .select('id, text, knowledge_essay_type')
     .eq('user_id', userId)
     .eq('source', 'user')
     .not('knowledge_essay_type', 'is', null)
@@ -247,17 +247,43 @@ export async function getCollectedSystemPhrases(
   if (userKbError) {
     if (userKbError.message.includes('knowledge_essay_type')) {
       return (systemData ?? []).map((r) => ({
+        id: r.id,
         text: r.text,
-        knowledge_essay_type: (r as { text: string; knowledge_essay_type?: string | null }).knowledge_essay_type ?? null,
+        knowledge_essay_type: (r as { id: string; text: string; knowledge_essay_type?: string | null }).knowledge_essay_type ?? null,
       }));
     }
     throw new Error(`Failed to get user knowledge phrases: ${userKbError.message}`);
   }
 
   return [...(systemData ?? []), ...(userKbData ?? [])] as Array<{
+    id: string;
     text: string;
     knowledge_essay_type: string | null;
   }>;
+}
+
+// v1.2.3 新增：批量增加知识素材的使用计数
+export async function incrementHighlightUsageCount(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const supabase = await createClient();
+  // Fetch current counts then update (Supabase JS client doesn't support SQL expressions in updates)
+  const { data: rows, error: fetchError } = await supabase
+    .from('highlights_library')
+    .select('id, usage_count')
+    .in('id', ids);
+  if (fetchError) {
+    // Silently ignore if the column doesn't exist yet (migration not applied)
+    if (fetchError.message.includes('usage_count')) return;
+    console.warn('incrementHighlightUsageCount fetch failed:', fetchError.message);
+    return;
+  }
+  for (const row of rows ?? []) {
+    const currentCount = (row as { id: string; usage_count: number }).usage_count ?? 0;
+    await supabase
+      .from('highlights_library')
+      .update({ usage_count: currentCount + 1 })
+      .eq('id', (row as { id: string }).id);
+  }
 }
 
 // v1.2.1 新增：写入时预关联知识库

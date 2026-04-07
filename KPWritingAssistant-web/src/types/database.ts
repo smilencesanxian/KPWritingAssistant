@@ -85,6 +85,8 @@ export interface Highlight {
   recommended_phrase_id: string | null;
   // v1.2.1 新增字段
   knowledge_essay_type: string | null;
+  // v1.2.3 新增字段
+  usage_count: number;
 }
 
 export interface ErrorPoint {

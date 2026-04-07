@@ -252,3 +252,24 @@
 ### Notes:
 - 前端兼容旧数据（无条目符的历史批改仍正常显示）
 - 新批改结果将以分条目列表形式展示，大幅提升可读性
+
+## 2026-04-07 - Task 42: FB-7 知识库搜索功能 + 运用次数统计
+
+### What was done:
+- 新增 migrations/009_highlights_usage_count.sql: highlights_library 表增加 usage_count 字段
+- types/database.ts: Highlight 接口新增 usage_count: number
+- highlights.ts getCollectedSystemPhrases(): 返回值增加 id 字段（用于跟踪）
+- highlights.ts: 新增 incrementHighlightUsageCount(ids) 函数，批量累加使用计数
+- recommended-phrases.ts KnowledgeItem 接口: 新增 usage_count 字段，getKnowledgeBase() 查询和映射时带上
+- model-essay/route.ts: 注入知识库后异步调用 incrementHighlightUsageCount（非阻塞）
+- KnowledgeItem.tsx: usage_count > 0 时显示"用N次"标签
+- KnowledgeBaseContent.tsx: 新增搜索框，客户端实时过滤 filteredSections，搜索无结果时友好提示
+
+### Testing:
+- npm run build: 通过
+- npx jest highlights|model-essay: 26/26 通过
+
+### Notes:
+- 搜索采用客户端过滤（数据已全量加载），无需额外API请求
+- incrementHighlightUsageCount 是非阻塞的，失败不影响范文生成
+- migration 009 需在生产环境手动执行

@@ -120,6 +120,7 @@ export interface KnowledgeItem {
   is_collected: boolean;
   is_in_highlights: boolean;
   highlight_id?: string | null;
+  usage_count?: number;
 }
 
 export interface KnowledgeSection {
@@ -170,7 +171,7 @@ export async function getKnowledgeBase(
   // 2. 查询用户 highlights 中所有有 recommended_phrase_id 的条目
   const { data: highlights, error: highlightsError } = await supabase
     .from('highlights_library')
-    .select('*')
+    .select('id, source, recommended_phrase_id, usage_count')
     .eq('user_id', userId)
     .not('recommended_phrase_id', 'is', null);
 
@@ -179,13 +180,14 @@ export async function getKnowledgeBase(
   }
 
   // 3. 构建 Map 用于 O(1) 状态查找
-  // Map<phraseId, { source, id }>
-  const highlightMap = new Map<string, { source: 'system' | 'user'; id: string }>();
+  // Map<phraseId, { source, id, usage_count }>
+  const highlightMap = new Map<string, { source: 'system' | 'user'; id: string; usage_count: number }>();
   for (const h of highlights ?? []) {
     if (h.recommended_phrase_id) {
       highlightMap.set(h.recommended_phrase_id, {
         source: h.source,
         id: h.id,
+        usage_count: (h as { usage_count?: number }).usage_count ?? 0,
       });
     }
   }
@@ -203,6 +205,7 @@ export async function getKnowledgeBase(
       is_collected: highlightInfo?.source === 'system',
       is_in_highlights: highlightInfo?.source === 'user',
       highlight_id: highlightInfo?.id || null,
+      usage_count: highlightInfo?.usage_count ?? 0,
     };
   });
 
@@ -230,6 +233,7 @@ export async function getKnowledgeBase(
     is_collected: false,
     is_in_highlights: true,
     highlight_id: h.id,
+    usage_count: (h as { usage_count?: number }).usage_count ?? 0,
   }));
 
   // 6. 合并所有条目

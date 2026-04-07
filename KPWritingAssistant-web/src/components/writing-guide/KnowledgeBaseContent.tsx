@@ -162,11 +162,55 @@ export default function KnowledgeBaseContent() {
     }
   };
 
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter sections by search query
+  const filteredSections = searchQuery.trim()
+    ? sections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) =>
+            item.text.toLowerCase().includes(searchQuery.toLowerCase())
+          ),
+        }))
+        .filter((section) => section.items.length > 0)
+    : sections;
+
   // Check if all sections are empty
-  const isEmpty = sections.length === 0 || sections.every((s) => s.items.length === 0);
+  const isEmpty = filteredSections.length === 0 || filteredSections.every((s) => s.items.length === 0);
 
   return (
     <>
+      {/* Search Bar */}
+      <div className="relative mb-4">
+        <svg
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="搜索知识库内容..."
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-neutral-200 rounded-xl text-sm text-neutral-800 placeholder-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-300"
+          data-testid="knowledge-search-input"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
       {/* Tab Navigation */}
       <div className="flex gap-2 mb-6">
         {tabs.map((tab) => (
@@ -236,15 +280,19 @@ export default function KnowledgeBaseContent() {
               />
             </svg>
           </div>
-          <p className="text-neutral-600 font-medium mb-1">暂无知识条目</p>
-          <p className="text-neutral-400 text-sm mb-6">点击下方按钮添加你的第一条知识</p>
+          <p className="text-neutral-600 font-medium mb-1">
+            {searchQuery ? `未找到包含"${searchQuery}"的内容` : '暂无知识条目'}
+          </p>
+          <p className="text-neutral-400 text-sm mb-6">
+            {searchQuery ? '尝试其他关键词' : '点击下方按钮添加你的第一条知识'}
+          </p>
         </div>
       )}
 
       {/* Content */}
       {!loading && !error && !isEmpty && (
         <div className="space-y-4">
-          {sections.map((section) => (
+          {filteredSections.map((section) => (
             <CategorySection
               key={section.category}
               section={section}

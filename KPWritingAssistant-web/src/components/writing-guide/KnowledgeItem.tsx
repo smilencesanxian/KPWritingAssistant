@@ -80,6 +80,16 @@ export default function KnowledgeItem({
       {/* Text content */}
       <span className="flex-1 text-neutral-800">{item.text}</span>
 
+      {/* Usage count badge */}
+      {(item.usage_count ?? 0) > 0 && (
+        <span
+          className="text-xs text-neutral-400 shrink-0"
+          title="已被注入范文生成的次数"
+        >
+          用{item.usage_count}次
+        </span>
+      )}
+
       {/* Type Badge */}
       {getTypeBadge()}
 

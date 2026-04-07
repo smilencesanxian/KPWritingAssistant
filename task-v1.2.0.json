@@ -1109,7 +1109,7 @@
       "feature_ids": ["FB-0405-KB"],
       "priority": "P2",
       "phase": 13,
-      "passes": false,
+      "passes": true,
       "description": "在现有知识库页面（/writing-guide）新增：① 全文搜索已有内容；② 每条素材展示运用次数（即该素材被注入范文生成的次数）",
       "steps": [
         "在知识库页面（src/app/writing-guide/page.tsx 或 KnowledgeBaseContent.tsx）顶部新增搜索框，用户输入时实时过滤当前展示的素材列表",

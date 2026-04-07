@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { getModelEssayByLevel, createModelEssay } from '@/lib/db/corrections';
-import { getHighlights, getCollectedSystemPhrases } from '@/lib/db/highlights';
+import { getHighlights, getCollectedSystemPhrases, incrementHighlightUsageCount } from '@/lib/db/highlights';
 import { generateModelEssay } from '@/lib/ai/llm';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { NextRequest } from 'next/server';
@@ -80,14 +80,14 @@ export async function POST(request: NextRequest) {
     // Get user's collected system phrases and user KB phrases, filtered by essay type
     const allPhrases = await getCollectedSystemPhrases(user.id);
     const isEmail = submissionData.exam_part === 'part1';
-    const collectedPhrases = allPhrases
-      .filter((p) => {
-        const et = p.knowledge_essay_type;
-        if (!et) return true;
-        if (isEmail) return et === 'email' || et === 'general';
-        return et === 'article' || et === 'story' || et === 'general';
-      })
-      .map((p) => p.text);
+    const injectedPhrases = allPhrases.filter((p) => {
+      const et = p.knowledge_essay_type;
+      if (!et) return true;
+      if (isEmail) return et === 'email' || et === 'general';
+      return et === 'article' || et === 'story' || et === 'general';
+    });
+    const collectedPhrases = injectedPhrases.map((p) => p.text);
+    const injectedIds = injectedPhrases.map((p) => p.id);
 
     // Generate model essay (pass exam_part and question_type for part-specific prompts)
     const content = await generateModelEssay(
@@ -101,6 +101,11 @@ export async function POST(request: NextRequest) {
 
     // Save model essay
     const model_essay = await createModelEssay(correction_id, level, content);
+
+    // Increment usage count for injected knowledge phrases (non-blocking)
+    if (injectedIds.length > 0) {
+      incrementHighlightUsageCount(injectedIds).catch(() => {});
+    }
 
     return Response.json({ model_essay });
   } catch (err) {
