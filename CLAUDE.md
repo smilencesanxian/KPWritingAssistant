@@ -10,20 +10,22 @@
 
 ## MANDATORY: Agent Workflow
 
-Every new agent session MUST follow this workflow:
+每个新的 agent 会话都必须遵循以下流程：
 
-### Step 0: Read Shared Handoff
+### Step 0: 先读取共享交接信息
 
-Before doing anything else, read these files in order:
+在执行任何操作前，按顺序读取以下文件：
 
 1. `docs/agent-handoff/current-state.md`
 2. `docs/agent-handoff/active-task.md`
 3. `docs/agent-handoff/decision-log.md`
 4. `AGENTS.md`
 
-If the work is inside `KPWritingAssistant-web/`, also read `KPWritingAssistant-web/AGENTS.md`.
+如果工作发生在 `KPWritingAssistant-web/` 内，还要读取 `KPWritingAssistant-web/AGENTS.md`。
 
-You must update the handoff files before ending the session.
+会话结束前，必须更新 handoff 文件。
+
+交接文档、状态记录、决策记录默认使用中文；只有在命令、路径、状态枚举值、代码标识或外部规范要求时才保留英文。
 
 ### Step 1: Initialize Environment
 
@@ -37,14 +39,14 @@ This will:
 
 **DO NOT skip this step.** Ensure the server is running before proceeding.
 
-### Step 2: Select Or Confirm The Active Task
+### Step 2: 选择或确认当前任务
 
-Read `docs/agent-handoff/active-task.md` and do one of the following:
+读取 `docs/agent-handoff/active-task.md`，然后执行以下之一：
 
-1. If there is an active task, continue that task.
-2. If status is `idle`, replace it with the exact task you are taking over before making substantial edits.
+1. 如果已有进行中的任务，就继续该任务。
+2. 如果状态是 `idle`，就先把你接手的明确任务写进去，再开始实质性修改。
 
-`task-v1.2.0.json` is now historical. As of 2026-04-07, all entries are already marked complete, so do not use it as the default source for selecting new work unless a human explicitly asks for that legacy workflow.
+`task-v1.2.0.json` 现在主要是历史记录。截止 2026-04-07，其中所有条目都已完成，除非人工明确要求沿用旧流程，否则不要再把它当作默认任务来源。
 
 
 ## 测试驱动开发工作流（TDD - Test Driven Development）

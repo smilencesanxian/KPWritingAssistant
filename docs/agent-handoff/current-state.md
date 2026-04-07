@@ -1,25 +1,25 @@
-# Current State
+# 当前状态
 
-Last updated: 2026-04-07
+最后更新：2026-04-07
 
-## Project Snapshot
+## 项目快照
 
-- Repository root: `/mnt/d/ClaudeCodes/KPWritingAssistant-github/KPWritingAssistant`
-- Primary tracked application: `KPWritingAssistant-web/`
-- Main stack: Next.js 16.2.0, React 19, TypeScript, Supabase, Jest, Playwright, pdfkit
-- Backup checkpoint before handoff setup:
-  - Commit: `f3df323`
-  - Tag: `backup-before-handoff-20260407-195102`
+- 仓库根目录：`/mnt/d/ClaudeCodes/KPWritingAssistant-github/KPWritingAssistant`
+- 当前主开发应用：`KPWritingAssistant-web/`
+- 主要技术栈：Next.js 16.2.0、React 19、TypeScript、Supabase、Jest、Playwright、pdfkit
+- handoff 机制落地前的备份检查点：
+  - Commit：`f3df323`
+  - Tag：`backup-before-handoff-20260407-195102`
 
-## Current Reality
+## 当前事实
 
-- `KPWritingAssistant-web/` is the real production codebase and the default place to continue development.
-- `apps/web`, `apps/miniapp`, `packages/api-client`, and `packages/types` should be treated as migration or experiment artifacts unless a future handoff explicitly promotes them.
-- `task-v1.2.0.json` is historical tracking only. As of 2026-04-07, all 41 tasks in that file are already marked `passes: true`.
+- `KPWritingAssistant-web/` 是当前真实的生产主代码库，默认后续开发都从这里继续。
+- `apps/web`、`apps/miniapp`、`packages/api-client`、`packages/types` 目前默认视为迁移或实验产物，除非后续 handoff 明确提升为正式入口。
+- `task-v1.2.0.json` 目前只保留历史追踪意义。截止 2026-04-07，其中 41 个任务都已标记为 `passes: true`。
 
-## Verified Baseline
+## 已验证基线
 
-These commands were verified in `KPWritingAssistant-web/` on 2026-04-07:
+以下命令已于 2026-04-07 在 `KPWritingAssistant-web/` 中验证：
 
 ```bash
 npm test -- --runInBand
@@ -27,27 +27,32 @@ npm run lint
 npm run build
 ```
 
-Results at that point:
+当时结果如下：
 
-- `npm test -- --runInBand`: 20 suites, 274 tests passed
-- `npm run build`: passed
-- `npm run lint`: passed with 0 errors and 14 warnings
+- `npm test -- --runInBand`：20 个 suite、274 个测试全部通过
+- `npm run build`：通过
+- `npm run lint`：通过，0 error，14 个 warning
 
-## Known Risks
+## 已知风险
 
-- `run-automation.sh` contains a hardcoded API key and should be cleaned up and rotated before the script is relied on.
-- Lint is not clean yet; current warnings are mostly unused-variable warnings in tests and a few source files.
-- `KPWritingAssistant-web/progress.txt` is useful history, but recent git commits are a more accurate source for the latest implemented changes.
+- `run-automation.sh` 中仍然存在硬编码 API Key，后续如果继续依赖该脚本，需要先清理并轮换密钥。
+- 当前 lint 还不算完全干净，现有 warning 主要是测试文件和少量源码中的未使用变量。
+- `KPWritingAssistant-web/progress.txt` 仍有参考价值，但最近的 git 提交比它更能反映当前真实进展。
 
-## Start Session Checklist
+## 文档语言约定
 
-1. Read this file, `active-task.md`, and `decision-log.md`.
-2. Run `git status --short --branch`.
-3. Check recent history with `git log --oneline --decorate -n 10`.
-4. If developing in the web app, work under `KPWritingAssistant-web/` unless handoff says otherwise.
+- 当前目录下的 handoff 文档默认使用中文维护。
+- 状态值、命令、路径、代码标识和必要术语可以保留英文。
 
-## End Session Checklist
+## 会话开始检查清单
 
-1. Update `active-task.md`.
-2. Update this file if baseline, entry point, or major risks changed.
-3. Append durable decisions to `decision-log.md`.
+1. 阅读本文件、`active-task.md` 和 `decision-log.md`。
+2. 执行 `git status --short --branch`。
+3. 用 `git log --oneline --decorate -n 10` 查看最近历史。
+4. 如果要继续 web 端开发，默认在 `KPWritingAssistant-web/` 下进行，除非 handoff 明确说明不是。
+
+## 会话结束检查清单
+
+1. 更新 `active-task.md`。
+2. 如果基线、开发入口或主要风险变化了，同步更新本文件。
+3. 如果形成了长期有效的新约定，追加到 `decision-log.md`。

@@ -330,6 +330,7 @@ for ((run=1; run<=TOTAL_RUNS; run++)); do
 
 默认主工程是 KPWritingAssistant-web。
 如果 active-task.md 不是 idle，就继续该任务；如果是 idle，就先把 active-task.md 改成你接手的明确任务，再开始编码。
+交接文档、状态记录、决策记录默认使用中文；只有在命令、路径、状态值、代码标识或外部规范要求时才保留英文。
 
 本次会话只处理一个明确任务。结束前必须更新 handoff 文件，至少包括：
 - 当前状态

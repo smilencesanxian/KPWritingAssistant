@@ -1,28 +1,28 @@
-# Active Task
+# 当前任务
 
-Last updated: 2026-04-07
+最后更新：2026-04-07
 
-## Status
+## 状态
 
 `idle`
 
-## Current Owner
+## 当前负责方
 
 `unassigned`
 
-## Goal
+## 目标
 
-No active implementation task is locked right now. The next agent should replace this section with the specific bug, feature, or investigation they are taking over before making substantial edits.
+当前没有锁定中的实施任务。下一位 agent 在进行实质性修改前，应先把这里替换成自己接手的具体 bug、功能或排查事项。
 
-## Primary Work Area
+## 主要工作区域
 
 `KPWritingAssistant-web/`
 
-## Files In Progress
+## 进行中的文件
 
-- None
+- 无
 
-## Latest Verified Commands
+## 最近一次验证命令
 
 ```bash
 cd KPWritingAssistant-web
@@ -31,57 +31,57 @@ npm run lint
 npm run build
 ```
 
-## Known Blockers
+## 已知阻塞
 
-- None recorded
+- 暂无记录
 
-## Next Agent First Step
+## 下一位 Agent 的第一步
 
-Read `docs/agent-handoff/current-state.md`, then update this file from `idle` to an explicit task status before starting work.
+先阅读 `docs/agent-handoff/current-state.md`，然后把本文件从 `idle` 更新为明确的任务状态，再开始动手。
 
-## Update Template
+## 更新模板
 
-Use this structure when taking ownership:
+接手任务时建议使用以下结构：
 
 ```md
-# Active Task
+# 当前任务
 
-Last updated: YYYY-MM-DD
+最后更新：YYYY-MM-DD
 
-## Status
+## 状态
 
 `in_progress`
 
-## Current Owner
+## 当前负责方
 
 `codex` or `claude-code`
 
-## Goal
+## 目标
 
-One-sentence task description.
+一句话描述当前任务。
 
-## Primary Work Area
+## 主要工作区域
 
-Main directory or module.
+主要目录或模块。
 
-## Files In Progress
+## 进行中的文件
 
 - path/to/file
 
-## Latest Actions
+## 最新进展
 
-- What was changed
-- What is still under investigation
+- 已修改什么
+- 还在排查什么
 
-## Verification
+## 验证情况
 
-- Command and result
+- 命令和结果
 
-## Known Blockers
+## 已知阻塞
 
-- Blocking issue, or `None`
+- 阻塞项，或 `无`
 
-## Next Agent First Step
+## 下一位 Agent 的第一步
 
-Concrete first action.
+一个明确的起手动作。
 ```
