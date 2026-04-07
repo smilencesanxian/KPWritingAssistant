@@ -1,10 +1,10 @@
 #!/bin/bash
 
 # =============================================================================
-# run-automation.sh - Automated Task Runner
+# run-automation.sh - Automated Claude Code Runner
 # =============================================================================
-# This script runs Claude Code multiple times in a loop to automatically
-# complete tasks defined in task-v1.2.0.json
+# This script runs Claude Code multiple times in a loop and relies on the
+# shared handoff files under docs/agent-handoff/ to decide what to continue.
 #
 # Usage: ./run-automation.sh <number_of_runs> [--llm <kimi|official>]
 # Example: ./run-automation.sh 5
@@ -44,6 +44,11 @@ WATCHDOG_PID=""
 
 # Soft-stop flag: set to 1 to finish current task then exit
 SOFT_STOP=0
+
+HANDOFF_DIR="docs/agent-handoff"
+HANDOFF_CURRENT="$HANDOFF_DIR/current-state.md"
+HANDOFF_ACTIVE="$HANDOFF_DIR/active-task.md"
+HANDOFF_DECISIONS="$HANDOFF_DIR/decision-log.md"
 
 acquire_lock() {
     if [ -f "$LOCK_FILE" ]; then
@@ -169,16 +174,40 @@ log() {
     esac
 }
 
-count_remaining_tasks() {
+count_remaining_work_items() {
     local count=0
+
     if [ -f "task-v1.2.0.json" ]; then
         count=$(grep -c '"passes": false' task-v1.2.0.json 2>/dev/null | head -1)
     fi
-    # Ensure we output a valid number (default to 0 if empty or invalid)
-    if ! [[ "$count" =~ ^[0-9]+$ ]]; then
-        count=0
+
+    if [[ "$count" =~ ^[0-9]+$ ]] && [ "$count" -gt 0 ]; then
+        echo "$count"
+        return 0
     fi
-    echo "$count"
+
+    if [ -f "$HANDOFF_ACTIVE" ]; then
+        if grep -Eiq '^`?(in_progress|active|planned|ready|blocked|review)`?$' "$HANDOFF_ACTIVE"; then
+            echo "1"
+            return 0
+        fi
+
+        if grep -Eiq '^## Status' "$HANDOFF_ACTIVE"; then
+            local status_line
+            status_line=$(awk '
+                /^## Status$/ {getline; getline; print; exit}
+            ' "$HANDOFF_ACTIVE" | tr -d '`' | tr '[:upper:]' '[:lower:]' | xargs)
+
+            case "$status_line" in
+                in_progress|active|planned|ready|blocked|review)
+                    echo "1"
+                    return 0
+                    ;;
+            esac
+        fi
+    fi
+
+    echo "0"
 }
 
 # Parse arguments
@@ -241,13 +270,13 @@ echo -e "${CYAN}    touch $STOP_FILE${NC}  (create stop file)"
 echo -e "${CYAN}  Hard-stop: Ctrl+C (immediate, current task aborted)${NC}"
 echo ""
 
-if [ ! -f "task-v1.2.0.json" ]; then
-    log "ERROR" "task-v1.2.0.json not found! Please run this script from the project root."
+if [ ! -f "$HANDOFF_CURRENT" ] || [ ! -f "$HANDOFF_ACTIVE" ] || [ ! -f "$HANDOFF_DECISIONS" ]; then
+    log "ERROR" "Shared handoff files are missing. Please ensure docs/agent-handoff/ is present."
     exit 1
 fi
 
-INITIAL_TASKS=$(count_remaining_tasks)
-log "INFO" "Tasks remaining at start: $INITIAL_TASKS"
+INITIAL_WORK_ITEMS=$(count_remaining_work_items)
+log "INFO" "Work items remaining at start: $INITIAL_WORK_ITEMS"
 
 if ! command -v claude &> /dev/null; then
     log "ERROR" "claude command not found. Please install Claude Code CLI."
@@ -274,15 +303,15 @@ for ((run=1; run<=TOTAL_RUNS; run++)); do
         fi
     fi
 
-    REMAINING=$(count_remaining_tasks)
+    REMAINING=$(count_remaining_work_items)
 
     if [ "$REMAINING" -eq 0 ]; then
-        log "SUCCESS" "All tasks completed! No more tasks to process."
+        log "SUCCESS" "No active work items found in task file or handoff docs."
         log "INFO" "Automation finished early after $((run-1)) runs"
         exit 0
     fi
 
-    log "INFO" "Tasks remaining before this run: $REMAINING"
+    log "INFO" "Work items remaining before this run: $REMAINING"
 
     RUN_START=$(date +%s)
     RUN_LOG="$LOG_DIR/run-${run}-$(date +%Y%m%d_%H%M%S).log"
@@ -292,7 +321,24 @@ for ((run=1; run<=TOTAL_RUNS; run++)); do
 
     PROMPT_FILE=$(mktemp)
     cat > "$PROMPT_FILE" << 'EOF'
-继续下一个任务，每次只完成一个任务，完成后输出结果并结束会话。
+开始前先读取以下文件并严格遵守：
+1. docs/agent-handoff/current-state.md
+2. docs/agent-handoff/active-task.md
+3. docs/agent-handoff/decision-log.md
+4. AGENTS.md
+5. 如果在 KPWritingAssistant-web 内开发，还要读取 KPWritingAssistant-web/AGENTS.md
+
+默认主工程是 KPWritingAssistant-web。
+如果 active-task.md 不是 idle，就继续该任务；如果是 idle，就先把 active-task.md 改成你接手的明确任务，再开始编码。
+
+本次会话只处理一个明确任务。结束前必须更新 handoff 文件，至少包括：
+- 当前状态
+- 改动文件
+- 已执行命令和结果
+- 阻塞项
+- 下一位 agent 的第一步
+
+完成后输出结果并结束会话。
 EOF
 
     EXIT_CODE_FILE=$(mktemp)
@@ -544,7 +590,6 @@ PROCESSOR_EOF
         export MAX_LOG_SIZE="$MAX_LOG_SIZE"
         claude -p "$(cat "$PROMPT_FILE")" \
             --dangerously-skip-permissions \
-            # --allowed-tools "Bash Edit Read Write Glob Grep TodoWrite TodoRead WebSearch WebFetch mcp__playwright__*" \
             --output-format stream-json \
             --verbose 2>&1 | "$JSON_PROCESSOR" "$RUN_LOG"
         echo $? > "$EXIT_CODE_FILE"
@@ -593,16 +638,16 @@ PROCESSOR_EOF
         log "WARNING" "Run $run finished with exit code $CLAUDE_EXIT after ${RUN_DURATION} seconds"
     fi
 
-    REMAINING_AFTER=$(count_remaining_tasks)
+    REMAINING_AFTER=$(count_remaining_work_items)
     COMPLETED=$((REMAINING - REMAINING_AFTER))
 
     if [ "$COMPLETED" -gt 0 ]; then
-        log "SUCCESS" "Task(s) completed this run: $COMPLETED"
+        log "SUCCESS" "Work item(s) completed this run: $COMPLETED"
     else
-        log "WARNING" "No tasks marked as completed this run"
+        log "WARNING" "No work items were cleared this run"
     fi
 
-    log "INFO" "Tasks remaining after run $run: $REMAINING_AFTER"
+    log "INFO" "Work items remaining after run $run: $REMAINING_AFTER"
 
     echo "" >> "$LOG_FILE"
     echo "----------------------------------------" >> "$LOG_FILE"
@@ -619,18 +664,18 @@ echo "========================================"
 log "SUCCESS" "Automation completed!"
 echo "========================================"
 
-FINAL_REMAINING=$(count_remaining_tasks)
-TOTAL_COMPLETED=$((INITIAL_TASKS - FINAL_REMAINING))
+FINAL_REMAINING=$(count_remaining_work_items)
+TOTAL_COMPLETED=$((INITIAL_WORK_ITEMS - FINAL_REMAINING))
 
 log "INFO" "Summary:"
 log "INFO" "  - Total runs: $TOTAL_RUNS"
 log "INFO" "  - LLM Type: $LLM_TYPE"
-log "INFO" "  - Tasks completed: $TOTAL_COMPLETED"
-log "INFO" "  - Tasks remaining: $FINAL_REMAINING"
+log "INFO" "  - Work items completed: $TOTAL_COMPLETED"
+log "INFO" "  - Work items remaining: $FINAL_REMAINING"
 log "INFO" "  - Log file: $LOG_FILE"
 
 if [ "$FINAL_REMAINING" -eq 0 ]; then
-    log "SUCCESS" "All tasks have been completed!"
+    log "SUCCESS" "No active work items remain."
 else
-    log "WARNING" "Some tasks remain. You may need to run more iterations."
+    log "WARNING" "Some work items remain. You may need to run more iterations."
 fi

@@ -12,6 +12,19 @@
 
 Every new agent session MUST follow this workflow:
 
+### Step 0: Read Shared Handoff
+
+Before doing anything else, read these files in order:
+
+1. `docs/agent-handoff/current-state.md`
+2. `docs/agent-handoff/active-task.md`
+3. `docs/agent-handoff/decision-log.md`
+4. `AGENTS.md`
+
+If the work is inside `KPWritingAssistant-web/`, also read `KPWritingAssistant-web/AGENTS.md`.
+
+You must update the handoff files before ending the session.
+
 ### Step 1: Initialize Environment
 
 ```bash
@@ -24,14 +37,14 @@ This will:
 
 **DO NOT skip this step.** Ensure the server is running before proceeding.
 
-### Step 2: Select Next Task
+### Step 2: Select Or Confirm The Active Task
 
-Read `task-v1.2.0.json` and select ONE task to work on.
+Read `docs/agent-handoff/active-task.md` and do one of the following:
 
-Selection criteria (in order of priority):
-1. Choose a task where `passes: false`
-2. Consider dependencies - fundamental features should be done first
-3. Pick the highest-priority incomplete task
+1. If there is an active task, continue that task.
+2. If status is `idle`, replace it with the exact task you are taking over before making substantial edits.
+
+`task-v1.2.0.json` is now historical. As of 2026-04-07, all entries are already marked complete, so do not use it as the default source for selecting new work unless a human explicitly asks for that legacy workflow.
 
 
 ## 测试驱动开发工作流（TDD - Test Driven Development）
@@ -173,8 +186,8 @@ npm run lint
 - [ ] UI修改在浏览器中验证通过（如适用）
 - [ ] `npm run lint` 无错误
 - [ ] `npm run build` 构建成功
-- [ ] 更新 progress.txt
-- [ ] task.json 标记 passes: true
+- [ ] 更新 `docs/agent-handoff/active-task.md`
+- [ ] 如需记录长期背景，更新 `docs/agent-handoff/current-state.md` 或 `docs/agent-handoff/decision-log.md`
 - [ ] 所有更改在同一个 commit 中提交
 
 ### Step 3: Implement the Task
@@ -208,30 +221,36 @@ npm run lint
 - 验证表单提交、按钮点击等交互功能
 - 截图确认 UI 正确显示
 
-### Step 6: Update Progress
+### Step 6: Update Shared Handoff
 
-Write your work to `progress.txt`:
+Before ending the session, update `docs/agent-handoff/active-task.md` with:
+
+- 当前状态
+- 改动的文件
+- 已执行的命令和结果
+- 阻塞项
+- 下一位接手 agent 的第一步
+
+If you changed important project context, also update:
+
+- `docs/agent-handoff/current-state.md`
+- `docs/agent-handoff/decision-log.md`
+
+`KPWritingAssistant-web/progress.txt` can still be updated when it adds useful project history, but it is no longer enough on its own for cross-agent handoff.
+
+Recommended handoff structure:
 
 ```
-## [Date] - Task: [task description]
-
-### What was done:
-- [specific changes made]
-
-### Testing:
-- [how it was tested]
-
-### Notes:
-- [any relevant notes for future agents]
+Status / Owner / Goal / Files In Progress / Verification / Blockers / Next Agent First Step
 ```
 
-### Step 7: Commit Changes (包含 task.json 更新)
+### Step 7: Commit Changes
 
-**IMPORTANT: 所有更改必须在同一个 commit 中提交，包括 task.json 的更新！**
+**IMPORTANT: 所有更改必须在同一个 commit 中提交，并且 handoff 文件要和代码一起更新。**
 
 流程：
-1. 更新 `task-v1.2.0.json`，将任务的 `passes` 从 `false` 改为 `true`
-2. 更新 `progress.txt` 记录工作内容
+1. 更新 handoff 文件
+2. 如有必要，更新 `progress.txt` 记录较长的项目历史
 3. 一次性提交所有更改：
 
 ```bash
@@ -240,10 +259,10 @@ git commit -m "[task description] - completed"
 ```
 
 **规则:**
-- 只有在所有步骤都验证通过后才标记 `passes: true`
-- 永远不要删除或修改任务描述
-- 永远不要从列表中移除任务
-- **一个 task 的所有内容（代码、progress.txt、task.json）必须在同一个 commit 中提交**
+- 只有在所有步骤都验证通过后才提交
+- handoff 记录必须和代码状态一致
+- 只有在明确维护旧任务系统时才更新 `task-v1.2.0.json`
+- **同一项工作的代码和 handoff 更新必须在同一个 commit 中提交**
 
 ---
 
@@ -272,11 +291,12 @@ git commit -m "[task description] - completed"
 
 **DO NOT（禁止）：**
 - ❌ 提交 git commit
-- ❌ 将 task.json 的 passes 设为 true
+- ❌ 将 handoff 标记为“已完成”但实际仍阻塞
 - ❌ 假装任务已完成
 
 **DO（必须）：**
-- ✅ 在 progress.txt 中记录当前进度和阻塞原因
+- ✅ 在 handoff 文件中记录当前进度和阻塞原因
+- ✅ 如有需要，再补充到 progress.txt
 - ✅ 输出清晰的阻塞信息，说明需要人工做什么
 - ✅ 停止任务，等待人工介入
 
