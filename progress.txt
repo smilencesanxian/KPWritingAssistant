@@ -183,3 +183,12 @@
 ### Notes:
 - 用户反馈"/5"紧贴数字被误读为"15"，改为文字描述更清晰
 - 分数标准表格无维度注明让用户困惑，删除后改为简洁总分说明
+
+## 2026-04-07 - Task 37: FB-2 语言校对无问题时的提示文案
+
+### What was done:
+- CorrectionDetails.tsx: 将"暂无语言校对数据"改为"✓ 语言表达较好，未发现明显语法或拼写问题"（绿色text-green-600）
+
+### Testing:
+- npm run build: 通过（Compiled successfully）
+- npm run lint: 0 errors

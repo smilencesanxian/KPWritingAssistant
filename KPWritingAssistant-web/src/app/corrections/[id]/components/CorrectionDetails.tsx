@@ -162,7 +162,7 @@ export default function CorrectionDetails({ correctionSteps }: CorrectionDetails
                         </table>
                       </div>
                     ) : isStep4 && (!step4Data || step4Data.length === 0) ? (
-                      <p className="text-xs text-neutral-400 italic">暂无语言校对数据</p>
+                      <p className="text-xs text-green-600">✓ 语言表达较好，未发现明显语法或拼写问题</p>
                     ) : (
                       // Other steps: plain text content
                       <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">

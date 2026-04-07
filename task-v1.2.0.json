@@ -998,7 +998,7 @@
       "feature_ids": ["FB-0405"],
       "priority": "P1",
       "phase": 12,
-      "passes": false,
+      "passes": true,
       "description": "当语言校对（Step 4）无错误时，当前显示'暂无语言校对数据'，让用户误以为是加载失败。应改为正面的表扬性提示",
       "steps": [
         "打开 src/app/corrections/[id]/components/CorrectionDetails.tsx，定位 line 164-165",
