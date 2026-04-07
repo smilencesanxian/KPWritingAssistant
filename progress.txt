@@ -223,3 +223,18 @@
 
 ### Notes:
 - 原因: Supabase .single() 在0行时抛出 "Cannot coerce to single JSON" 错误，.maybeSingle() 返回 null 而不是报错
+
+## 2026-04-07 - Task 40: FB-5 字帖限制为1页 + 答题纸模板确认
+
+### What was done:
+- renderer.ts: 将 pageCount 固定为1，超出内容截断（原来根据行数动态计算可多页）
+- templates/index.ts: 确认代码正确（part2 → pet-part2），无需修改
+- copybook route.ts: 确认 exam_part 字段正确传递，无需修改
+
+### Testing:
+- npm run build: 通过
+- npx jest src/lib/pdf/: 54/54 通过
+
+### Notes:
+- 答题纸选错可能是历史数据的 exam_part 字段未设置问题，代码逻辑本身正确
+- 新生成的字帖将严格限制为1页，超出的范文内容被截断

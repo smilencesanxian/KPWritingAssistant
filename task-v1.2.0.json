@@ -1063,7 +1063,7 @@
       "feature_ids": ["FB-0405"],
       "priority": "P0",
       "phase": 12,
-      "passes": false,
+      "passes": true,
       "description": "① 字帖（描红/默写模式）目前可超过1页，用户要求严格限制为1页，超出内容截断；② 确认Part2 article是否使用了错误的Part1答题纸模板，并修复",
       "steps": [
         "打开 src/lib/pdf/renderer.ts，定位 line 554-560（wrapTextWithFontMetrics 和 pageCount 计算）",

@@ -560,14 +560,11 @@ export async function renderCopybookPDF(
       ? wrapTextWithFontMetrics(doc, essayText, usableWidth, contentFontSize, fontName, 10)
       : [];
 
-    const pageCount = (mode === 'tracing' || mode === 'dictation')
-      ? Math.max(1, Math.ceil(allLines.length / linesPerPage))
-      : 1;
+    // 字帖严格限制为1页，超出内容截断
+    const pageCount = 1;
 
     for (let page = 0; page < pageCount; page++) {
-      if (page > 0) doc.addPage({ size: 'A4', margin: 0 });
-
-      const pageLines = allLines.slice(page * linesPerPage, (page + 1) * linesPerPage);
+      const pageLines = allLines.slice(0, linesPerPage);
 
       if (template.showCornerMarks) drawCornerMarks(doc, pageWidth, pageHeight);
       if (template.showCambridgeWatermark) drawCambridgeWatermark(doc, pageWidth, pageHeight);
