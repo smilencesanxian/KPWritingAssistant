@@ -1087,7 +1087,7 @@
       "feature_ids": ["FB-0405"],
       "priority": "P1",
       "phase": 12,
-      "passes": false,
+      "passes": true,
       "description": "批改输出的Step1/2/3/5/6目前是大段连续文字，可读性差。需从Prompt层要求分条目输出，并在前端做对应的解析渲染",
       "steps": [
         "打开 src/config/prompts.json，修改 systemPrompt 中对 step1/2/3/5/6 格式的要求：step1要求按'• 要点：评价'格式分条；step3要求按'• 分段/连接词/逻辑'三方面分条；step5要求每个亮点一行（格式：✓ 原文片段 - 中文说明）；step6要求分两段：整体评价 + 改进要点（分条）",

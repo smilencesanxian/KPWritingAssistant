@@ -238,3 +238,17 @@
 ### Notes:
 - 答题纸选错可能是历史数据的 exam_part 字段未设置问题，代码逻辑本身正确
 - 新生成的字帖将严格限制为1页，超出的范文内容被截断
+
+## 2026-04-07 - Task 41: FB-6 批改输出分条目展示
+
+### What was done:
+- prompts.json systemPrompt: 要求step1/2/3以"• 条目：内容"格式输出，step5以"✓ 原文 - 说明"格式，step6分两部分（整体评价+条目建议）
+- CorrectionDetails.tsx: 渲染逻辑升级，检测到"•"/"✓"开头的行时，自动渲染为<ul><li>列表形式，旧数据保持whitespace-pre-line兜底
+
+### Testing:
+- npm run build: 通过
+- npx jest src/app/corrections/: 23/23 通过
+
+### Notes:
+- 前端兼容旧数据（无条目符的历史批改仍正常显示）
+- 新批改结果将以分条目列表形式展示，大幅提升可读性

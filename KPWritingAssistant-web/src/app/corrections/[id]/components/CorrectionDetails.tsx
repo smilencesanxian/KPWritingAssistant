@@ -164,10 +164,31 @@ export default function CorrectionDetails({ correctionSteps }: CorrectionDetails
                     ) : isStep4 && (!step4Data || step4Data.length === 0) ? (
                       <p className="text-xs text-green-600">✓ 语言表达较好，未发现明显语法或拼写问题</p>
                     ) : (
-                      // Other steps: plain text content
-                      <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">
-                        {typeof content === 'string' ? content : '暂无内容'}
-                      </p>
+                      // Other steps: render as bullet list if content has bullet markers, else plain text
+                      (() => {
+                        const text = typeof content === 'string' ? content : '暂无内容';
+                        const lines = text.split('\n').filter(l => l.trim() !== '');
+                        const hasBullets = lines.some(l => /^[•·✓▪\-]/.test(l.trim()));
+                        if (hasBullets) {
+                          return (
+                            <ul className="space-y-1.5">
+                              {lines.map((line, i) => {
+                                const cleaned = line.trim().replace(/^[•·✓▪\-]\s*/, '');
+                                const marker = /^✓/.test(line.trim()) ? '✓' : '•';
+                                return (
+                                  <li key={i} className="flex gap-2 text-sm text-neutral-600 leading-relaxed">
+                                    <span className="text-primary-400 shrink-0 mt-0.5">{marker}</span>
+                                    <span>{cleaned}</span>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          );
+                        }
+                        return (
+                          <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-line">{text}</p>
+                        );
+                      })()
                     )}
                   </div>
                 )}
