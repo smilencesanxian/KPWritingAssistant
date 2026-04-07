@@ -14,6 +14,15 @@ const LLM_BASE_URL =
 const LLM_API_KEY = process.env.LLM_API_KEY || '';
 const LLM_MODEL = process.env.LLM_MODEL || 'qwen-plus';
 
+/** 清理 LLM 输出中残留的 Markdown 格式符号（**bold**、*italic*、# 标题等） */
+export function cleanMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '')
+    .trim();
+}
+
 function createLLMClient(): OpenAI {
   return new OpenAI({
     baseURL: LLM_BASE_URL,
@@ -195,7 +204,7 @@ export async function generateModelEssay(
     throw new Error('范文生成失败，请稍后重试。');
   }
 
-  return content.trim();
+  return cleanMarkdown(content);
 }
 
 export async function detectEssayType(

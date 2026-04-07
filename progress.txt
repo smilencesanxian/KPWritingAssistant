@@ -192,3 +192,19 @@
 ### Testing:
 - npm run build: 通过（Compiled successfully）
 - npm run lint: 0 errors
+
+## 2026-04-07 - Task 38: FB-3 清理范文Markdown符号
+
+### What was done:
+- llm.ts: 新增 cleanMarkdown() 导出函数，在 generateModelEssay() 返回前清理 **/**/#
+- ModelEssayView.tsx: displayContent 计算时对旧数据也做 Markdown 清理
+- renderer.ts: wrapTextWithFontMetrics() 入口处在 split('\n') 前先清理 Markdown
+
+### Testing:
+- npm run build: 通过
+- npm run lint: 0 errors
+- npx jest llm.test.ts: 6/6 通过
+
+### Notes:
+- cleanMarkdown 同时处理 **bold**、*italic*、# 标题三种格式
+- 历史数据通过前端展示层兜底清理，不需要数据库迁移

@@ -1019,7 +1019,7 @@
       "feature_ids": ["FB-0405"],
       "priority": "P0",
       "phase": 12,
-      "passes": false,
+      "passes": true,
       "description": "LLM有时对范文标题输出 **标题** 这类Markdown格式，但代码没有后处理清理，导致**符号直接显示在UI和字帖中。需要在生成后和展示时两处清理",
       "steps": [
         "在 src/lib/ai/llm.ts 中，在 generateModelEssay() 函数返回结果前（约 line 198 的 .trim() 之后），添加 cleanMarkdown 清理函数：去除 **text** 中的 **；去除 *text* 中的 *；去除行首的 # 标题符号",

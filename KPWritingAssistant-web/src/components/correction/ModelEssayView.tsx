@@ -66,8 +66,9 @@ export default function ModelEssayView({ correctionId, initialEssays }: ModelEss
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isRegenerateModalOpen, setIsRegenerateModalOpen] = useState(false);
 
-  // Get display content (use user_edited_content if available)
-  const displayContent = essay?.user_edited_content ?? essay?.content ?? '';
+  // Get display content (use user_edited_content if available), clean residual Markdown symbols
+  const rawContent = essay?.user_edited_content ?? essay?.content ?? '';
+  const displayContent = rawContent.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/^#{1,6}\s+/gm, '');
 
   // Auto-fetch excellent essay on mount if not already available
   useEffect(() => {

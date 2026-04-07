@@ -441,8 +441,13 @@ export function wrapTextWithFontMetrics(
   targetWordsPerLine: number = 10
 ): string[] {
   doc.fontSize(fontSize).font(fontName);
+  // Clean residual Markdown symbols before rendering to PDF
+  const cleanedText = text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/^#{1,6}\s+/gm, '');
   // Split on single newlines to preserve email structure (salutation, paragraphs, sign-off)
-  const sourceLines = text.split('\n');
+  const sourceLines = cleanedText.split('\n');
   const lines: string[] = [];
 
   for (const sourceLine of sourceLines) {
