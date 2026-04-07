@@ -292,20 +292,7 @@ for ((run=1; run<=TOTAL_RUNS; run++)); do
 
     PROMPT_FILE=$(mktemp)
     cat > "$PROMPT_FILE" << 'EOF'
-Please follow the workflow in CLAUDE.md:
-1. Read task-v1.2.0.json and select the next task with passes: false
-2. Implement the task following all steps
-3. Test thoroughly (run npm run lint and npm run build in hello-nextjs/)
-4. Update progress.txt with your work
-5. Commit all changes including task-v1.2.0.json update in a single commit
-
-To read task-v1.2.0.json efficiently (it may be large):
-- First use Grep to find tasks with "passes": false
-- Then use Read with offset and limit to read specific task details
-- Do not read the entire file at once (max 10000 tokens per read)
-
-Start by using Grep to find the next incomplete task.
-Please complete only one task in this session, and stop once you are done or if you encounter an unresolvable issue.
+继续下一个任务，每次只完成一个任务，完成后输出结果并结束会话。
 EOF
 
     EXIT_CODE_FILE=$(mktemp)
@@ -557,7 +544,7 @@ PROCESSOR_EOF
         export MAX_LOG_SIZE="$MAX_LOG_SIZE"
         claude -p "$(cat "$PROMPT_FILE")" \
             --dangerously-skip-permissions \
-            --allowed-tools "Bash Edit Read Write Glob Grep TodoWrite TodoRead WebSearch WebFetch mcp__playwright__*" \
+            # --allowed-tools "Bash Edit Read Write Glob Grep TodoWrite TodoRead WebSearch WebFetch mcp__playwright__*" \
             --output-format stream-json \
             --verbose 2>&1 | "$JSON_PROCESSOR" "$RUN_LOG"
         echo $? > "$EXIT_CODE_FILE"
