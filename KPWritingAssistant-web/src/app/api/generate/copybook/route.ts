@@ -91,7 +91,11 @@ export async function POST(request: NextRequest) {
 
   // Encode opacity into cache key (appended to fontStyle) so different opacities don't share cache
   // v3: bumped to invalidate old PDFs when template auto-selection was introduced
-  const cacheKey = copybookMode === 'tracing' ? `v5_${fontStyle}@${tracingOpacity}` : `v5_${fontStyle}`;
+  // v6: 增加编辑状态到缓存键，确保编辑后的范文生成新的字帖
+  const essayVersion = (modelEssayData as { is_user_edited?: boolean }).is_user_edited ? 'edited' : 'original';
+  const cacheKey = copybookMode === 'tracing'
+    ? `v6_${fontStyle}@${tracingOpacity}_${essayVersion}`
+    : `v6_${fontStyle}_${essayVersion}`;
 
   // Cache check: (model_essay_id, template_id, mode, cacheKey)
   const existing = await getCopybookByModelEssayId(model_essay_id, user.id, templateId, copybookMode, cacheKey);
@@ -101,7 +105,8 @@ export async function POST(request: NextRequest) {
 
   let pdfBuffer: Buffer;
   try {
-    const essayContent = (modelEssayData as { content: string }).content;
+    // 优先使用用户编辑后的内容，否则使用原始内容
+    const essayContent = (modelEssayData.user_edited_content ?? modelEssayData.content) as string;
 
     // For dictation mode, fetch highlights and error words to create gap-fill
     let gapFillWords: string[] | undefined;

@@ -23,7 +23,8 @@ interface FontOption {
 }
 
 const TEMPLATE_OPTIONS: TemplateOption[] = [
-  { id: 'pet', name: 'PET Writing', description: 'Cambridge B1 Preliminary 标准答题纸' },
+  { id: 'pet', name: 'PET Part 1', description: '邮件写作 - 18行答题纸' },
+  { id: 'pet-part2', name: 'PET Part 2', description: '文章/故事写作 - 17行答题纸' },
 ];
 
 const FONT_OPTIONS: FontOption[] = [
@@ -44,9 +45,10 @@ function countWords(text: string): number {
 interface ModelEssayViewProps {
   correctionId: string;
   initialEssays: ModelEssay[];
+  examPart?: 'part1' | 'part2' | null;
 }
 
-export default function ModelEssayView({ correctionId, initialEssays }: ModelEssayViewProps) {
+export default function ModelEssayView({ correctionId, initialEssays, examPart }: ModelEssayViewProps) {
   const router = useRouter();
 
   // Always show excellent level only
@@ -56,7 +58,8 @@ export default function ModelEssayView({ correctionId, initialEssays }: ModelEss
   const [copybookLoading, setCopybookLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [templateId, setTemplateId] = useState<string>('pet');
+  // 根据 examPart 自动选择默认模板，Part2 使用 pet-part2，其他使用 pet
+  const [templateId, setTemplateId] = useState<string>(examPart === 'part2' ? 'pet-part2' : 'pet');
   const [copybookMode, setCopybookMode] = useState<CopybookMode>('tracing');
   const [fontStyle, setFontStyle] = useState<string>('hengshui');
   const [fontSize, setFontSize] = useState<number>(18); // 默认字体大小18pt

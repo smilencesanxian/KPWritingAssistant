@@ -90,7 +90,11 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
 
       {/* Block 4: Model Essay */}
       <section data-testid="model-essay">
-        <ModelEssayView correctionId={id} initialEssays={modelEssays} />
+        <ModelEssayView
+          correctionId={id}
+          initialEssays={modelEssays}
+          examPart={submission.exam_part}
+        />
       </section>
     </div>
   );

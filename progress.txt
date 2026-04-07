@@ -292,3 +292,20 @@
 ### Notes:
 - 推荐结果从用户未收藏的 recommended_phrases 中随机取2条
 - 采纳后调用现有 handleCollect() 流程，与普通收藏完全一致
+
+## 2026-04-07 - 范文和字帖问题修复
+
+### What was done:
+1. 修复范文编辑后保存不生效问题
+   - src/app/api/generate/copybook/route.ts: 优先使用 user_edited_content
+   - 缓存键v6: 增加 edited/original 标识，确保编辑后生成新字帖
+2. 添加Part1/Part2答题纸模板选择
+   - ModelEssayView: 添加 TEMPLATE_OPTIONS, examPart prop
+   - page.tsx: 传递 examPart 给 ModelEssayView
+3. 新增字帖排版E2E测试
+   - e2e/copybook-layout.spec.ts: 5个测试用例
+
+### Testing:
+- npm run build: 通过
+- npm run lint: 通过
+- npm run test:e2e: 无回归问题
