@@ -72,13 +72,21 @@ export async function PUT(
       note: user_preference_notes,
     };
 
-    // Update the model essay
-    const updatedEssay = await updateModelEssay(id, {
+    // Update the model essay (returns void - no SELECT after UPDATE to avoid RLS issues)
+    await updateModelEssay(id, {
       user_edited_content,
       is_user_edited: true,
       edit_history: [historyEntry],
       user_preference_notes,
     });
+
+    // Construct response from already-fetched data merged with the updates
+    const updatedEssay = {
+      ...modelEssayData,
+      user_edited_content,
+      is_user_edited: true,
+      user_preference_notes: user_preference_notes ?? modelEssayData.user_preference_notes,
+    };
 
     return Response.json({ model_essay: updatedEssay });
   } catch (error) {

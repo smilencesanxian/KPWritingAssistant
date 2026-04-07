@@ -195,7 +195,7 @@ export async function generateModelEssay(
         content: buildModelEssayPrompt(originalText, highlights, level, collectedPhrases, examPart, questionType),
       },
     ],
-    max_tokens: 1024,
+    max_tokens: 220,
     temperature: 0.7,
   });
 
@@ -293,7 +293,7 @@ export async function regenerateModelEssay(
         ),
       },
     ],
-    max_tokens: 1024,
+    max_tokens: 220,
     temperature: 0.7,
   });
 
@@ -302,5 +302,5 @@ export async function regenerateModelEssay(
     throw new Error('范文重新生成失败，请稍后重试。');
   }
 
-  return content.trim();
+  return cleanMarkdown(content);
 }

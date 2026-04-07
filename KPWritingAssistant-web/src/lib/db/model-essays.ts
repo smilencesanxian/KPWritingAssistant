@@ -11,7 +11,7 @@ export interface UpdateModelEssayInput {
 export async function updateModelEssay(
   id: string,
   data: UpdateModelEssayInput
-): Promise<ModelEssay> {
+): Promise<void> {
   const supabase = await createClient();
 
   // Build update object dynamically
@@ -41,22 +41,16 @@ export async function updateModelEssay(
     updateData.edit_history = newHistory;
   }
 
-  const { data: result, error } = await supabase
+  // Do UPDATE only — no .select() to avoid RLS issues on model_essays
+  // (model_essays has no direct user_id column so SELECT-after-UPDATE fails RLS)
+  const { error } = await supabase
     .from('model_essays')
     .update(updateData)
-    .eq('id', id)
-    .select()
-    .maybeSingle();
+    .eq('id', id);
 
   if (error) {
     throw new Error(`Failed to update model essay: ${error.message}`);
   }
-
-  if (!result) {
-    throw new Error('范文不存在或更新失败');
-  }
-
-  return result as ModelEssay;
 }
 
 export async function getUserPreferenceNotes(
