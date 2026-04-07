@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
+import { createHash } from 'crypto';
 import { getCopybookByModelEssayId, createCopybook } from '@/lib/db/copybooks';
 import { getHighlights } from '@/lib/db/highlights';
 import { generateCopybookPDF } from '@/lib/pdf/copybook';
@@ -89,13 +90,15 @@ export async function POST(request: NextRequest) {
   // Auto-select template based on exam_part if not explicitly requested
   const templateId = requestedTemplateId ?? getTemplateByExamPart(correction.essay_submissions.exam_part);
 
-  // Encode opacity into cache key (appended to fontStyle) so different opacities don't share cache
-  // v3: bumped to invalidate old PDFs when template auto-selection was introduced
-  // v6: 增加编辑状态到缓存键，确保编辑后的范文生成新的字帖
-  const essayVersion = (modelEssayData as { is_user_edited?: boolean }).is_user_edited ? 'edited' : 'original';
+  // 优先使用用户编辑后的内容，否则使用原始内容
+  const essayContent = (modelEssayData.user_edited_content ?? modelEssayData.content) as string;
+
+  // v7: 使用内容 hash 作为缓存键，确保每次内容变更都生成新字帖
+  // （v6 用 is_user_edited 布尔值，多次编辑共享同一缓存键导致旧内容被复用）
+  const contentHash = createHash('md5').update(essayContent).digest('hex').slice(0, 8);
   const cacheKey = copybookMode === 'tracing'
-    ? `v6_${fontStyle}@${tracingOpacity}_${essayVersion}`
-    : `v6_${fontStyle}_${essayVersion}`;
+    ? `v7_${fontStyle}@${tracingOpacity}_${contentHash}`
+    : `v7_${fontStyle}_${contentHash}`;
 
   // Cache check: (model_essay_id, template_id, mode, cacheKey)
   const existing = await getCopybookByModelEssayId(model_essay_id, user.id, templateId, copybookMode, cacheKey);
@@ -105,9 +108,6 @@ export async function POST(request: NextRequest) {
 
   let pdfBuffer: Buffer;
   try {
-    // 优先使用用户编辑后的内容，否则使用原始内容
-    const essayContent = (modelEssayData.user_edited_content ?? modelEssayData.content) as string;
-
     // For dictation mode, fetch highlights and error words to create gap-fill
     let gapFillWords: string[] | undefined;
     if (copybookMode === 'dictation') {

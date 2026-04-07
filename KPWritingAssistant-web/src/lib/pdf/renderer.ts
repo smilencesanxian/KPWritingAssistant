@@ -264,7 +264,6 @@ function drawAnswerContainer(
         .font(resolveFontName(fontStyle))
         .fillColor(tracingColor)
         .text(pageLines[i], textX, textY, {
-          width: availableWidth,
           lineBreak: false,
           ...(wordSpacing !== undefined ? { wordSpacing } : {}),
         });
@@ -306,7 +305,6 @@ function drawAnswerContainer(
         .font(resolveFontName(fontStyle))
         .fillColor('#1a1a1a')
         .text(processedLine, textX, textY, {
-          width: availableWidth,
           lineBreak: false,
           ...(wordSpacing !== undefined ? { wordSpacing } : {}),
         });
