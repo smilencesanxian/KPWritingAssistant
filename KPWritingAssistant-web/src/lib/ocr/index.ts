@@ -8,6 +8,8 @@ export async function recognizeHandwriting(imageBase64: string): Promise<OcrResu
       return (await import('./tencent')).recognizeHandwriting(imageBase64);
     case 'claude':
       return (await import('./claude')).recognizeHandwriting(imageBase64);
+    case 'tal':
+      return (await import('./tal')).recognizeHandwriting(imageBase64);
     default:
       return (await import('./baidu')).recognizeHandwriting(imageBase64);
   }
