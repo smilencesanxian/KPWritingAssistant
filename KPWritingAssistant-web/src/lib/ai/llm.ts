@@ -193,11 +193,11 @@ export async function generateModelEssay(
 
   const response = await client.chat.completions.create({
     model: LLM_MODEL,
-    messages: [
-      { role: 'system', content: getModelEssaySystemPrompt(examPart) },
-      {
-        role: 'user',
-        content: buildModelEssayPrompt(
+      messages: [
+        { role: 'system', content: getModelEssaySystemPrompt(examPart, questionType) },
+        {
+          role: 'user',
+          content: buildModelEssayPrompt(
           originalText,
           highlights,
           level,
@@ -294,11 +294,11 @@ export async function regenerateModelEssay(
 
   const response = await client.chat.completions.create({
     model: LLM_MODEL,
-    messages: [
-      { role: 'system', content: getModelEssaySystemPrompt(examPart) },
-      {
-        role: 'user',
-        content: buildRegenerateModelEssayPrompt(
+      messages: [
+        { role: 'system', content: getModelEssaySystemPrompt(examPart, questionType) },
+        {
+          role: 'user',
+          content: buildRegenerateModelEssayPrompt(
           originalText,
           highlights,
           collectedPhrases,

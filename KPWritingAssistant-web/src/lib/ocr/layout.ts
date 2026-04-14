@@ -1,5 +1,6 @@
 const SALUTATION_RE = /^(dear|hi|hello)\b/i;
 const SIGNOFF_RE = /^(best wishes|best regards|regards|yours|love)\b/i;
+const TAIL_NOISE_RE = /^[A-Z]{2,4}$/;
 
 function isNoiseLine(line: string): boolean {
   const trimmed = line.trim();
@@ -27,6 +28,18 @@ function flushBlock(block: string[]): string | null {
     .trim();
 
   return text || null;
+}
+
+function isTailNoiseBlock(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return false;
+  }
+  if (!TAIL_NOISE_RE.test(trimmed)) {
+    return false;
+  }
+
+  return true;
 }
 
 export function restoreOcrEssayLayout(text: string): string {
@@ -76,6 +89,10 @@ export function restoreOcrEssayLayout(text: string): string {
   }
 
   pushCurrent();
+
+  while (blocks.length > 0 && isTailNoiseBlock(blocks[blocks.length - 1])) {
+    blocks.pop();
+  }
 
   return blocks.join('\n\n').trim();
 }

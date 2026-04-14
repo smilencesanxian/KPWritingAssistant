@@ -53,6 +53,10 @@ export function cleanOcrText(text: string): string {
   // 过滤独立的数字行（纯数字，通常是页码或题号，如 "119", "99"）
   cleaned = cleaned.replace(/^[\s]*\d+[\s]*$/gm, '');
 
+  // 过滤独立的大写短噪音 token，如 OCR 误识别出来的尾部杂字符 "IGV"
+  // 只处理整行独立内容，避免误伤正文中的正常单词
+  cleaned = cleaned.replace(/^[\s]*[A-Z]{2,4}[\s]*$/gm, '');
+
   // 过滤明显乱码行（短于3个字符且只包含ASCII字符且非英文单词的行，保留常见短单词和单字母如 I, a, b, c 等）
   // 注意：不过滤包含非ASCII字符（如中文）的行，避免误删有效内容
   const commonShortWords = new Set(['i', 'a', 'an', 'go', 'to', 'in', 'on', 'at', 'by', 'up', 'ok', 'oh', 'ah', 'no', 'so', 'if', 'we', 'he', 'me', 'my', 'us', 'do', 'be', 'is', 'am', 'it', 'as', 'of', 'or', 'ex']);

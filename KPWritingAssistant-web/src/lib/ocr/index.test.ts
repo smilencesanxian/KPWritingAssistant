@@ -89,6 +89,11 @@ describe('cleanOcrText', () => {
       expect(cleanOcrText(input)).toBe('Dear friend,\n\nHow are you?');
     });
 
+    it('should remove standalone all-caps OCR noise tokens', () => {
+      expect(cleanOcrText('正文内容\nIGV')).toBe('正文内容');
+      expect(cleanOcrText('IGV')).toBe('');
+    });
+
     it('should handle multi-digit numbers', () => {
       expect(cleanOcrText('第100张图片')).toBe('图片');
       expect(cleanOcrText('共999页')).toBe('');

@@ -34,4 +34,10 @@ describe('restoreOcrEssayLayout', () => {
       ['Dear Mike,', '', 'I am writing to tell you about my trip. See you soon.'].join('\n')
     );
   });
+
+  it('drops trailing all-caps OCR noise blocks', () => {
+    const input = ['My essay text', 'IGV'].join('\n');
+
+    expect(restoreOcrEssayLayout(input)).toBe('My essay text');
+  });
 });

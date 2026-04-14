@@ -14,10 +14,12 @@ export interface ModelEssayWordCountResult extends ModelEssayStructure {
 
 const TARGET_MIN_WORDS = 100;
 const TARGET_MAX_WORDS = 110;
-const HARD_MAX_WORDS = 120;
+const GENERATION_MIN_WORDS = 90;
+const HARD_MAX_WORDS = 130;
 
 const SALUTATION_RE = /^(dear|hi|hello)\b/i;
 const SIGNOFF_RE = /^(best wishes|best regards|regards|yours|yours sincerely|yours faithfully|love)\b/i;
+const TITLE_RE = /^[A-Z][^.!?]*$/;
 
 function normalizeEssayText(text: string): string {
   return text
@@ -83,11 +85,8 @@ export function parseModelEssayStructure(
       : rawLines.slice(salutationIndex + 1, signoffStart);
     signoffLines = signoffStart === -1 ? [] : rawLines.slice(signoffStart).filter(Boolean);
     bodyText = bodyLines.join('\n');
-  } else if (examPart === 'part2' && questionType === 'q1' && lines.length >= 2) {
+  } else if (examPart === 'part2' && questionType === 'q1' && lines.length > 0 && TITLE_RE.test(lines[0])) {
     titleLine = lines[0];
-    const titleIndex = nonEmptyLineIndexes[0] ?? 0;
-    bodyText = rawLines.slice(titleIndex + 1).join('\n');
-  } else if (examPart === 'part2' && questionType === 'q2' && lines.length > 0) {
     const titleIndex = nonEmptyLineIndexes[0] ?? 0;
     bodyText = rawLines.slice(titleIndex + 1).join('\n');
   }
@@ -120,11 +119,13 @@ export function getModelEssayWordCount(
 export function getModelEssayWordCountLimits(): {
   targetMin: number;
   targetMax: number;
+  generationMin: number;
   hardMax: number;
 } {
   return {
     targetMin: TARGET_MIN_WORDS,
     targetMax: TARGET_MAX_WORDS,
+    generationMin: GENERATION_MIN_WORDS,
     hardMax: HARD_MAX_WORDS,
   };
 }

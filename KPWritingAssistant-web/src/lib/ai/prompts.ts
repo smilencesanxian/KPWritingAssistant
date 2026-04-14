@@ -49,6 +49,33 @@ export const OCR_USER_PROMPT = config.ocr.userPrompt;
 
 export const DETECT_TYPE_SYSTEM_PROMPT = config.detectType.systemPrompt;
 
+function getModelEssayWordCountGuidance(examPart?: string | null, questionType?: string | null): string {
+  if (examPart === 'part1') {
+    return [
+      '【字数统计口径】',
+      '- 生成目标：正文建议控制在 100-110 词左右。',
+      '- 统计方式：只统计正文内容，不计称呼和落款。',
+      '- 结构要求：邮件正文保持自然分段，不要把称呼或落款混入正文统计。',
+    ].join('\n');
+  }
+
+  if (examPart === 'part2' && questionType === 'q2') {
+    return [
+      '【字数统计口径】',
+      '- 生成目标：故事正文建议控制在 100-110 词左右。',
+      '- 统计方式：全文都计入词数，不需要标题。',
+      '- 结构要求：直接写故事正文即可，不要额外添加标题。',
+    ].join('\n');
+  }
+
+  return [
+    '【字数统计口径】',
+    '- 生成目标：文章正文建议控制在 100-110 词左右。',
+    '- 统计方式：只统计正文内容，不计标题。',
+    '- 结构要求：标题单独一行，标题不计入正文词数。',
+  ].join('\n');
+}
+
 /**
  * Returns the correction system prompt for the given exam part.
  * For Part 1: prepends part1ExtraGuidance (detailed criteria) before the base JSON-format prompt.
@@ -94,15 +121,19 @@ export function getCorrectionSystemPrompt(
 }
 
 /** Returns the model essay system prompt for the given exam part */
-export function getModelEssaySystemPrompt(examPart?: string | null): string {
+export function getModelEssaySystemPrompt(
+  examPart?: string | null,
+  questionType?: string | null
+): string {
+  const wordCountGuidance = getModelEssayWordCountGuidance(examPart, questionType);
   if (examPart === 'part2') {
-    return config.modelEssay.part2SystemPrompt || config.modelEssay.systemPrompt;
+    return `${config.modelEssay.part2SystemPrompt || config.modelEssay.systemPrompt}\n\n${wordCountGuidance}`;
   }
   // Log warning if exam_part is missing or invalid
   if (examPart && examPart !== 'part1') {
     console.warn(`[Prompts] Unexpected exam_part "${examPart}", using Part1 prompt`);
   }
-  return config.modelEssay.part1SystemPrompt || config.modelEssay.systemPrompt;
+  return `${config.modelEssay.part1SystemPrompt || config.modelEssay.systemPrompt}\n\n${wordCountGuidance}`;
 }
 
 function getCorrectionQuestionTypeHint(questionType?: string | null): string {
@@ -162,6 +193,7 @@ export function buildModelEssayPrompt(
   const additionalRequirementsSection = additionalRequirements
     ? `\n\n【额外硬性要求】\n${additionalRequirements}`
     : '';
+  const wordCountGuidanceSection = `\n\n${getModelEssayWordCountGuidance(examPart, questionType)}`;
 
   if (examPart === 'part2') {
     const template = config.modelEssay.part2UserPromptTemplate || config.modelEssay.userPromptTemplate;
@@ -169,14 +201,14 @@ export function buildModelEssayPrompt(
       .replace('{{originalText}}', originalText)
       .replace('{{questionTypeDescription}}', getQuestionTypeDescription(questionType))
       .replace('{{highlightsSection}}', highlightsSection)
-      .replace('{{collectedPhrasesSection}}', `${collectedPhrasesSection}${additionalRequirementsSection}`)
+      .replace('{{collectedPhrasesSection}}', `${collectedPhrasesSection}${additionalRequirementsSection}${wordCountGuidanceSection}`)
       .replace('{{levelDescription}}', levelDescription);
   }
 
   return config.modelEssay.userPromptTemplate
     .replace('{{originalText}}', originalText)
     .replace('{{highlightsSection}}', highlightsSection)
-    .replace('{{collectedPhrasesSection}}', `${collectedPhrasesSection}${additionalRequirementsSection}`)
+    .replace('{{collectedPhrasesSection}}', `${collectedPhrasesSection}${additionalRequirementsSection}${wordCountGuidanceSection}`)
     .replace('{{levelDescription}}', levelDescription);
 }
 
@@ -230,6 +262,7 @@ export function buildRegenerateModelEssayPrompt(
   const additionalRequirementsSection = additionalRequirements
     ? `\n【额外硬性要求】\n${additionalRequirements}`
     : '';
+  const wordCountGuidanceSection = `\n${getModelEssayWordCountGuidance(examPart, questionType)}`;
   const collectedPhrasesSection =
     collectedPhrases.length > 0
       ? config.modelEssay.collectedPhrasesSectionTemplate.replace(
@@ -246,14 +279,14 @@ export function buildRegenerateModelEssayPrompt(
     return template
       .replace('{{originalText}}', originalText)
       .replace('{{questionTypeDescription}}', getQuestionTypeDescription(questionType))
-      .replace('{{highlightsSection}}', extraSections)
+      .replace('{{highlightsSection}}', `${extraSections}${wordCountGuidanceSection}`)
       .replace('{{collectedPhrasesSection}}', collectedPhrasesSection)
       .replace('{{levelDescription}}', levelDescription);
   }
 
   return config.modelEssay.userPromptTemplate
     .replace('{{originalText}}', originalText)
-    .replace('{{highlightsSection}}', extraSections)
+    .replace('{{highlightsSection}}', `${extraSections}${wordCountGuidanceSection}`)
     .replace('{{collectedPhrasesSection}}', collectedPhrasesSection)
     .replace('{{levelDescription}}', levelDescription);
 }
