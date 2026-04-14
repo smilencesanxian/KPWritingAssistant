@@ -33,12 +33,13 @@ export async function GET(
     return Response.json({ error: 'PDF not available' }, { status: 404 });
   }
 
-  // Fetch PDF from storage
-  const { data: pdfData, error: downloadError } = await supabase.storage
-    .from('copybook-pdfs')
-    .download(copybook.pdf_storage_path);
+  const downloadSource = copybook.pdf_url ?? null;
+  if (!downloadSource) {
+    return Response.json({ error: 'PDF not available' }, { status: 404 });
+  }
 
-  if (downloadError || !pdfData) {
+  const pdfResponse = await fetch(downloadSource);
+  if (!pdfResponse.ok) {
     return Response.json({ error: 'Failed to download PDF' }, { status: 500 });
   }
 
@@ -46,7 +47,7 @@ export async function GET(
   const fileName = copybook.download_file_name || `字帖 ${copybook.created_at}.pdf`;
 
   // Convert blob to array buffer
-  const arrayBuffer = await pdfData.arrayBuffer();
+  const arrayBuffer = await pdfResponse.arrayBuffer();
 
   // Return PDF with proper Content-Disposition header
   return new Response(arrayBuffer, {

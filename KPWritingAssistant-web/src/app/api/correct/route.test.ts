@@ -49,6 +49,7 @@ describe('POST /api/correct', () => {
       ocr_text: 'Test essay content',
       status: 'pending',
       exam_part: 'part1',
+      question_type: null,
     };
 
     const mockAIResult = {
@@ -119,6 +120,7 @@ describe('POST /api/correct', () => {
         structured_suggestions: mockAIResult.improvement_suggestions,
       })
     );
+    expect(correctEssay).toHaveBeenCalledWith('Test essay content', 'part1', null);
   });
 
   it('IT-002: should be backward compatible with old format AI response', async () => {
@@ -128,6 +130,7 @@ describe('POST /api/correct', () => {
       user_id: mockUser.id,
       ocr_text: 'Test essay content',
       status: 'pending',
+      question_type: null,
     };
 
     const mockAIResult = {
@@ -187,6 +190,7 @@ describe('POST /api/correct', () => {
       ocr_text: 'Test essay content',
       status: 'pending',
       exam_part: 'part2',
+      question_type: 'q2',
     };
 
     const mockAIResult = {
@@ -253,6 +257,7 @@ describe('POST /api/correct', () => {
       correction_steps: mockAIResult.correction_steps,
       structured_suggestions: mockAIResult.improvement_suggestions,
     });
+    expect(correctEssay).toHaveBeenCalledWith('Test essay content', 'part2', 'q2');
   });
 
   it('IT-004: should return existing correction for already completed submission (idempotent)', async () => {

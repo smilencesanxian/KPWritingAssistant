@@ -10,6 +10,7 @@
 import PDFDocument from 'pdfkit';
 import path from 'path';
 import type { CopybookTemplate, CopybookMode } from '@/types/pdf';
+import { parseModelEssayStructure } from '@/lib/model-essay/format';
 import { shouldGapWord, createGap } from './gap-fill';
 
 const FONTS_DIR = path.join(process.cwd(), 'src/assets/fonts');
@@ -19,6 +20,11 @@ const ZCOOL_PATH = path.join(FONTS_DIR, 'ZCOOLQingKeHuangYou-Regular.ttf');
 const ZHI_MANG_XING_PATH = path.join(FONTS_DIR, 'ZhiMangXing-Regular.ttf');
 const HENGSHUI_PATH = path.join(process.cwd(), 'font', '舒窈衡水体.ttf');
 const MM_TO_PT = 2.8346;
+
+interface PreparedCopybookLine {
+  text: string;
+  align: 'left' | 'center';
+}
 
 /** Maps user-facing font_style id → PDFKit font name */
 function resolveFontName(fontStyle: string): string {
@@ -168,7 +174,7 @@ function drawPart2SelectorHeader(
 function drawAnswerContainer(
   doc: PDFKit.PDFDocument,
   template: CopybookTemplate,
-  pageLines: string[],
+  pageLines: PreparedCopybookLine[],
   mode: CopybookMode,
   fontStyle: string,
   tracingColor: string,
@@ -237,21 +243,22 @@ function drawAnswerContainer(
     }
 
     // Tracing mode: render essay text on each line (with gray color for tracing)
-    if (mode === 'tracing' && pageLines[i]) {
+    if (mode === 'tracing' && pageLines[i]?.text) {
       // Position text near the bottom of the line so it sits on the baseline
       const textY = lineY + lineHeight - contentFontSize - 2;
       const textX = answerAreaX + 6;
       const availableWidth = answerAreaWidth - 12;
+      const currentLine = pageLines[i];
 
       // Check if this is the last line with content
-      const isLastLine = !pageLines.slice(i + 1).some(line => line && line.trim() !== '');
+      const isLastLine = !pageLines.slice(i + 1).some((line) => line?.text && line.text.trim() !== '');
 
       // Split line into words and calculate word spacing adjustment
-      const words = pageLines[i].split(' ').filter(Boolean);
+      const words = currentLine.text.split(' ').filter(Boolean);
       let wordSpacing: number | undefined;
 
       // Only justify if not the last line and has multiple words
-      if (!isLastLine && words.length > 1) {
+      if (currentLine.align === 'left' && !isLastLine && words.length > 1) {
         doc.fontSize(contentFontSize).font(resolveFontName(fontStyle));
         const extraSpacing = justifyLine(doc, words, availableWidth, 12);
         if (extraSpacing !== null && extraSpacing > 0) {
@@ -263,21 +270,29 @@ function drawAnswerContainer(
         .fontSize(contentFontSize)
         .font(resolveFontName(fontStyle))
         .fillColor(tracingColor)
-        .text(pageLines[i], textX, textY, {
-          lineBreak: false,
-          ...(wordSpacing !== undefined ? { wordSpacing } : {}),
-        });
+        .text(
+          currentLine.text,
+          textX,
+          textY,
+          currentLine.align === 'center'
+            ? { width: availableWidth, align: 'center', lineBreak: false }
+            : {
+                lineBreak: false,
+                ...(wordSpacing !== undefined ? { wordSpacing } : {}),
+              }
+        );
     }
 
     // Dictation mode: render essay text with gaps for specific words
-    if (mode === 'dictation' && pageLines[i] && gapFillWords && gapFillWords.length > 0) {
+    if (mode === 'dictation' && pageLines[i]?.text && gapFillWords && gapFillWords.length > 0) {
       // Position text near the bottom of the line so it sits on the baseline
       const textY = lineY + lineHeight - contentFontSize - 2;
       const textX = answerAreaX + 6;
       const availableWidth = answerAreaWidth - 12;
+      const currentLine = pageLines[i];
 
       // Process each word: replace gapped words with underscores
-      const words = pageLines[i].split(' ').filter(Boolean);
+      const words = currentLine.text.split(' ').filter(Boolean);
       const processedWords = words.map(word => {
         if (shouldGapWord(word, gapFillWords)) {
           return createGap(word);
@@ -288,11 +303,11 @@ function drawAnswerContainer(
       const processedLine = processedWords.join(' ');
 
       // Check if this is the last line with content
-      const isLastLine = !pageLines.slice(i + 1).some(line => line && line.trim() !== '');
+      const isLastLine = !pageLines.slice(i + 1).some((line) => line?.text && line.text.trim() !== '');
 
       // Calculate word spacing adjustment
       let wordSpacing: number | undefined;
-      if (!isLastLine && processedWords.length > 1) {
+      if (currentLine.align === 'left' && !isLastLine && processedWords.length > 1) {
         doc.fontSize(contentFontSize).font(resolveFontName(fontStyle));
         const extraSpacing = justifyLine(doc, processedWords, availableWidth, 12);
         if (extraSpacing !== null && extraSpacing > 0) {
@@ -304,10 +319,17 @@ function drawAnswerContainer(
         .fontSize(contentFontSize)
         .font(resolveFontName(fontStyle))
         .fillColor('#1a1a1a')
-        .text(processedLine, textX, textY, {
-          lineBreak: false,
-          ...(wordSpacing !== undefined ? { wordSpacing } : {}),
-        });
+        .text(
+          processedLine,
+          textX,
+          textY,
+          currentLine.align === 'center'
+            ? { width: availableWidth, align: 'center', lineBreak: false }
+            : {
+                lineBreak: false,
+                ...(wordSpacing !== undefined ? { wordSpacing } : {}),
+              }
+        );
     }
   }
 
@@ -397,7 +419,6 @@ export function wrapParagraph(
   maxWidth: number,
   targetWordsPerLine: number
 ): string[] {
-  const minWordsPerLine = Math.max(1, targetWordsPerLine - 2); // Minimum 8 for target 10
   const maxWordsPerLine = targetWordsPerLine + 2; // Maximum 12 for target 10
   const words = paragraph.split(/\s+/).filter(Boolean);
   if (words.length === 0) return [];
@@ -436,27 +457,39 @@ export function wrapTextWithFontMetrics(
   maxWidth: number,
   fontSize: number,
   fontName: string,
+  examPart?: 'part1' | 'part2' | null,
+  questionType?: 'q1' | 'q2' | null,
   targetWordsPerLine: number = 10
-): string[] {
+): PreparedCopybookLine[] {
   doc.fontSize(fontSize).font(fontName);
-  // Clean residual Markdown symbols before rendering to PDF
-  const cleanedText = text
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/\*(.*?)\*/g, '$1')
-    .replace(/^#{1,6}\s+/gm, '');
-  // Split on single newlines to preserve email structure (salutation, paragraphs, sign-off)
-  const sourceLines = cleanedText.split('\n');
-  const lines: string[] = [];
+  const structure = parseModelEssayStructure(text, examPart, questionType);
+  const lines: PreparedCopybookLine[] = [];
 
-  for (const sourceLine of sourceLines) {
-    const trimmed = sourceLine.trim();
-    if (trimmed === '') {
-      // Skip blank lines - no empty slots inserted
-      continue;
-    } else {
-      const wrapped = wrapParagraph(doc, trimmed, maxWidth, targetWordsPerLine);
-      lines.push(...wrapped);
-    }
+  const appendParagraphs = (paragraphs: string[]) => {
+    paragraphs.forEach((paragraph, index) => {
+      const wrapped = wrapParagraph(doc, paragraph, maxWidth, targetWordsPerLine);
+      lines.push(...wrapped.map((item) => ({ text: item, align: 'left' as const })));
+      if (index < paragraphs.length - 1) {
+        lines.push({ text: '', align: 'left' });
+      }
+    });
+  };
+
+  if (structure.titleLine) {
+    lines.push({ text: structure.titleLine, align: 'center' });
+    lines.push({ text: '', align: 'left' });
+  }
+
+  if (structure.salutationLine) {
+    lines.push({ text: structure.salutationLine, align: 'left' });
+    lines.push({ text: '', align: 'left' });
+  }
+
+  appendParagraphs(structure.bodyParagraphs);
+
+  if (structure.signoffLines.length > 0) {
+    lines.push({ text: '', align: 'left' });
+    lines.push(...structure.signoffLines.map((item) => ({ text: item, align: 'left' as const })));
   }
 
   return lines;
@@ -517,7 +550,9 @@ export async function renderCopybookPDF(
   fontStyle: string = 'gochi-hand',
   tracingOpacity: number = 30,
   customFontSize?: number,
-  gapFillWords?: string[]
+  gapFillWords?: string[],
+  examPart?: 'part1' | 'part2' | null,
+  questionType?: 'q1' | 'q2' | null
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 0, autoFirstPage: true });
@@ -553,7 +588,16 @@ export async function renderCopybookPDF(
     const usableWidth = answerAreaWidth - 12; // minus left/right padding
     // Wrap text for both tracing and dictation modes
     const allLines = (mode === 'tracing' || mode === 'dictation')
-      ? wrapTextWithFontMetrics(doc, essayText, usableWidth, contentFontSize, fontName, 10)
+      ? wrapTextWithFontMetrics(
+          doc,
+          essayText,
+          usableWidth,
+          contentFontSize,
+          fontName,
+          examPart,
+          questionType,
+          10
+        )
       : [];
 
     // 字帖严格限制为1页，超出内容截断

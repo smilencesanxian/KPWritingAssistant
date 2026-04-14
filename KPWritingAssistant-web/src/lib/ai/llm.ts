@@ -45,7 +45,7 @@ function extractScores(result: CorrectionResult): CorrectionScores {
     return {
       content: so.content?.score ?? 0,
       communication: so.communication?.score ?? 0,
-      organization: so.organisation?.score ?? so.language?.score ?? 0, // fallback for compatibility
+      organization: so.organisation?.score ?? 0,
       language: so.language?.score ?? 0,
       total: (so.content?.score ?? 0) + (so.communication?.score ?? 0) +
              (so.organisation?.score ?? 0) + (so.language?.score ?? 0),
@@ -73,12 +73,22 @@ function extractScores(result: CorrectionResult): CorrectionScores {
  */
 function validateCorrectionResult(result: CorrectionResult): boolean {
   // Check for new structured format (v1.2.1)
-  if (result.scoring_overview &&
+  if (
+    result.scoring_overview &&
+    result.correction_steps &&
     typeof result.scoring_overview.content?.score === 'number' &&
     typeof result.scoring_overview.communication?.score === 'number' &&
+    typeof result.scoring_overview.organisation?.score === 'number' &&
     typeof result.scoring_overview.language?.score === 'number' &&
+    typeof result.correction_steps.step1 === 'string' &&
+    typeof result.correction_steps.step2 === 'string' &&
+    typeof result.correction_steps.step3 === 'string' &&
+    Array.isArray(result.correction_steps.step4) &&
+    typeof result.correction_steps.step5 === 'string' &&
+    typeof result.correction_steps.step6 === 'string' &&
     Array.isArray(result.improvement_suggestions) &&
-    Array.isArray(result.highlights)) {
+    Array.isArray(result.highlights)
+  ) {
     return true;
   }
 
@@ -96,7 +106,8 @@ function validateCorrectionResult(result: CorrectionResult): boolean {
 
 export async function correctEssay(
   text: string,
-  examPart?: string | null
+  examPart?: string | null,
+  questionType?: string | null
 ): Promise<CorrectionResult> {
   const client = createLLMClient();
   let lastError: Error | null = null;
@@ -110,10 +121,10 @@ export async function correctEssay(
       const response = await client.chat.completions.create({
         model: LLM_MODEL,
         messages: [
-          { role: 'system', content: getCorrectionSystemPrompt(examPart) },
+          { role: 'system', content: getCorrectionSystemPrompt(examPart, questionType) },
           {
             role: 'user',
-            content: buildCorrectionUserPrompt(text, examPart),
+            content: buildCorrectionUserPrompt(text, examPart, questionType),
           },
         ],
         max_tokens: 4096,
@@ -143,14 +154,7 @@ export async function correctEssay(
           result.overall_comment = result.correction_steps.step6;
         }
 
-        // Populate legacy improvement_suggestions if not present
-        if (!result.improvement_suggestions && Array.isArray(result.improvement_suggestions)) {
-          // Already in new format, convert to string for backward compatibility
-          const suggestions = result.improvement_suggestions as Array<{ icon: string; title: string; detail: string }>;
-          result.improvement_suggestions = suggestions
-            .map(s => `${s.icon} ${s.title}: ${s.detail}`)
-            .join('\n') as unknown as string;
-        }
+        // improvement_suggestions keeps its structured array shape in the new format.
 
         // Ensure error_annotations array exists
         if (!result.error_annotations) {
@@ -182,7 +186,8 @@ export async function generateModelEssay(
   level: 'pass' | 'good' | 'excellent',
   collectedPhrases?: string[],
   examPart?: string | null,
-  questionType?: string | null
+  questionType?: string | null,
+  additionalRequirements?: string
 ): Promise<string> {
   const client = createLLMClient();
 
@@ -192,7 +197,15 @@ export async function generateModelEssay(
       { role: 'system', content: getModelEssaySystemPrompt(examPart) },
       {
         role: 'user',
-        content: buildModelEssayPrompt(originalText, highlights, level, collectedPhrases, examPart, questionType),
+        content: buildModelEssayPrompt(
+          originalText,
+          highlights,
+          level,
+          collectedPhrases,
+          examPart,
+          questionType,
+          additionalRequirements
+        ),
       },
     ],
     max_tokens: 220,
@@ -270,10 +283,12 @@ function getDefaultDetectTypeResult(): DetectTypeResult {
 export async function regenerateModelEssay(
   originalText: string,
   highlights: string[],
+  collectedPhrases: string[],
   preferenceNotes: string,
   historyNotes: string[],
   examPart?: string | null,
-  questionType?: string | null
+  questionType?: string | null,
+  additionalRequirements?: string
 ): Promise<string> {
   const client = createLLMClient();
 
@@ -286,10 +301,12 @@ export async function regenerateModelEssay(
         content: buildRegenerateModelEssayPrompt(
           originalText,
           highlights,
+          collectedPhrases,
           preferenceNotes,
           historyNotes,
           examPart,
-          questionType
+          questionType,
+          additionalRequirements
         ),
       },
     ],

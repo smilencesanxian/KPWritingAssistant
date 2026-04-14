@@ -1,6 +1,6 @@
 # 当前任务
 
-最后更新：2026-04-13
+最后更新：2026-04-14
 
 ## 状态
 
@@ -8,86 +8,68 @@
 
 ## 当前负责方
 
-`claude-code`
+`codex`
 
 ## 目标
 
-新增好未来(学而思) OCR 识别接口支持，作为现有 OCR 能力的扩展选项。
+根据 `KPWritingAssistant-web/docs/sugession&issues/功能意见-0412.html` 的 6 条客户反馈，完成一轮面向生产现状的系统整改，重点修复：
+
+- OCR 提取排版混乱、噪音文本过多、批改页无法查看原图
+- 批改详情步骤语义与提示词规范不一致
+- 范文超字数、字帖标题和分段排版错误
+- 范文未区分知识库素材与历史亮点来源
+- 知识库未与 `PET写作知识库-v2.0.md` 对齐且存在重复展示
+- 易错点列表默认删除入口过于显眼
 
 ## 主要工作区域
 
 `KPWritingAssistant-web/`
 
-## 已完成的文件
+## 待办拆解
 
-- `KPWritingAssistant-web/src/lib/ocr/tal.ts` - 好未来 OCR 实现
-- `KPWritingAssistant-web/src/lib/ocr/tal.test.ts` - 单元测试
-- `KPWritingAssistant-web/src/lib/ocr/index.ts` - 添加 tal 选项
-- `KPWritingAssistant-web/.env.local.example` - 添加环境变量配置
+1. 修正批改链路：透传 `question_type`，让 Part2 article/story 走正确提示词；同步修复批改详情 Step 标题与 `correction_steps.step1-6` 的真实语义错位。
+2. 收紧范文生成与编辑保存的字数约束，确保正文目标 `100-110` 词，硬上限 `120` 词。
+3. 修复字帖渲染：支持文章标题居中、正文分段、邮件称呼/正文/落款结构保留。
+4. 在批改页补原图查看能力，使用 `original_image_path` / `question_image_path` 动态生成可访问图片链接。
+5. 改进 OCR 文本清洗与版式恢复，减少无关噪音并提升换行/段落结构。
+6. 修复范文来源注入与知识库供数逻辑：去重历史亮点/知识库短语，增加“亮点不足时回落到 PET 知识库”的硬规则。
+7. 修复知识库重复展示，并将运行时知识库内容与 `PET写作知识库-v2.0.md` 对齐。
+8. 移除易错点列表默认滑删/常驻删除入口，仅保留“管理”模式下的删除。
+9. 为以上改动补齐单测/E2E，并跑最小必要回归。
 
-## 变更详情
+## 当前执行顺序
 
-### 1. 新增好未来 OCR 实现 (src/lib/ocr/tal.ts)
+1. 先修批改链路与 Step 语义
+2. 再修范文字数与字帖排版
+3. 再补 OCR 原图与知识库/来源逻辑
+4. 最后统一补测试与文档
 
-实现了 `recognizeHandwriting` 函数，支持好未来 AI 开放平台的手写文字识别 API：
+## 计划中的关键验收标准
 
-- **API 地址**: `https://openai.100tal.com/aiimage/comeducation`
-- **鉴权方式**: HmacSHA1 签名，通过 URL 参数传递
-- **签名参数**:
-  - `access_key_id`: 应用 Access Key ID
-  - `timestamp`: 13位 UNIX 时间戳
-  - `signature_nonce`: 随机 UUID
-  - `signature`: HmacSHA1 签名结果 (Base64)
-- **请求体参数**:
-  - `image_base64`: 图片 Base64 编码
-  - `function`: 2 (手写文字识别)
-  - `detect_direction`: true (检测图片方向)
-  - `subject`: 'liberat' (文科)
-  - `textInImage`: true (输出图片中的文字)
+- Part2 文章类批改结果中，第 5 步稳定显示“亮点分析”，不再错位成语法检查
+- 生成范文正文默认落在 `100-110` 词，绝不超过 `120` 词
+- Part2 字帖标题居中，正文保留分段
+- 批改页可直接查看作文原图和题目图
+- 知识库页面同一条素材不重复展示
+- 易错点默认浏览态不显示删除入口
 
-### 2. 响应处理逻辑
+## 已完成
 
-优先返回手写文本识别结果，按以下优先级处理：
-1. `hand_text` - 手写文本框识别结果
-2. `result` - 通用识别结果 (按字符拼接)
-3. `print_text` - 印刷体文本 (备用)
+- 已逐条分析 `功能意见-0412.html` 中的 6 条客户反馈，并完成根因定位
+- 已确认本轮任务主入口仍为 `docs/agent-handoff/active-task.md`，不回退到历史 `task-v1.2.0.json`
+- 已将 6 条反馈对应的整改项全部落地到代码与数据库迁移中，并补齐单测/E2E 验证
 
-### 3. 配置方式
+## 当前进行中
 
-在 `.env.local` 中配置：
+- 本轮整改已收口：已完成批改链路、范文字数/字帖结构、原图展示、知识库去重、易错点删除入口收敛，以及 OCR 版式恢复与范文来源 spans 标注
 
-```bash
-# 切换 OCR 提供商为好未来
-OCR_PROVIDER=tal
+## 待验证
 
-# 好未来 OCR 密钥 (在控制台 -> 应用管理中创建应用获取)
-TAL_ACCESS_KEY_ID=your_tal_access_key_id
-TAL_ACCESS_KEY_SECRET=your_tal_access_key_secret
-```
+- 现有工作区包含其他未提交改动，后续如继续开发仍需避免覆盖与本轮任务无关的文件内容
+- 如果后续要继续增强 OCR 版式恢复，可再补更细的题型识别 heuristics
 
-## 验证情况
+## 下一位 agent 应先做什么
 
-- `npm test -- --runInBand src/lib/ocr/tal.test.ts`: 通过，9 个测试全部通过
-- `npm test -- --runInBand src/lib/ocr/`: 通过，26 个测试全部通过
-- `npm run lint`: 通过，0 error (13 个 warning 为既有)
-- `npm run build`: 通过
-
-## 已知阻塞
-
-- 无功能阻塞
-- 需要用户提供真实的好未来 API 密钥才能实际测试
-
-## 下一位 Agent 的第一步
-
-如需使用好未来 OCR：
-
-1. 在好未来 AI 开放平台 (https://ai.100tal.com) 创建应用
-2. 获取 `Access Key ID` 和 `Access Key Secret`
-3. 在 `.env.local` 中配置上述密钥并设置 `OCR_PROVIDER=tal`
-4. 重启开发服务器测试图片上传识别功能
-
-## 参考文档
-
-- 好未来 AI 开放平台: https://ai.100tal.com/product/ocr-hr
-- 鉴权文档: `docs/sugession&issues/好未来API调用文档-HTTP-HTTPS鉴权.mhtml`
-- 通用 OCR 接口文档: `docs/sugession&issues/好未来通用OCR接口文档.mhtml`
+1. 本轮 0412 整改已完成，不需要继续在这条任务线上追加实现
+2. 如果后续出现新反馈，先重新写入 `active-task.md` 再开工
+3. 如需做回归，优先跑 upload/correction/model-essay/copybook 相关测试，再补 E2E

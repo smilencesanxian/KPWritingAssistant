@@ -1,8 +1,20 @@
 import { createClient } from '@/lib/supabase/server';
 import { updateModelEssay, getUserPreferenceNotes } from '@/lib/db/model-essays';
+import { getCollectedSystemPhrases } from '@/lib/db/highlights';
+import { getRecommendedPhrases } from '@/lib/db/recommended-phrases';
 import { regenerateModelEssay } from '@/lib/ai/llm';
+import { generateValidatedModelEssay } from '@/lib/model-essay/generation';
+import { buildModelEssaySourceSpans } from '@/lib/model-essay/source-spans';
+import {
+  buildModelEssaySourceBuckets,
+  dedupeSourceInputs,
+  filterPhrasesByKnowledgeEssayType,
+  getKnowledgeEssayType,
+} from '@/lib/model-essay/sources';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { NextRequest } from 'next/server';
+
+const MIN_HISTORICAL_HIGHLIGHTS = 3;
 
 export async function POST(
   request: NextRequest,
@@ -65,14 +77,61 @@ export async function POST(
   }
 
   try {
-    // Get user's highlights for this submission
-    const { data: highlightsData } = await supabase
+    // Get user's historical highlights
+    const { data: highlightsData, error: highlightsError } = await supabase
       .from('highlights_library')
-      .select('text')
+      .select('id, text, source, source_submission_id, knowledge_essay_type')
       .eq('user_id', user.id)
-      .eq('source_submission_id', correctionData.submission_id);
+      .order('created_at', { ascending: false })
+      .limit(100);
 
-    const highlightTexts = (highlightsData ?? []).map((h) => h.text as string);
+    if (highlightsError) {
+      throw new Error(`Failed to get highlight sources: ${highlightsError.message}`);
+    }
+
+    const historicalHighlights = dedupeSourceInputs(
+      (highlightsData ?? [])
+        .filter((row) => row.source_submission_id !== null || (row.source === 'user' && row.knowledge_essay_type === null))
+        .map((row) => ({
+          id: row.id as string,
+          text: row.text as string,
+        }))
+    );
+
+    const knowledgeEssayType = getKnowledgeEssayType(
+      correctionData.essay_submissions.exam_part,
+      correctionData.essay_submissions.question_type
+    );
+    const collectedRows = await getCollectedSystemPhrases(user.id);
+    let collectedPhrases = dedupeSourceInputs(
+      filterPhrasesByKnowledgeEssayType(collectedRows, knowledgeEssayType).map((row) => ({
+        id: row.id,
+        text: row.text,
+      }))
+    );
+
+    if (historicalHighlights.length < MIN_HISTORICAL_HIGHLIGHTS) {
+      const fallbackPhrases = await getRecommendedPhrases({
+        essayType: knowledgeEssayType,
+        limit: 12,
+      });
+      collectedPhrases = dedupeSourceInputs([
+        ...collectedPhrases,
+        ...fallbackPhrases.map((phrase) => ({
+          id: phrase.id,
+          text: phrase.text,
+        })),
+      ]);
+    }
+
+    const historicalKeys = new Set(historicalHighlights.map((item) => item.text.trim().toLowerCase()));
+    collectedPhrases = collectedPhrases.filter(
+      (item) => !historicalKeys.has(item.text.trim().toLowerCase())
+    );
+    const sourceBuckets = buildModelEssaySourceBuckets({
+      historicalHighlights,
+      knowledgeBasePhrases: collectedPhrases,
+    });
 
     // Get user's recent preference notes
     const historyNotes = await getUserPreferenceNotes(user.id, 5);
@@ -81,20 +140,27 @@ export async function POST(
     const originalText = correctionData.essay_submissions.ocr_text ?? '';
 
     // Regenerate model essay (pass exam_part and question_type for part-specific prompts)
-    const newContent = await regenerateModelEssay(
-      originalText,
-      highlightTexts,
-      preference_notes ?? '',
-      historyNotes,
-      correctionData.essay_submissions.exam_part,
-      correctionData.essay_submissions.question_type
+    const newContent = await generateValidatedModelEssay(
+      (additionalRequirements) => regenerateModelEssay(
+        originalText,
+        historicalHighlights.map((item) => item.text),
+        collectedPhrases.map((item) => item.text),
+        `${preference_notes ?? ''}${additionalRequirements ? `\n${additionalRequirements}` : ''}`.trim(),
+        historyNotes,
+        correctionData.essay_submissions.exam_part,
+        correctionData.essay_submissions.question_type
+      ),
+      correctionData.essay_submissions.exam_part as 'part1' | 'part2' | null,
+      correctionData.essay_submissions.question_type as 'q1' | 'q2' | null
     );
+    const sourceSpans = buildModelEssaySourceSpans(newContent, sourceBuckets);
 
     // Update the model essay with new content
     const updatedEssay = await updateModelEssay(id, {
       user_edited_content: newContent,
       is_user_edited: true,
       user_preference_notes: preference_notes,
+      source_spans: sourceSpans,
     });
 
     return Response.json({ model_essay: updatedEssay });

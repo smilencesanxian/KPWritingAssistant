@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { recognizeHandwriting, cleanOcrText } from '@/lib/ocr';
+import { restoreOcrEssayLayout } from '@/lib/ocr/layout';
 import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
     const result = await recognizeHandwriting(imageBase64);
     // 清洗OCR文本，过滤拍照App产生的噪音
     const cleanedText = cleanOcrText(result.text);
-    return Response.json({ text: cleanedText, confidence: result.confidence });
+    const restoredText = restoreOcrEssayLayout(cleanedText);
+    return Response.json({ text: restoredText, confidence: result.confidence });
   } catch (err) {
     console.error('OCR recognition failed:', err);
     const message =

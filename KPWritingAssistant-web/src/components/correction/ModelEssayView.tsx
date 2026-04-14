@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import type { ModelEssay } from '@/types/database';
+import type { ModelEssay, ModelEssaySourceSpan } from '@/types/database';
 import type { CopybookMode } from '@/types/pdf';
+import {
+  getModelEssayWordCount,
+  getModelEssayWordCountLimits,
+} from '@/lib/model-essay/format';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Spinner from '@/components/ui/Spinner';
@@ -38,17 +42,63 @@ const FONT_OPTIONS: FontOption[] = [
   { id: 'helvetica', name: 'Helvetica', description: '无衬线体（简洁现代）' },
 ];
 
-function countWords(text: string): number {
-  return text.trim().split(/\s+/).filter(Boolean).length;
+function getSourceSpanClass(sourceType: ModelEssaySourceSpan['source_type']): string {
+  if (sourceType === 'historical_highlight') {
+    return 'bg-sky-100 text-sky-800 border-sky-200';
+  }
+  return 'bg-amber-100 text-amber-800 border-amber-200';
+}
+
+function renderEssayWithSourceSpans(
+  content: string,
+  sourceSpans: ModelEssaySourceSpan[]
+): ReactNode[] {
+  if (sourceSpans.length === 0) {
+    return [content];
+  }
+
+  const orderedSpans = [...sourceSpans].sort((left, right) => left.start - right.start);
+  const nodes: ReactNode[] = [];
+  let cursor = 0;
+
+  orderedSpans.forEach((span, index) => {
+    if (span.start > cursor) {
+      nodes.push(content.slice(cursor, span.start));
+    }
+
+    nodes.push(
+      <span
+        key={`${span.source_type}-${span.source_id ?? 'unknown'}-${index}-${span.start}`}
+        className={`rounded px-0.5 border ${getSourceSpanClass(span.source_type)}`}
+        title={span.source_type === 'historical_highlight' ? '历史亮点' : '知识库素材'}
+      >
+        {content.slice(span.start, span.end)}
+      </span>
+    );
+
+    cursor = span.end;
+  });
+
+  if (cursor < content.length) {
+    nodes.push(content.slice(cursor));
+  }
+
+  return nodes;
 }
 
 interface ModelEssayViewProps {
   correctionId: string;
   initialEssays: ModelEssay[];
   examPart?: 'part1' | 'part2' | null;
+  questionType?: 'q1' | 'q2' | null;
 }
 
-export default function ModelEssayView({ correctionId, initialEssays, examPart }: ModelEssayViewProps) {
+export default function ModelEssayView({
+  correctionId,
+  initialEssays,
+  examPart,
+  questionType,
+}: ModelEssayViewProps) {
   const router = useRouter();
 
   // Always show excellent level only
@@ -72,6 +122,9 @@ export default function ModelEssayView({ correctionId, initialEssays, examPart }
   // Get display content (use user_edited_content if available), clean residual Markdown symbols
   const rawContent = essay?.user_edited_content ?? essay?.content ?? '';
   const displayContent = rawContent.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1').replace(/^#{1,6}\s+/gm, '');
+  const sourceSpans = essay?.source_spans ?? [];
+  const wordCountMetrics = getModelEssayWordCount(displayContent, examPart, questionType);
+  const wordCountLimits = getModelEssayWordCountLimits();
 
   // Auto-fetch excellent essay on mount if not already available
   useEffect(() => {
@@ -139,13 +192,19 @@ export default function ModelEssayView({ correctionId, initialEssays, examPart }
   }, [essay, router, templateId, copybookMode, fontStyle, fontSize, tracingOpacity]);
 
   const handleEditSave = useCallback(
-    (updatedEssay: { id: string; user_edited_content: string | null; is_user_edited: boolean }) => {
+    (updatedEssay: {
+      id: string;
+      user_edited_content: string | null;
+      is_user_edited: boolean;
+      source_spans?: ModelEssaySourceSpan[] | null;
+    }) => {
       setEssay((prev) =>
         prev
           ? {
               ...prev,
               user_edited_content: updatedEssay.user_edited_content,
               is_user_edited: updatedEssay.is_user_edited,
+              source_spans: updatedEssay.source_spans ?? null,
             }
           : null
       );
@@ -154,13 +213,19 @@ export default function ModelEssayView({ correctionId, initialEssays, examPart }
   );
 
   const handleRegenerateSave = useCallback(
-    (updatedEssay: { id: string; user_edited_content: string | null; is_user_edited: boolean }) => {
+    (updatedEssay: {
+      id: string;
+      user_edited_content: string | null;
+      is_user_edited: boolean;
+      source_spans?: ModelEssaySourceSpan[] | null;
+    }) => {
       setEssay((prev) =>
         prev
           ? {
               ...prev,
               user_edited_content: updatedEssay.user_edited_content,
               is_user_edited: updatedEssay.is_user_edited,
+              source_spans: updatedEssay.source_spans ?? null,
             }
           : null
       );
@@ -237,15 +302,36 @@ export default function ModelEssayView({ correctionId, initialEssays, examPart }
             </div>
 
             {/* Essay content */}
+            {sourceSpans.length > 0 && (
+              <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] text-neutral-500">
+                <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-1 text-sky-700">
+                  <span className="h-2 w-2 rounded-full bg-sky-500" />
+                  历史亮点
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-amber-700">
+                  <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  知识库素材
+                </span>
+              </div>
+            )}
             <p
               className="text-sm text-neutral-800 whitespace-pre-wrap select-text"
               style={{ fontFamily: 'monospace', lineHeight: '1.8' }}
             >
-              {displayContent}
+              {renderEssayWithSourceSpans(displayContent, sourceSpans)}
             </p>
             {/* Word count */}
-            <p className="text-xs text-neutral-400 mt-2 text-right">
-              共 {countWords(displayContent)} 词
+            <p
+              className={`text-xs mt-2 text-right ${
+                wordCountMetrics.withinHardLimit ? 'text-neutral-400' : 'text-red-500'
+              }`}
+            >
+              正文 {wordCountMetrics.wordCount} 词
+              {!wordCountMetrics.withinTargetRange && (
+                <span className="ml-1">
+                  （目标 {wordCountLimits.targetMin}-{wordCountLimits.targetMax}，上限 {wordCountLimits.hardMax}）
+                </span>
+              )}
             </p>
 
             {/* Copybook generation controls */}
@@ -368,6 +454,8 @@ export default function ModelEssayView({ correctionId, initialEssays, examPart }
             onClose={() => setIsEditModalOpen(false)}
             initialContent={displayContent}
             essayId={essay.id}
+            examPart={examPart}
+            questionType={questionType}
             onSave={handleEditSave}
           />
           <RegenerateModal

@@ -1,6 +1,6 @@
 # 当前状态
 
-最后更新：2026-04-07
+最后更新：2026-04-14
 
 ## 项目快照
 
@@ -38,6 +38,30 @@ npm run build
 - `run-automation.sh` 中仍然存在硬编码 API Key，后续如果继续依赖该脚本，需要先清理并轮换密钥。
 - 当前 lint 还不算完全干净，现有 warning 主要是测试文件和少量源码中的未使用变量。
 - `KPWritingAssistant-web/progress.txt` 仍有参考价值，但最近的 git 提交比它更能反映当前真实进展。
+- `recommended_phrases.essay_type` 的代码类型已补齐 `story`，与 008 migration 的数据库约束保持一致，后续新增知识库素材时应继续沿用该枚举。
+- `model_essays.source_spans` 已新增为 JSONB 元数据列，用于承载范文来源高亮的结构化 spans；编辑保存会清空该列，重新生成会重建。
+- 0412 客户反馈整改已完成到可验证状态，最近一轮关键 E2E 已通过：
+  - `e2e/copybook-edit-save-real.spec.ts`
+  - `e2e/copybook-layout.spec.ts`
+  - `e2e/correction-result.spec.ts`
+  - 其中 `copybook-layout` 的部分用例因测试数据缺失被自动 skip，不影响已覆盖的关键路径结论。
+
+## 新增基线评测
+
+- 新增 `KPWritingAssistant-web/e2e/ocr-accuracy.spec.ts`，默认跳过，只有手动设置 `RUN_OCR_ACCURACY=1` 才会运行。
+- 新增 `KPWritingAssistant-web/e2e/ocr-accuracy.baseline.json`，作为当前版本的 OCR 准确率 baseline。
+- 新增 `KPWritingAssistant-web/scripts/run-ocr-accuracy.mjs` 与 `npm run ocr:accuracy`，运行时会自动读取 `.env.local`。
+- 当前实测结果：
+  - `tencent` 在 `ket` / `pet` 两张样本上的平均准确率为 `94.8%`
+  - `tal` 在 `ket` / `pet` 两张样本上的平均准确率为 `94.8%`
+  - `baidu` 因当前 `.env.local` 未配置密钥而跳过
+- benchmark 预处理与线上上传页保持一致，先把图片压到 `1920` 上限再送 OCR，避免把超大原图误判成识别劣化。
+
+## 线上部署状态
+
+- 已将当前最新代码部署到服务器 `8.136.127.32` 的 `/var/www/kp-writing/KPWritingAssistant-web`
+- 已在服务器目录内执行 `set -a && . ./.env.production && set +a && docker compose up -d --build`
+- 当前容器 `kpwritingassistant-web-app-1` 运行正常，`127.0.0.1:3000` 返回 `200`
 
 ## 文档语言约定
 

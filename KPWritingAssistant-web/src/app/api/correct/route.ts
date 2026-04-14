@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
-  const { submission_id, exam_part } = body as Record<string, unknown>;
+  const { submission_id, exam_part, question_type } = body as Record<string, unknown>;
 
   if (!submission_id || typeof submission_id !== 'string') {
     return Response.json({ error: 'submission_id is required' }, { status: 400 });
@@ -57,8 +57,10 @@ export async function POST(request: NextRequest) {
   await updateSubmissionStatus(submission_id, 'processing');
 
   try {
-    // Determine exam_part: prefer submission's stored value, fallback to request parameter for backward compatibility
+    // Determine exam_part/question_type: prefer submission's stored values, fallback to request parameters for backward compatibility
     const effectiveExamPart = submission.exam_part ?? (typeof exam_part === 'string' ? exam_part : null);
+    const effectiveQuestionType =
+      submission.question_type ?? (typeof question_type === 'string' ? question_type : null);
 
     // Log warning if exam_part is missing (helps debug prompt selection issues)
     if (!effectiveExamPart) {
@@ -67,8 +69,16 @@ export async function POST(request: NextRequest) {
       console.warn(`[Correct API] Invalid exam_part "${effectiveExamPart}" for submission ${submission_id}, will use default Part1 prompt`);
     }
 
-    // Call LLM to correct the essay (pass exam_part for part-specific prompts)
-    const correctionResult = await correctEssay(submission.ocr_text, effectiveExamPart);
+    if (effectiveExamPart === 'part2' && effectiveQuestionType !== 'q1' && effectiveQuestionType !== 'q2') {
+      console.warn(`[Correct API] Missing or invalid question_type "${effectiveQuestionType}" for Part2 submission ${submission_id}, will default to article guidance`);
+    }
+
+    // Call LLM to correct the essay (pass exam_part/question_type for part-specific prompts)
+    const correctionResult = await correctEssay(
+      submission.ocr_text,
+      effectiveExamPart,
+      effectiveQuestionType
+    );
 
     // Extract scores (handles both new and legacy formats)
     const scores = correctionResult.scores;

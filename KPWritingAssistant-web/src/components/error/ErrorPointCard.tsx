@@ -1,6 +1,5 @@
 'use client';
 
-import { useRef, useState } from 'react';
 import { ErrorPoint } from '@/types/database';
 
 interface ErrorPointCardProps {
@@ -33,102 +32,22 @@ function formatDate(dateStr: string): string {
   return `${month}月${day}日`;
 }
 
-const DELETE_WIDTH = 72;
-const SNAP_THRESHOLD = 24; // 降低阈值，更容易触发删除按钮展开
-
 export default function ErrorPointCard({ errorPoint, onClick, onDelete, manageMode }: ErrorPointCardProps) {
   const config = getTypeConfig(errorPoint.error_type);
   const isFlagged = errorPoint.is_flagged;
 
-  const [offsetX, setOffsetX] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const startX = useRef(0);
-  const startY = useRef(0);
-  const startOffset = useRef(0);
-  const isHorizontal = useRef<boolean | null>(null);
-
-  function handleTouchStart(e: React.TouchEvent) {
-    startX.current = e.touches[0].clientX;
-    startY.current = e.touches[0].clientY;
-    startOffset.current = offsetX;
-    isHorizontal.current = null;
-  }
-
-  function handleTouchMove(e: React.TouchEvent) {
-    const dx = e.touches[0].clientX - startX.current;
-    const dy = e.touches[0].clientY - startY.current;
-
-    if (isHorizontal.current === null) {
-      if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
-      isHorizontal.current = Math.abs(dx) >= Math.abs(dy);
-    }
-    if (!isHorizontal.current) return;
-
-    e.preventDefault();
-    if (!isDragging) setIsDragging(true);
-    const newOffset = Math.min(0, Math.max(-DELETE_WIDTH, startOffset.current + dx));
-    setOffsetX(newOffset);
-  }
-
-  function handleTouchEnd() {
-    if (isHorizontal.current === null) return;
-    setIsDragging(false);
-    if (offsetX < -SNAP_THRESHOLD) {
-      setOffsetX(-DELETE_WIDTH);
-    } else {
-      setOffsetX(0);
-    }
-  }
-
-  function handleClose() {
-    setOffsetX(0);
-  }
-
-  const isOpen = offsetX !== 0;
-
   return (
-    <div className="relative overflow-hidden border-b border-neutral-100 last:border-b-0">
-      {/* Delete button revealed by swipe (non-manage mode) */}
-      {onDelete && !manageMode && (
-        <div
-          className="absolute right-0 top-0 bottom-0 flex items-center justify-center bg-red-500"
-          style={{ width: DELETE_WIDTH }}
-        >
-          <button
-            onClick={() => onDelete(errorPoint.id)}
-            className="w-full h-full flex flex-col items-center justify-center gap-1 text-white text-xs font-medium"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-            </svg>
-            删除
-          </button>
-        </div>
-      )}
-
-      {/* Swipeable row */}
-      <div
-        style={{
-          transform: manageMode ? 'none' : `translateX(${offsetX}px)`,
-          transition: isDragging ? 'none' : 'transform 0.2s ease',
-        }}
-        onTouchStart={manageMode ? undefined : handleTouchStart}
-        onTouchMove={manageMode ? undefined : handleTouchMove}
-        onTouchEnd={manageMode ? undefined : handleTouchEnd}
-      >
+    <div className="border-b border-neutral-100 last:border-b-0">
+      <div className={`w-full flex items-stretch gap-3 py-3.5 px-4 border-l-4 ${
+        isFlagged ? 'border-l-orange-400 pl-3' : 'border-l-transparent'
+      }`}>
         <button
           onClick={() => {
-            if (manageMode) return;
-            if (isOpen) {
-              handleClose();
-            } else {
+            if (!manageMode) {
               onClick(errorPoint.id);
             }
           }}
-          className={`w-full flex items-center gap-3 py-3.5 px-4 text-left border-l-4 transition-colors hover:bg-neutral-50 active:bg-neutral-100 ${
-            isFlagged ? 'border-l-orange-400 pl-3' : 'border-l-transparent'
-          }`}
+          className="flex flex-1 items-center gap-3 text-left hover:bg-neutral-50 active:bg-neutral-100 rounded-lg transition-colors"
         >
           {/* Left icon */}
           {isFlagged ? (
@@ -151,18 +70,9 @@ export default function ErrorPointCard({ errorPoint, onClick, onDelete, manageMo
             <p className="text-xs text-neutral-400 mt-0.5">出现{errorPoint.occurrence_count}次</p>
           </div>
 
-          {/* Right: date + delete button in manage mode, or arrow */}
-          {manageMode && onDelete ? (
-            <button
-              onClick={(e) => { e.preventDefault(); onDelete(errorPoint.id); }}
-              className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-red-100 text-red-500 active:bg-red-200"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          ) : (
-            <div className="flex-shrink-0 flex items-center gap-1.5">
+          {/* Right: date or chevron */}
+          {!manageMode && (
+            <div className="flex-shrink-0 flex items-center gap-1.5 pr-1">
               <span className="text-xs text-neutral-400">{formatDate(errorPoint.last_seen_at)}</span>
               <svg className="w-4 h-4 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -170,6 +80,18 @@ export default function ErrorPointCard({ errorPoint, onClick, onDelete, manageMo
             </div>
           )}
         </button>
+
+        {manageMode && onDelete ? (
+          <button
+            onClick={() => onDelete(errorPoint.id)}
+            className="flex-shrink-0 w-8 h-8 self-center flex items-center justify-center rounded-full bg-red-50 text-red-400 hover:bg-red-100 active:bg-red-200"
+            aria-label={`删除 ${errorPoint.error_type_label}`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        ) : null}
       </div>
     </div>
   );

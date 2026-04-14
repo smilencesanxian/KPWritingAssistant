@@ -1,12 +1,22 @@
 import { createClient } from '@/lib/supabase/server';
 import { getModelEssayByLevel, createModelEssay } from '@/lib/db/corrections';
-import { getHighlights, getCollectedSystemPhrases, incrementHighlightUsageCount } from '@/lib/db/highlights';
+import { getCollectedSystemPhrases, incrementHighlightUsageCount } from '@/lib/db/highlights';
+import { getRecommendedPhrases } from '@/lib/db/recommended-phrases';
 import { generateModelEssay } from '@/lib/ai/llm';
+import { generateValidatedModelEssay } from '@/lib/model-essay/generation';
+import { buildModelEssaySourceSpans } from '@/lib/model-essay/source-spans';
+import {
+  buildModelEssaySourceBuckets,
+  dedupeSourceInputs,
+  filterPhrasesByKnowledgeEssayType,
+  getKnowledgeEssayType,
+} from '@/lib/model-essay/sources';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { NextRequest } from 'next/server';
 
 const VALID_LEVELS = ['pass', 'good', 'excellent'] as const;
 type TargetLevel = (typeof VALID_LEVELS)[number];
+const MIN_HISTORICAL_HIGHLIGHTS = 3;
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,34 +83,82 @@ export async function POST(request: NextRequest) {
       return Response.json({ model_essay: existing });
     }
 
-    // Get highlights for this user to inject into the prompt
-    const { highlights } = await getHighlights(user.id, { limit: 50 });
-    const highlightTexts = highlights.map((h) => h.text);
+    const { data: highlightRows, error: highlightRowsError } = await supabase
+      .from('highlights_library')
+      .select('id, text, source, source_submission_id, knowledge_essay_type')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (highlightRowsError) {
+      throw new Error(`Failed to get highlight sources: ${highlightRowsError.message}`);
+    }
+
+    const historicalHighlights = dedupeSourceInputs(
+      (highlightRows ?? [])
+        .filter((row) => row.source_submission_id !== null || (row.source === 'user' && row.knowledge_essay_type === null))
+        .map((row) => ({
+          id: row.id as string,
+          text: row.text as string,
+        }))
+    );
 
     // Get user's collected system phrases and user KB phrases, filtered by essay type
     const allPhrases = await getCollectedSystemPhrases(user.id);
-    const isEmail = submissionData.exam_part === 'part1';
-    const injectedPhrases = allPhrases.filter((p) => {
-      const et = p.knowledge_essay_type;
-      if (!et) return true;
-      if (isEmail) return et === 'email' || et === 'general';
-      return et === 'article' || et === 'story' || et === 'general';
-    });
-    const collectedPhrases = injectedPhrases.map((p) => p.text);
-    const injectedIds = injectedPhrases.map((p) => p.id);
-
-    // Generate model essay (pass exam_part and question_type for part-specific prompts)
-    const content = await generateModelEssay(
-      submissionData.ocr_text,
-      highlightTexts,
-      level,
-      collectedPhrases,
+    const knowledgeEssayType = getKnowledgeEssayType(
       submissionData.exam_part,
       submissionData.question_type
     );
+    const injectedPhrases = dedupeSourceInputs(
+      filterPhrasesByKnowledgeEssayType(allPhrases, knowledgeEssayType).map((phrase) => ({
+        id: phrase.id,
+        text: phrase.text,
+      }))
+    );
+    const injectedIds = injectedPhrases.map((phrase) => phrase.id);
+    let knowledgeBasePhrases = injectedPhrases;
+
+    if (historicalHighlights.length < MIN_HISTORICAL_HIGHLIGHTS) {
+      const fallbackPhrases = await getRecommendedPhrases({
+        essayType: knowledgeEssayType,
+        limit: 12,
+      });
+      knowledgeBasePhrases = dedupeSourceInputs([
+        ...knowledgeBasePhrases,
+        ...fallbackPhrases.map((phrase) => ({
+          id: phrase.id,
+          text: phrase.text,
+        })),
+      ]);
+    }
+
+    const historicalKeys = new Set(historicalHighlights.map((item) => item.text.trim().toLowerCase()));
+    const collectedPhrases = knowledgeBasePhrases.filter(
+      (item) => !historicalKeys.has(item.text.trim().toLowerCase())
+    );
+    const sourceBuckets = buildModelEssaySourceBuckets({
+      historicalHighlights,
+      knowledgeBasePhrases: collectedPhrases,
+    });
+
+    // Generate model essay (pass exam_part and question_type for part-specific prompts)
+    const content = await generateValidatedModelEssay(
+      (additionalRequirements) => generateModelEssay(
+        submissionData.ocr_text,
+        historicalHighlights.map((item) => item.text),
+        level,
+        collectedPhrases.map((item) => item.text),
+        submissionData.exam_part,
+        submissionData.question_type,
+        additionalRequirements
+      ),
+      submissionData.exam_part as 'part1' | 'part2' | null,
+      submissionData.question_type as 'q1' | 'q2' | null
+    );
+    const sourceSpans = buildModelEssaySourceSpans(content, sourceBuckets);
 
     // Save model essay
-    const model_essay = await createModelEssay(correction_id, level, content);
+    const model_essay = await createModelEssay(correction_id, level, content, sourceSpans);
 
     // Increment usage count for injected knowledge phrases (non-blocking)
     if (injectedIds.length > 0) {

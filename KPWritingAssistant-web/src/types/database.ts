@@ -60,6 +60,15 @@ export interface EditHistoryItem {
   note?: string;
 }
 
+export interface ModelEssaySourceSpan {
+  start: number;
+  end: number;
+  text: string;
+  source_type: 'historical_highlight' | 'knowledge_base';
+  source_id: string | null;
+  occurrence_index: number;
+}
+
 export interface ModelEssay {
   id: string;
   correction_id: string;
@@ -71,6 +80,7 @@ export interface ModelEssay {
   is_user_edited: boolean;
   edit_history: EditHistoryItem[] | null;
   user_preference_notes: string | null;
+  source_spans: ModelEssaySourceSpan[] | null;
 }
 
 export interface Highlight {
@@ -128,7 +138,7 @@ export interface RecommendedPhrase {
   id: string;
   text: string;
   type: 'vocabulary' | 'phrase' | 'sentence';
-  essay_type: 'email' | 'article' | 'general' | null;
+  essay_type: 'email' | 'article' | 'story' | 'general' | null;
   topic_tags: string[] | null;
   usage_example: string | null;
   is_active: boolean;

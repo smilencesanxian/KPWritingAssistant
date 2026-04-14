@@ -2,12 +2,18 @@
 
 import { useState, useCallback } from 'react';
 import Button from '@/components/ui/Button';
+import {
+  getModelEssayWordCount,
+  getModelEssayWordCountLimits,
+} from '@/lib/model-essay/format';
 
 interface EditEssayModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialContent: string;
   essayId: string;
+  examPart?: 'part1' | 'part2' | null;
+  questionType?: 'q1' | 'q2' | null;
   onSave: (updatedEssay: { id: string; user_edited_content: string | null; is_user_edited: boolean }) => void;
 }
 
@@ -16,11 +22,15 @@ export default function EditEssayModal({
   onClose,
   initialContent,
   essayId,
+  examPart,
+  questionType,
   onSave,
 }: EditEssayModalProps) {
   const [content, setContent] = useState(initialContent);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const wordCountMetrics = getModelEssayWordCount(content, examPart, questionType);
+  const wordCountLimits = getModelEssayWordCountLimits();
 
   const handleSave = useCallback(async () => {
     setIsLoading(true);
@@ -104,6 +114,14 @@ export default function EditEssayModal({
             data-testid="edit-essay-textarea"
           />
 
+          <p
+            className={`mt-2 text-xs text-right ${
+              wordCountMetrics.withinHardLimit ? 'text-neutral-400' : 'text-red-500'
+            }`}
+          >
+            正文 {wordCountMetrics.wordCount} 词，目标 {wordCountLimits.targetMin}-{wordCountLimits.targetMax}，上限 {wordCountLimits.hardMax}
+          </p>
+
           {error && (
             <p className="mt-3 text-sm text-red-500" data-testid="edit-error">
               {error}
@@ -119,7 +137,7 @@ export default function EditEssayModal({
           <Button
             onClick={handleSave}
             loading={isLoading}
-            disabled={isLoading}
+            disabled={isLoading || !wordCountMetrics.withinHardLimit}
             data-testid="save-edit-button"
           >
             保存这个版本

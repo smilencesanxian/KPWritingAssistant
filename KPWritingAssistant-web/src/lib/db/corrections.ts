@@ -162,7 +162,8 @@ export async function updateCorrectionStatus(
 export async function createModelEssay(
   correctionId: string,
   level: string,
-  content: string
+  content: string,
+  sourceSpans: import('@/types/database').ModelEssaySourceSpan[] | null = null
 ): Promise<ModelEssay> {
   const supabase = await createClient();
 
@@ -172,6 +173,7 @@ export async function createModelEssay(
       correction_id: correctionId,
       target_level: level,
       content,
+      source_spans: sourceSpans ?? [],
     })
     .select()
     .single();

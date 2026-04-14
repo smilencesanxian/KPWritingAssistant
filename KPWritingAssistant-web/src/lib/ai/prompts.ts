@@ -55,11 +55,39 @@ export const DETECT_TYPE_SYSTEM_PROMPT = config.detectType.systemPrompt;
  * For Part 2: prepends part2ExtraGuidance before the base JSON-format prompt.
  * Falls back to the base systemPrompt if no extra guidance is configured.
  */
-export function getCorrectionSystemPrompt(examPart?: string | null): string {
+function getPart2QuestionTypeGuidance(questionType?: string | null): string {
+  if (questionType === 'q2') {
+    return [
+      '【Part 2 Story 额外要求】',
+      '- 当前作文题型明确为故事续写（Story），不得按 Article 标准批改。',
+      '- step2 必须聚焦故事衔接与文体效果，检查是否与给定开头句自然衔接、是否具备叙事感。',
+      '- step3 必须聚焦情节推进与段落组织，检查开端-发展-结局是否完整。',
+      '- step5 必须输出亮点词句分析，不能输出语法准确性检查、改写全文或泛泛总结。',
+      '- 语法、拼写、时态等错误只能放到 step4 中，不得挤占 step5/step6 的语义。',
+    ].join('\n');
+  }
+
+  return [
+    '【Part 2 Article 额外要求】',
+    '- 当前作文题型明确为文章（Article），不得按 Story 标准批改。',
+    '- step2 必须聚焦文章文体与读者意识，检查标题、开头吸引力、观点表达是否符合文章体裁。',
+    '- step3 必须聚焦问题回应完整度与段落组织，检查题目中的问题是否逐一回答。',
+    '- step5 必须输出亮点词句分析，不能输出语法准确性检查、改写全文或泛泛总结。',
+    '- 语法、拼写、时态等错误只能放到 step4 中。',
+  ].join('\n');
+}
+
+export function getCorrectionSystemPrompt(
+  examPart?: string | null,
+  questionType?: string | null
+): string {
   const baseJsonFormat = config.correction.systemPrompt;
   if (examPart === 'part2') {
     const extra = config.correction.part2ExtraGuidance;
-    return extra ? `${extra}\n\n以下是批改结果的输出格式要求（必须严格遵守）：\n\n${baseJsonFormat}` : baseJsonFormat;
+    const questionTypeGuidance = getPart2QuestionTypeGuidance(questionType);
+    return extra
+      ? `${extra}\n\n${questionTypeGuidance}\n\n以下是批改结果的输出格式要求（必须严格遵守）：\n\n${baseJsonFormat}`
+      : `${questionTypeGuidance}\n\n${baseJsonFormat}`;
   }
   const extra = config.correction.part1ExtraGuidance;
   return extra ? `${extra}\n\n以下是批改结果的输出格式要求（必须严格遵守）：\n\n${baseJsonFormat}` : baseJsonFormat;
@@ -77,9 +105,24 @@ export function getModelEssaySystemPrompt(examPart?: string | null): string {
   return config.modelEssay.part1SystemPrompt || config.modelEssay.systemPrompt;
 }
 
-export function buildCorrectionUserPrompt(text: string, examPart?: string | null): string {
+function getCorrectionQuestionTypeHint(questionType?: string | null): string {
+  if (questionType === 'q2') {
+    return '\n\n【题型确认】这是一篇 Part 2 Story（故事续写）。请严格按 Story 评分标准批改，并确保 step5 输出亮点分析。';
+  }
+  if (questionType === 'q1') {
+    return '\n\n【题型确认】这是一篇 Part 2 Article（文章写作）。请严格按 Article 评分标准批改，并确保 step5 输出亮点分析。';
+  }
+  return '';
+}
+
+export function buildCorrectionUserPrompt(
+  text: string,
+  examPart?: string | null,
+  questionType?: string | null
+): string {
   if (examPart === 'part2') {
-    return (config.correction.part2UserPromptTemplate || config.correction.userPromptTemplate).replace('{{text}}', text);
+    return (config.correction.part2UserPromptTemplate || config.correction.userPromptTemplate)
+      .replace('{{text}}', text) + getCorrectionQuestionTypeHint(questionType);
   }
   return config.correction.userPromptTemplate.replace('{{text}}', text);
 }
@@ -96,7 +139,8 @@ export function buildModelEssayPrompt(
   level: 'pass' | 'good' | 'excellent',
   collectedPhrases?: string[],
   examPart?: string | null,
-  questionType?: string | null
+  questionType?: string | null,
+  additionalRequirements?: string
 ): string {
   const levelDescription = config.modelEssay.levelDescriptions[level];
 
@@ -115,6 +159,9 @@ export function buildModelEssayPrompt(
           collectedPhrases.map((p) => `- ${p}`).join('\n')
         )
       : '';
+  const additionalRequirementsSection = additionalRequirements
+    ? `\n\n【额外硬性要求】\n${additionalRequirements}`
+    : '';
 
   if (examPart === 'part2') {
     const template = config.modelEssay.part2UserPromptTemplate || config.modelEssay.userPromptTemplate;
@@ -122,14 +169,14 @@ export function buildModelEssayPrompt(
       .replace('{{originalText}}', originalText)
       .replace('{{questionTypeDescription}}', getQuestionTypeDescription(questionType))
       .replace('{{highlightsSection}}', highlightsSection)
-      .replace('{{collectedPhrasesSection}}', collectedPhrasesSection)
+      .replace('{{collectedPhrasesSection}}', `${collectedPhrasesSection}${additionalRequirementsSection}`)
       .replace('{{levelDescription}}', levelDescription);
   }
 
   return config.modelEssay.userPromptTemplate
     .replace('{{originalText}}', originalText)
     .replace('{{highlightsSection}}', highlightsSection)
-    .replace('{{collectedPhrasesSection}}', collectedPhrasesSection)
+    .replace('{{collectedPhrasesSection}}', `${collectedPhrasesSection}${additionalRequirementsSection}`)
     .replace('{{levelDescription}}', levelDescription);
 }
 
@@ -155,10 +202,12 @@ export function buildDetectTypePrompt(
 export function buildRegenerateModelEssayPrompt(
   originalText: string,
   highlights: string[],
+  collectedPhrases: string[],
   preferenceNotes: string,
   historyNotes: string[],
   examPart?: string | null,
-  questionType?: string | null
+  questionType?: string | null,
+  additionalRequirements?: string
 ): string {
   const levelDescription = config.modelEssay.levelDescriptions.excellent;
 
@@ -178,8 +227,19 @@ export function buildRegenerateModelEssayPrompt(
     historyNotes.length > 0
       ? `\n【用户历史偏好（参考）】\n${historyNotes.map((n) => `- ${n}`).join('\n')}`
       : '';
+  const additionalRequirementsSection = additionalRequirements
+    ? `\n【额外硬性要求】\n${additionalRequirements}`
+    : '';
+  const collectedPhrasesSection =
+    collectedPhrases.length > 0
+      ? config.modelEssay.collectedPhrasesSectionTemplate.replace(
+          '{{collectedPhrases}}',
+          collectedPhrases.map((phrase) => `- ${phrase}`).join('\n')
+        )
+      : '';
 
-  const extraSections = highlightsSection + preferenceSection + historySection;
+  const extraSections =
+    highlightsSection + preferenceSection + historySection + additionalRequirementsSection;
 
   if (examPart === 'part2') {
     const template = config.modelEssay.part2UserPromptTemplate || config.modelEssay.userPromptTemplate;
@@ -187,13 +247,13 @@ export function buildRegenerateModelEssayPrompt(
       .replace('{{originalText}}', originalText)
       .replace('{{questionTypeDescription}}', getQuestionTypeDescription(questionType))
       .replace('{{highlightsSection}}', extraSections)
-      .replace('{{collectedPhrasesSection}}', '')
+      .replace('{{collectedPhrasesSection}}', collectedPhrasesSection)
       .replace('{{levelDescription}}', levelDescription);
   }
 
   return config.modelEssay.userPromptTemplate
     .replace('{{originalText}}', originalText)
     .replace('{{highlightsSection}}', extraSections)
-    .replace('{{collectedPhrasesSection}}', '')
+    .replace('{{collectedPhrasesSection}}', collectedPhrasesSection)
     .replace('{{levelDescription}}', levelDescription);
 }

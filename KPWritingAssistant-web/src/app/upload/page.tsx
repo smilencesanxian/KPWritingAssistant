@@ -356,14 +356,18 @@ export default function UploadPage() {
         setSubmissionId(sid);
       }
 
-      // Start correction with exam_part parameter
-      const { examPart: currentExamPart } = parseManualType(manualType);
+      // Start correction with the current type selection
+      const {
+        examPart: currentExamPart,
+        questionType: currentQuestionType,
+      } = parseManualType(manualType);
       const correctRes = await fetch('/api/correct', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           submission_id: sid,
           exam_part: currentExamPart,
+          question_type: currentQuestionType,
         }),
       });
 

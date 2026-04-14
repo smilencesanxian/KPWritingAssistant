@@ -1,8 +1,26 @@
 import { createClient } from '@/lib/supabase/server';
 import type { RecommendedPhrase, Highlight } from '@/types/database';
 
+function normalizePhraseKey(text: string): string {
+  return text.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function dedupePhrases<T extends { text: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+
+  for (const item of items) {
+    const key = normalizePhraseKey(item.text);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(item);
+  }
+
+  return result;
+}
+
 export interface GetRecommendedPhrasesOptions {
-  essayType?: 'email' | 'article' | 'general' | null;
+  essayType?: 'email' | 'article' | 'story' | 'general' | null;
   topicTags?: string[];
   type?: 'vocabulary' | 'phrase' | 'sentence';
   limit?: number;
@@ -42,7 +60,7 @@ export async function getRecommendedPhrases(
     throw new Error(`Failed to get recommended phrases: ${error.message}`);
   }
 
-  return (data ?? []) as RecommendedPhrase[];
+  return dedupePhrases((data ?? []) as RecommendedPhrase[]);
 }
 
 export interface CollectPhraseInput {
@@ -237,7 +255,7 @@ export async function getKnowledgeBase(
   }));
 
   // 6. 合并所有条目
-  const allItems = [...systemItems, ...userItems];
+  const allItems = dedupePhrases([...systemItems, ...userItems]);
 
   // 7. 按 category 分组
   const grouped = new Map<string, KnowledgeItem[]>();
@@ -330,7 +348,7 @@ export async function getRecommendation(
   // 随机取2条
   const shuffled = uncollected.sort(() => Math.random() - 0.5).slice(0, 2);
 
-  return shuffled.map((phrase) => ({
+  return dedupePhrases(shuffled).map((phrase) => ({
     id: phrase.id,
     text: phrase.text,
     type: phrase.type,

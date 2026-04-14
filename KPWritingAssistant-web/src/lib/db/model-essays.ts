@@ -1,17 +1,18 @@
 import { createClient } from '@/lib/supabase/server';
-import type { ModelEssay, EditHistoryItem } from '@/types/database';
+import type { ModelEssay, EditHistoryItem, ModelEssaySourceSpan } from '@/types/database';
 
 export interface UpdateModelEssayInput {
   user_edited_content?: string;
   is_user_edited?: boolean;
   edit_history?: EditHistoryItem[];
   user_preference_notes?: string;
+  source_spans?: ModelEssaySourceSpan[] | null;
 }
 
 export async function updateModelEssay(
   id: string,
   data: UpdateModelEssayInput
-): Promise<void> {
+): Promise<ModelEssay> {
   const supabase = await createClient();
 
   // Build update object dynamically
@@ -25,6 +26,9 @@ export async function updateModelEssay(
   }
   if (data.user_preference_notes !== undefined) {
     updateData.user_preference_notes = data.user_preference_notes;
+  }
+  if (data.source_spans !== undefined) {
+    updateData.source_spans = data.source_spans;
   }
 
   // Handle edit_history - append new entry if provided
@@ -41,16 +45,22 @@ export async function updateModelEssay(
     updateData.edit_history = newHistory;
   }
 
-  // Do UPDATE only — no .select() to avoid RLS issues on model_essays
-  // (model_essays has no direct user_id column so SELECT-after-UPDATE fails RLS)
-  const { error } = await supabase
+  const { data: updatedEssay, error } = await supabase
     .from('model_essays')
     .update(updateData)
-    .eq('id', id);
+    .eq('id', id)
+    .select('*')
+    .single();
 
   if (error) {
     throw new Error(`Failed to update model essay: ${error.message}`);
   }
+
+  if (!updatedEssay) {
+    throw new Error('Failed to update model essay: update returned no rows');
+  }
+
+  return updatedEssay as ModelEssay;
 }
 
 export async function getUserPreferenceNotes(

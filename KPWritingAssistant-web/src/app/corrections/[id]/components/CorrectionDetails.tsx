@@ -29,12 +29,12 @@ interface StepConfig {
 }
 
 const STEPS: StepConfig[] = [
-  { key: 'step1', title: 'Step 1: 任务完成度分析', icon: '📝' },
-  { key: 'step2', title: 'Step 2: 内容完整性检查', icon: '✅' },
-  { key: 'step3', title: 'Step 3: 逻辑结构评估', icon: '🏗️' },
+  { key: 'step1', title: 'Step 1: 内容审查', icon: '📝' },
+  { key: 'step2', title: 'Step 2: 文体与交际效果审查', icon: '✅' },
+  { key: 'step3', title: 'Step 3: 组织结构审查', icon: '🏗️' },
   { key: 'step4', title: 'Step 4: 语言校对', icon: '🔍' },
-  { key: 'step5', title: 'Step 5: 词汇多样性分析', icon: '📚' },
-  { key: 'step6', title: 'Step 6: 语法准确性检查', icon: '✏️' },
+  { key: 'step5', title: 'Step 5: 亮点分析', icon: '📚' },
+  { key: 'step6', title: 'Step 6: 总评与改进建议', icon: '✏️' },
 ];
 
 export default function CorrectionDetails({ correctionSteps }: CorrectionDetailsProps) {

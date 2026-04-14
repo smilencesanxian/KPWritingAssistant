@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "thresholds": {
+    "minAccuracy": 0.9,
+    "maxRegression": 0.05
+  },
+  "providers": {
+    "baidu": {
+      "averageAccuracy": null,
+      "samples": {
+        "ket": null,
+        "pet": null
+      }
+    },
+    "tencent": {
+      "averageAccuracy": 0.948,
+      "samples": {
+        "ket": {
+          "accuracy": 0.97,
+          "compactAccuracy": 0.978
+        },
+        "pet": {
+          "accuracy": 0.927,
+          "compactAccuracy": 0.957
+        }
+      }
+    },
+    "tal": {
+      "averageAccuracy": 0.948,
+      "samples": {
+        "ket": {
+          "accuracy": 0.95,
+          "compactAccuracy": 0.971
+        },
+        "pet": {
+          "accuracy": 0.946,
+          "compactAccuracy": 0.97
+        }
+      }
+    }
+  }
+}

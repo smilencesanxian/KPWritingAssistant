@@ -9,8 +9,20 @@ export async function generateCopybookPDF(
   fontStyle: string = 'hengshui',
   tracingOpacity: number = 30,
   fontSize?: number,
-  gapFillWords?: string[]
+  gapFillWords?: string[],
+  examPart?: 'part1' | 'part2' | null,
+  questionType?: 'q1' | 'q2' | null
 ): Promise<Buffer> {
   const template = getTemplate(templateId);
-  return renderCopybookPDF(essayText, template, mode, fontStyle, tracingOpacity, fontSize, gapFillWords);
+  return renderCopybookPDF(
+    essayText,
+    template,
+    mode,
+    fontStyle,
+    tracingOpacity,
+    fontSize,
+    gapFillWords,
+    examPart,
+    questionType
+  );
 }

@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
   // Also get exam_part and essay_topic for template auto-selection and filename generation
   const { data: modelEssayData, error: modelEssayError } = await supabase
     .from('model_essays')
-    .select('*, corrections!inner(id, essay_submissions!inner(user_id, exam_part, essay_topic))')
+    .select('*, corrections!inner(id, essay_submissions!inner(user_id, exam_part, question_type, essay_topic))')
     .eq('id', model_essay_id)
     .single();
 
@@ -80,6 +80,7 @@ export async function POST(request: NextRequest) {
     essay_submissions: {
       user_id: string;
       exam_part: string | null;
+      question_type: string | null;
       essay_topic: string | null;
     };
   };
@@ -153,7 +154,9 @@ export async function POST(request: NextRequest) {
       fontStyle,
       tracingOpacity,
       fontSize,
-      gapFillWords
+      gapFillWords,
+      correction.essay_submissions.exam_part as 'part1' | 'part2' | null,
+      correction.essay_submissions.question_type as 'q1' | 'q2' | null
     );
   } catch (err) {
     console.error('[copybook] PDF generation failed:', err);
