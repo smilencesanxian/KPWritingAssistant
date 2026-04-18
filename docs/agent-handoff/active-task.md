@@ -1,76 +1,105 @@
 # 当前任务
 
-最后更新：2026-04-14
+最后更新：2026-04-18
 
 ## 状态
 
-`completed`
+`in_progress`
 
 ## 当前负责方
 
-`codex`
+`claude`
 
 ## 目标
 
-根据 `KPWritingAssistant-web/docs/sugession&issues/功能意见-0412.html` 的 6 条客户反馈，完成一轮面向生产现状的系统整改，重点修复：
+根据 `KPWritingAssistant-web/docs/sugession&issues/KP作文宝-功能意见-0414.html` 的 6 条用户反馈 + 1 个新增 API 报错，完成系统整改。
 
-- OCR 提取排版混乱、噪音文本过多、批改页无法查看原图
-- 批改详情步骤语义与提示词规范不一致
-- 范文超字数、字帖标题和分段排版错误
-- 范文未区分知识库素材与历史亮点来源
-- 知识库未与 `PET写作知识库-v2.0.md` 对齐且存在重复展示
-- 易错点列表默认删除入口过于显眼
+## 问题清单
 
-## 主要工作区域
+### Bug 1：重新生成范文报错（最高优先级）
 
-`KPWritingAssistant-web/`
+**错误信息**：`Could not find a relationship between 'model_essays' and 'essay_submissions' in the schema cache`
 
-## 待办拆解
+**根因**：`src/lib/db/model-essays.ts:73-79` 中 `getUserPreferenceNotes` 的 Supabase 查询语法错误，`essay_submissions` 在顶层而非嵌套在 `corrections` 下。
 
-1. 修正批改链路：透传 `question_type`，让 Part2 article/story 走正确提示词；同步修复批改详情 Step 标题与 `correction_steps.step1-6` 的真实语义错位。
-2. 收紧范文生成与编辑保存的字数约束，确保正文目标 `100-110` 词，硬上限 `120` 词。
-3. 修复字帖渲染：支持文章标题居中、正文分段、邮件称呼/正文/落款结构保留。
-4. 在批改页补原图查看能力，使用 `original_image_path` / `question_image_path` 动态生成可访问图片链接。
-5. 改进 OCR 文本清洗与版式恢复，减少无关噪音并提升换行/段落结构。
-6. 修复范文来源注入与知识库供数逻辑：去重历史亮点/知识库短语，增加“亮点不足时回落到 PET 知识库”的硬规则。
-7. 修复知识库重复展示，并将运行时知识库内容与 `PET写作知识库-v2.0.md` 对齐。
-8. 移除易错点列表默认滑删/常驻删除入口，仅保留“管理”模式下的删除。
-9. 为以上改动补齐单测/E2E，并跑最小必要回归。
+**修改文件**：`src/lib/db/model-essays.ts`
+
+---
+
+### Bug 2：编辑范文后保存按钮不可点击
+
+**根因**：`src/components/model-essay/EditEssayModal.tsx:140` 保存按钮 `disabled` 条件包含 `!wordCountMetrics.withinHardLimit`，与 Bug 3（字数统计错误）紧密相关。
+
+**处理**：Bug 3 修复后验证，可能自动解决。
+
+---
+
+### Bug 3 + 功能优化 1：范文字数统计错误 + 不分段 + 标题正文多空行 + 上限收紧
+
+**子问题**：
+- 字数统计显示 108 但实际 140+ 词
+- 范文不分段，可读性差
+- 标题与正文间多空行
+- 字数上限需从 130 收紧到 120
+
+**修改文件**：`src/lib/model-essay/format.ts`、`src/lib/model-essay/generation.ts`、`src/app/api/model-essays/[id]/route.ts`、`src/components/correction/ModelEssayView.tsx`、`src/lib/pdf/renderer.ts`
+
+---
+
+### 功能优化 2：批改结果页 UI 调整
+
+**需求**：
+1. 删除"上传原图"展示区域
+2. 保留 Step 6 条目化展示
+3. 删除 Step 6 之后的"改进建议"框
+
+**修改文件**：`src/app/corrections/[id]/page.tsx`
+
+---
+
+### 功能优化 3：知识库按主题分类展示 + 过滤基础类
+
+**需求**：
+1. 文章类按主题分组（地点描述、困难事物等）
+2. 不显示 `level = 'basic'` 的素材
+
+**前置**：先查询线上数据库 `article` 类型数据的 `topic_tags` 填充情况，再决定分组方案。
+
+**修改文件**：`src/lib/db/recommended-phrases.ts`、`src/components/writing-guide/CategorySection.tsx`
+
+## 任务拆解
+
+| # | 任务 | 优先级 | 依赖 |
+|---|------|--------|------|
+| 2 | Bug 1: 修复 getUserPreferenceNotes Supabase join 语法 | 最高 | 无 |
+| 3 | Bug 3 + 优化1: 字数统计修复 + 上限收紧到 120 | 高 | 无 |
+| 4 | 优化2: 批改结果页 UI（去原图/改进建议框） | 中 | 无 |
+| 5 | Bug 2: 验证编辑保存按钮 | 中 | #3 |
+| 6 | 优化3: 知识库分类 + 过滤基础类 | 中 | 无 |
 
 ## 当前执行顺序
 
-1. 先修批改链路与 Step 语义
-2. 再修范文字数与字帖排版
-3. 再补 OCR 原图与知识库/来源逻辑
-4. 最后统一补测试与文档
-
-## 计划中的关键验收标准
-
-- Part2 文章类批改结果中，第 5 步稳定显示“亮点分析”，不再错位成语法检查
-- 生成范文正文默认落在 `100-110` 词，绝不超过 `120` 词
-- Part2 字帖标题居中，正文保留分段
-- 批改页可直接查看作文原图和题目图
-- 知识库页面同一条素材不重复展示
-- 易错点默认浏览态不显示删除入口
+按任务编号顺序执行，每个任务独立完成并验证。
 
 ## 已完成
 
-- 已逐条分析 `功能意见-0412.html` 中的 6 条客户反馈，并完成根因定位
-- 已确认本轮任务主入口仍为 `docs/agent-handoff/active-task.md`，不回退到历史 `task-v1.2.0.json`
-- 已将 6 条反馈对应的整改项全部落地到代码与数据库迁移中，并补齐单测/E2E 验证
-- 已针对 OCR 尾部噪音补充额外清理规则，能去掉类似 `IGV` 这类独立大写噪声 token
-
-## 当前进行中
-
-- 本轮范文字数门槛优化已完成：生成提示词已回收为 `100-110` 左右，后置校验放宽为 `90-130`，并把重试上限配置化为默认 3 次
+- 已分析全部 7 个问题的根因
+- 已拆解为 5 个可独立执行的任务
+- **Bug 1 已修复**：`getUserPreferenceNotes` 的 Supabase join 语法已修正
+  - 将 `essay_submissions!inner` 从顶层移入 `corrections` 的嵌套查询
+  - `.eq('corrections.essay_submissions.user_id', userId)` 使用正确的嵌套路径
+  - 12 个单元测试全部通过
+  - lint 0 error，build 成功
+  - 已部署到服务器
 
 ## 待验证
 
-- 现有工作区包含其他未提交改动，后续如继续开发仍需避免覆盖与本轮任务无关的文件内容
-- 如果后续要继续增强 OCR 版式恢复，可再补更细的题型识别 heuristics
+- Bug 2 是否在 Bug 3 修复后自动解决
+- 知识库 article 类型的 topic_tags 数据填充情况
+- Bug 1 修复后在线上真实数据下验证重新生成范文功能
 
 ## 下一位 agent 应先做什么
 
-1. 本轮范文字数门槛优化已完成，后续如果要继续调生成策略，优先通过提示词和模型选择迭代
-2. 如果后续出现新反馈，先重新写入 `active-task.md` 再开工
-3. 如需做回归，优先跑 upload/correction/model-essay/copybook 相关测试，再补 E2E
+1. 继续 Bug 3 + 优化1（字数统计修复 + 上限收紧到 120）
+2. 开始前先调用 test-engineer SubAgent 设计测试用例
+3. 按 TDD 流程执行：测试设计 → 实现 → 测试验证

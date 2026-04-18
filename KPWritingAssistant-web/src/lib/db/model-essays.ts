@@ -69,11 +69,10 @@ export async function getUserPreferenceNotes(
 ): Promise<string[]> {
   const supabase = await createClient();
 
-  // Join through corrections and essay_submissions to filter by user_id
   const { data, error } = await supabase
     .from('model_essays')
-    .select('user_preference_notes, corrections!inner(submission_id), essay_submissions!inner(user_id)')
-    .eq('essay_submissions.user_id', userId)
+    .select('user_preference_notes, corrections!inner(submission_id, essay_submissions!inner(user_id))')
+    .eq('corrections.essay_submissions.user_id', userId)
     .not('user_preference_notes', 'is', null)
     .order('created_at', { ascending: false })
     .limit(limit);
