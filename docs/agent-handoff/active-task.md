@@ -136,6 +136,11 @@
 - `npm run test:e2e -- e2e/knowledge-base.spec.ts`（`8 passed`）
 - `google-chrome --version`（`Google Chrome 147.0.7727.101`）
 - `npx playwright --version`（`Version 1.58.2`）
+- `git commit -m "fix: complete harness规范整改并补齐回归验证"`（`aa20e87`）
+- `git push origin main`（`143e70f..aa20e87`）
+- `ssh root@8.136.127.32 'cd /var/www/kp-writing/KPWritingAssistant-web && git pull --ff-only origin main'`（服务器已到 `aa20e87`）
+- `ssh root@8.136.127.32 'cd /var/www/kp-writing/KPWritingAssistant-web && set -a && . ./.env.production && set +a && docker compose up -d --build'`（容器重建并启动）
+- `ssh root@8.136.127.32 'curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000'`（`200`）
 
 ## 下一位 agent 应先做什么
 
