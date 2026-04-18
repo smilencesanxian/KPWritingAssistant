@@ -1,4 +1,8 @@
-import { getModelEssayWordCount, getModelEssayWordCountLimits } from './format';
+import {
+  getModelEssayWordCount,
+  getModelEssayWordCountLimits,
+  normalizeModelEssayFormatting,
+} from './format';
 
 type EssayGenerator = (additionalRequirements: string) => Promise<string>;
 
@@ -42,14 +46,15 @@ export async function generateValidatedModelEssay(
 
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     const content = await generator(additionalRequirements);
-    if (content.trim()) {
-      lastContent = content;
+    const normalizedContent = normalizeModelEssayFormatting(content, examPart, questionType);
+    if (normalizedContent.trim()) {
+      lastContent = normalizedContent;
     }
 
-    const metrics = getModelEssayWordCount(content, examPart, questionType);
+    const metrics = getModelEssayWordCount(normalizedContent, examPart, questionType);
 
     if (metrics.withinHardLimit && metrics.wordCount >= generationMin) {
-      return content;
+      return normalizedContent;
     }
 
     additionalRequirements = buildRetryRequirements(metrics.wordCount);

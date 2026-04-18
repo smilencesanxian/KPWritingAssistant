@@ -2,14 +2,30 @@
 
 本仓库会由多个编码代理协作开发。共享上下文必须写入仓库文件，不能只依赖会话记忆。
 
+## Harness Engineering（强制）
+
+从 2026-04-18 起，仓库采用 Harness Engineering 作为默认开发规范。开始任务前先读：
+
+1. `docs/harness-engineering/development-spec.md`
+2. `docs/agent-handoff/current-state.md`
+3. `docs/agent-handoff/active-task.md`
+4. `docs/agent-handoff/decision-log.md`
+5. `CLAUDE.md`
+
+核心约束：
+- 不在仓库里的决策，对后续 agent 视为不存在。
+- 优先机械门禁（lint/test/build），而不是口头“应该”。
+- 根 `AGENTS.md` 只做导航，详细规则统一沉淀到专用文档。
+
 ## 强制交接流程
 
 开始任何任务前，按顺序阅读以下文件：
 
-1. `docs/agent-handoff/current-state.md`
-2. `docs/agent-handoff/active-task.md`
-3. `docs/agent-handoff/decision-log.md`
-4. `CLAUDE.md`
+1. `docs/harness-engineering/development-spec.md`
+2. `docs/agent-handoff/current-state.md`
+3. `docs/agent-handoff/active-task.md`
+4. `docs/agent-handoff/decision-log.md`
+5. `CLAUDE.md`
 
 如果工作发生在 `KPWritingAssistant-web/` 内，还要读取 `KPWritingAssistant-web/AGENTS.md`。
 

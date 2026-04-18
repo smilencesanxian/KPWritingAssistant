@@ -15,7 +15,8 @@ export interface ModelEssayWordCountResult extends ModelEssayStructure {
 const TARGET_MIN_WORDS = 100;
 const TARGET_MAX_WORDS = 110;
 const GENERATION_MIN_WORDS = 90;
-const HARD_MAX_WORDS = 130;
+const HARD_MAX_WORDS = 120;
+const TITLE_MAX_WORDS = 10;
 
 const SALUTATION_RE = /^(dear|hi|hello)\b/i;
 const SIGNOFF_RE = /^(best wishes|best regards|regards|yours|yours sincerely|yours faithfully|love)\b/i;
@@ -43,6 +44,56 @@ function splitParagraphs(text: string): string[] {
     .split(/\n\s*\n/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean);
+}
+
+function splitLongParagraphForReadability(paragraph: string): string[] {
+  const words = countWords(paragraph);
+  if (words < 80) {
+    return [paragraph];
+  }
+
+  const sentences = paragraph
+    .split(/(?<=[.!?])\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  if (sentences.length < 3) {
+    return [paragraph];
+  }
+
+  const targetWords = Math.ceil(words / 2);
+  let accumulated = 0;
+  let splitIndex = 0;
+
+  for (let index = 0; index < sentences.length - 1; index += 1) {
+    accumulated += countWords(sentences[index]);
+    if (accumulated >= targetWords) {
+      splitIndex = index + 1;
+      break;
+    }
+  }
+
+  if (splitIndex === 0) {
+    splitIndex = Math.ceil(sentences.length / 2);
+  }
+
+  return [
+    sentences.slice(0, splitIndex).join(' ').trim(),
+    sentences.slice(splitIndex).join(' ').trim(),
+  ].filter(Boolean);
+}
+
+function isLikelyTitle(line: string): boolean {
+  if (!TITLE_RE.test(line)) {
+    return false;
+  }
+
+  const words = countWords(line);
+  if (words === 0 || words > TITLE_MAX_WORDS) {
+    return false;
+  }
+
+  return line.length <= 80;
 }
 
 function getRawLines(text: string): string[] {
@@ -85,10 +136,15 @@ export function parseModelEssayStructure(
       : rawLines.slice(salutationIndex + 1, signoffStart);
     signoffLines = signoffStart === -1 ? [] : rawLines.slice(signoffStart).filter(Boolean);
     bodyText = bodyLines.join('\n');
-  } else if (examPart === 'part2' && questionType === 'q1' && lines.length > 0 && TITLE_RE.test(lines[0])) {
+  } else if (examPart === 'part2' && questionType === 'q1' && lines.length > 0 && isLikelyTitle(lines[0])) {
     titleLine = lines[0];
     const titleIndex = nonEmptyLineIndexes[0] ?? 0;
     bodyText = rawLines.slice(titleIndex + 1).join('\n');
+  }
+
+  let bodyParagraphs = splitParagraphs(bodyText);
+  if (bodyParagraphs.length === 1) {
+    bodyParagraphs = splitLongParagraphForReadability(bodyParagraphs[0]);
   }
 
   return {
@@ -96,8 +152,33 @@ export function parseModelEssayStructure(
     titleLine,
     salutationLine,
     signoffLines,
-    bodyParagraphs: splitParagraphs(bodyText),
+    bodyParagraphs,
   };
+}
+
+export function normalizeModelEssayFormatting(
+  text: string,
+  examPart?: 'part1' | 'part2' | null,
+  questionType?: 'q1' | 'q2' | null
+): string {
+  const structure = parseModelEssayStructure(text, examPart, questionType);
+  const blocks: string[] = [];
+
+  if (structure.titleLine) {
+    blocks.push(structure.titleLine.trim());
+  }
+
+  if (structure.salutationLine) {
+    blocks.push(structure.salutationLine.trim());
+  }
+
+  blocks.push(...structure.bodyParagraphs.map((item) => item.trim()).filter(Boolean));
+
+  if (structure.signoffLines.length > 0) {
+    blocks.push(...structure.signoffLines.map((item) => item.trim()).filter(Boolean));
+  }
+
+  return blocks.join('\n\n').trim();
 }
 
 export function getModelEssayWordCount(

@@ -12,6 +12,18 @@
 
 每个新的 agent 会话都必须遵循以下流程：
 
+### 0.5 Harness Engineering 基线（新增）
+
+从 2026-04-18 起，开发流程按 Harness Engineering 执行，统一规范文件：
+
+- `docs/harness-engineering/development-spec.md`
+
+执行要求：
+- 共享信息必须写入仓库（Repo as System of Record）
+- 根 `AGENTS.md` 只做导航（Map, Not Manual）
+- 通过 lint/test/build 实施机械门禁（Mechanical Enforcement）
+- 会话结束必须更新 handoff 文档（反馈回路闭合）
+
 ### Step 0: 先读取共享交接信息
 
 在执行任何操作前，按顺序读取以下文件：

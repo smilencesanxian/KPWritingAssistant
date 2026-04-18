@@ -1,15 +1,12 @@
 import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
 import { createClient } from '@/lib/supabase/server';
 import { getCorrectionById, getModelEssaysByCorrectionId } from '@/lib/db/corrections';
 import { getSubmissionById } from '@/lib/db/essays';
-import { getSignedUrl } from '@/lib/storage/upload';
 import ModelEssayView from '@/components/correction/ModelEssayView';
 import type { Correction } from '@/types/database';
 import ScoreOverview from './components/ScoreOverview';
 import CorrectionDetails from './components/CorrectionDetails';
-import ImprovementSuggestions from './components/ImprovementSuggestions';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -46,14 +43,6 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
   const [modelEssays] = await Promise.all([
     getModelEssaysByCorrectionId(id).catch(() => []),
   ]);
-  const [essayImageUrl, questionImageUrl] = await Promise.all([
-    submission.original_image_path
-      ? getSignedUrl('essay-images', submission.original_image_path).catch(() => null)
-      : Promise.resolve(null),
-    submission.question_image_path
-      ? getSignedUrl('essay-images', submission.question_image_path).catch(() => null)
-      : Promise.resolve(null),
-  ]);
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 space-y-6">
@@ -81,50 +70,6 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
         </Link>
       )}
 
-      {(essayImageUrl || questionImageUrl) && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold text-neutral-700">上传原图</h2>
-          <div className="grid grid-cols-1 gap-3">
-            {essayImageUrl && (
-              <Link
-                href={essayImageUrl}
-                target="_blank"
-                className="block bg-white rounded-2xl border border-neutral-200 p-3"
-              >
-                <p className="text-xs text-neutral-500 mb-2">作文原图</p>
-                <div className="relative w-full aspect-[3/4] overflow-hidden rounded-xl bg-neutral-50">
-                  <Image
-                    src={essayImageUrl}
-                    alt="作文原图"
-                    fill
-                    className="object-contain"
-                    unoptimized
-                  />
-                </div>
-              </Link>
-            )}
-            {questionImageUrl && (
-              <Link
-                href={questionImageUrl}
-                target="_blank"
-                className="block bg-white rounded-2xl border border-neutral-200 p-3"
-              >
-                <p className="text-xs text-neutral-500 mb-2">题目原图</p>
-                <div className="relative w-full aspect-[3/4] overflow-hidden rounded-xl bg-neutral-50">
-                  <Image
-                    src={questionImageUrl}
-                    alt="题目原图"
-                    fill
-                    className="object-contain"
-                    unoptimized
-                  />
-                </div>
-              </Link>
-            )}
-          </div>
-        </section>
-      )}
-
       {/* Block 1: Score Overview */}
       <ScoreOverview
         totalScore={correction.total_score}
@@ -136,13 +81,7 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
         correctionSteps={correction.correction_steps}
       />
 
-      {/* Block 3: Improvement Suggestions */}
-      <ImprovementSuggestions
-        structuredSuggestions={correction.structured_suggestions}
-        fallbackSuggestions={correction.improvement_suggestions}
-      />
-
-      {/* Block 4: Model Essay */}
+      {/* Block 3: Model Essay */}
       <section data-testid="model-essay">
         <ModelEssayView
           correctionId={id}

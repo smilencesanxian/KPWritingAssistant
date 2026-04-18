@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
   try {
     const phrases = await getRecommendedPhrases({
       type: type as 'vocabulary' | 'phrase' | 'sentence' | undefined,
-      essayType: essayType as 'email' | 'article' | 'general' | undefined,
+      essayType: essayType as 'email' | 'article' | 'story' | 'general' | undefined,
     });
 
     // Group by essay_type for better frontend consumption

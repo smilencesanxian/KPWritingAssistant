@@ -18,6 +18,10 @@ const mockUser = {
   email: 'test@example.com',
 };
 
+function repeatWords(word: string, count: number): string {
+  return Array.from({ length: count }, () => word).join(' ');
+}
+
 function createModelEssayQueryResult(modelEssayData: unknown, error: unknown = null) {
   return {
     select: jest.fn().mockReturnThis(),
@@ -95,10 +99,13 @@ describe('PUT /api/model-essays/[id]', () => {
   });
 
   it('should persist the edited essay and return the stored record', async () => {
+    const previousVersion = repeatWords('previous', 95);
+    const newestVersion = repeatWords('newest', 100);
+
     const modelEssayData = {
       id: 'essay-123',
       content: 'Original AI draft',
-      user_edited_content: 'Previous custom version',
+      user_edited_content: previousVersion,
       is_user_edited: true,
       user_preference_notes: 'older note',
       corrections: {
@@ -112,7 +119,7 @@ describe('PUT /api/model-essays/[id]', () => {
       target_level: 'excellent' as const,
       content: 'Original AI draft',
       created_at: '2026-04-07T00:00:00.000Z',
-      user_edited_content: 'Newest saved version',
+      user_edited_content: newestVersion,
       is_user_edited: true,
       edit_history: [],
       user_preference_notes: 'new note',
@@ -126,7 +133,7 @@ describe('PUT /api/model-essays/[id]', () => {
     const request = new NextRequest('http://localhost:3000/api/model-essays/essay-123', {
       method: 'PUT',
       body: JSON.stringify({
-        user_edited_content: 'Newest saved version',
+        user_edited_content: newestVersion,
         user_preference_notes: 'new note',
       }),
       headers: { 'Content-Type': 'application/json' },
@@ -140,13 +147,13 @@ describe('PUT /api/model-essays/[id]', () => {
     expect(mockedUpdateModelEssay).toHaveBeenCalledWith(
       'essay-123',
       expect.objectContaining({
-        user_edited_content: 'Newest saved version',
+        user_edited_content: newestVersion,
         is_user_edited: true,
         user_preference_notes: 'new note',
         edit_history: [
           expect.objectContaining({
-            original: 'Previous custom version',
-            edited: 'Newest saved version',
+            original: previousVersion,
+            edited: newestVersion,
             note: 'new note',
           }),
         ],
@@ -155,6 +162,7 @@ describe('PUT /api/model-essays/[id]', () => {
   });
 
   it('should return 500 when persistence fails', async () => {
+    const editedEssay = repeatWords('edited', 100);
     const modelEssayData = {
       id: 'essay-123',
       content: 'Original AI draft',
@@ -174,7 +182,7 @@ describe('PUT /api/model-essays/[id]', () => {
 
     const request = new NextRequest('http://localhost:3000/api/model-essays/essay-123', {
       method: 'PUT',
-      body: JSON.stringify({ user_edited_content: 'Edited essay' }),
+      body: JSON.stringify({ user_edited_content: editedEssay }),
       headers: { 'Content-Type': 'application/json' },
     });
 

@@ -134,6 +134,7 @@ export interface KnowledgeItem {
   type: 'vocabulary' | 'phrase' | 'sentence';
   level: 'basic' | 'advanced' | null;
   category: string | null;
+  topic_tags?: string[] | null;
   source: 'system' | 'user';
   is_collected: boolean;
   is_in_highlights: boolean;
@@ -145,6 +146,62 @@ export interface KnowledgeSection {
   category: string;
   category_label: string;
   items: KnowledgeItem[];
+}
+
+const ARTICLE_TOPIC_LABELS: Record<string, string> = {
+  favorite_place: '地点描述',
+  difficult_thing: '困难事物',
+  friendship: '人际友谊',
+  living_environment: '居住环境',
+  admired_person: '敬佩的人',
+  hobby: '兴趣爱好',
+  reading: '读书',
+};
+
+const ARTICLE_TOPIC_ORDER = [
+  'favorite_place',
+  'difficult_thing',
+  'friendship',
+  'living_environment',
+  'admired_person',
+  'hobby',
+  'reading',
+] as const;
+
+function normalizeTopicTag(tag: string): string {
+  return tag.trim().toLowerCase().replace(/[\s-]+/g, '_');
+}
+
+function resolveArticleTopicKey(topicTags?: string[] | null): string | null {
+  if (!topicTags || topicTags.length === 0) return null;
+
+  for (const rawTag of topicTags) {
+    const tag = normalizeTopicTag(rawTag);
+
+    if (tag.includes('favorite_place') || tag.includes('place') || tag.includes('地点')) {
+      return 'favorite_place';
+    }
+    if (tag.includes('difficult_thing') || tag.includes('difficulty') || tag.includes('困难')) {
+      return 'difficult_thing';
+    }
+    if (tag.includes('friendship') || tag.includes('friend') || tag.includes('友谊')) {
+      return 'friendship';
+    }
+    if (tag.includes('living_environment') || tag.includes('environment') || tag.includes('居住')) {
+      return 'living_environment';
+    }
+    if (tag.includes('admired_person') || tag.includes('admire') || tag.includes('敬佩')) {
+      return 'admired_person';
+    }
+    if (tag.includes('hobby') || tag.includes('interest') || tag.includes('兴趣')) {
+      return 'hobby';
+    }
+    if (tag.includes('reading') || tag.includes('book') || tag.includes('读书')) {
+      return 'reading';
+    }
+  }
+
+  return null;
 }
 
 // 分类标签映射
@@ -165,6 +222,10 @@ export const CATEGORY_LABELS: Record<string, string> = {
 
 export function getCategoryLabel(category: string | null): string {
   if (!category) return '其他';
+  if (category.startsWith('article_topic:')) {
+    const topicKey = category.replace('article_topic:', '');
+    return ARTICLE_TOPIC_LABELS[topicKey] || topicKey;
+  }
   return CATEGORY_LABELS[category] || category;
 }
 
@@ -211,21 +272,33 @@ export async function getKnowledgeBase(
   }
 
   // 4. 处理系统推荐条目
-  const systemItems: KnowledgeItem[] = (phrases ?? []).map((phrase) => {
+  const systemItems: KnowledgeItem[] = (phrases ?? []).reduce<KnowledgeItem[]>((acc, phrase) => {
+    if (phrase.level === 'basic') {
+      return acc;
+    }
+
+    const articleTopicKey = essayType === 'article'
+      ? resolveArticleTopicKey(phrase.topic_tags)
+      : null;
+    const category = articleTopicKey ? `article_topic:${articleTopicKey}` : phrase.category;
     const highlightInfo = highlightMap.get(phrase.id);
-    return {
+
+    acc.push({
       id: phrase.id,
       text: phrase.text,
       type: phrase.type,
       level: phrase.level,
-      category: phrase.category,
+      category,
+      topic_tags: phrase.topic_tags,
       source: 'system',
       is_collected: highlightInfo?.source === 'system',
       is_in_highlights: highlightInfo?.source === 'user',
       highlight_id: highlightInfo?.id || null,
       usage_count: highlightInfo?.usage_count ?? 0,
-    };
-  });
+    });
+
+    return acc;
+  }, []);
 
   // 5. 查询并追加用户自定义条目
   // 用户自定义：source='user' 且 recommended_phrase_id IS NULL 且 knowledge_essay_type 匹配
@@ -268,7 +341,24 @@ export async function getKnowledgeBase(
   }
 
   // 8. 构建结果数组，保持特定分类顺序
-  const categoryOrder = [
+  const categoryOrder = essayType === 'article'
+    ? [
+      ...ARTICLE_TOPIC_ORDER.map((key) => `article_topic:${key}`),
+      'opening',
+      'opinion',
+      'connector',
+      'detail',
+      'closing',
+      'title',
+      'plot',
+      'emotion',
+      'emotion_vocab',
+      'action_vocab',
+      'adverb',
+      'complex_sentence',
+      'other',
+    ]
+    : [
     'opening',
     'opinion',
     'connector',

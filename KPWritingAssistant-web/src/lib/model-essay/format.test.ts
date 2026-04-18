@@ -1,6 +1,7 @@
 import {
   getModelEssayWordCount,
   getModelEssayWordCountLimits,
+  normalizeModelEssayFormatting,
   parseModelEssayStructure,
 } from './format';
 
@@ -68,7 +69,42 @@ describe('model essay format helpers', () => {
       targetMin: 100,
       targetMax: 110,
       generationMin: 90,
-      hardMax: 130,
+      hardMax: 120,
     });
+  });
+
+  test('does not treat a long first sentence as article title', () => {
+    const text = [
+      'Nowadays many students spend too much time on mobile phones and forget to exercise regularly',
+      '',
+      'It is important to keep a healthy balance in daily life.',
+    ].join('\n');
+
+    const result = getModelEssayWordCount(text, 'part2', 'q1');
+
+    expect(result.titleLine).toBeNull();
+    expect(result.wordCount).toBeGreaterThan(18);
+  });
+
+  test('normalizes essay blocks with single blank lines', () => {
+    const raw = [
+      'The Joy of Reading',
+      '',
+      '',
+      'Reading helps me relax after school. It also teaches me many things.',
+      '',
+      '',
+      'I often read detective stories and share them with my friends.',
+    ].join('\n');
+
+    const normalized = normalizeModelEssayFormatting(raw, 'part2', 'q1');
+
+    expect(normalized).toBe([
+      'The Joy of Reading',
+      '',
+      'Reading helps me relax after school. It also teaches me many things.',
+      '',
+      'I often read detective stories and share them with my friends.',
+    ].join('\n'));
   });
 });

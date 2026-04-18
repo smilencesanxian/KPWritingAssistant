@@ -3,8 +3,19 @@
 
 ================
 04.18
-请参考下面用户发现的新问题或者提的建议，分析解决方案
+我给你一个github仓库，你将这个仓库的代码下载下来学习一下harness-engineering相关概念，然后优化当前项目规范文档，确保后续开发过程都能够遵循这个harness-engineering规范开进行开发
+https://github.com/deusyu/harness-engineering
+
+请参考下面用户发现的新问题或者提的建议，分析解决方案，要求严格项目要求的规范流程来处理，先分析问题，再给出方案拆分子问题，然后写E2E测试用例，最后再开发确保E2E测试通过
 KPWritingAssistant-web\docs\sugession&issues\KP作文宝-功能意见-0414.html
+
+还有一个新增的问题不在上面文档中，也要一起解决
+问题描述：重新生成范文报错如下
+{
+    "error": "Failed to get preference notes: Could not find a relationship between 'model_essays' and 'essay_submissions' in the schema cache"
+}
+
+
 ========
 
 

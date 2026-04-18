@@ -2,9 +2,10 @@
 
 在这个应用内进行实质性修改前，先读取以下仓库级 handoff 文件：
 
-1. `../docs/agent-handoff/current-state.md`
-2. `../docs/agent-handoff/active-task.md`
-3. `../docs/agent-handoff/decision-log.md`
+1. `../docs/harness-engineering/development-spec.md`
+2. `../docs/agent-handoff/current-state.md`
+3. `../docs/agent-handoff/active-task.md`
+4. `../docs/agent-handoff/decision-log.md`
 
 结束会话前，至少更新 `../docs/agent-handoff/active-task.md`。如果本次改动改变了长期有效的项目背景、开发入口或工作流假设，也要同步更新另外两份文件。
 

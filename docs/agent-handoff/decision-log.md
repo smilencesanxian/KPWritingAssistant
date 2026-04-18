@@ -31,3 +31,15 @@
 
 - 字帖下载接口统一从 `copybooks.pdf_url` 读取并回传 PDF 字节流，不再依赖前端直接访问存储对象路径；这样可以保持下载链路与现有上传/签名逻辑一致，并便于在 E2E 中验证最终响应内容。
 - 0412 客户反馈整改已完成主线实现，并通过 `copybook-edit-save-real`、`copybook-layout`、`correction-result` 等关键 E2E 验证；`copybook-layout` 中部分用例因测试数据缺失被自动跳过，不影响核心回归结论。
+
+## 2026-04-18
+
+- 仓库正式引入 Harness Engineering 作为默认开发流程，规范基线文件为 `docs/harness-engineering/development-spec.md`。
+- 会话启动阅读顺序调整为：Harness 规范 → handoff 三件套 → `CLAUDE.md`；`KPWritingAssistant-web/` 内开发同样遵循该顺序。
+- 根 `AGENTS.md` 明确保持“地图而非手册”定位，只保留入口与硬约束，详细规范沉淀到专用文档。
+- 新增统一机械门禁要求：非纯文档任务默认执行 `npm run lint`、`npm test`、`npm run build`；门禁失败不得标记任务完成。
+- 范文正文硬上限从 `130` 收紧到 `120`；服务端编辑保存、前端计数提示、生成重试校验统一沿用同一口径（目标 `100-110`，允许 `90-120`）。
+- 范文生成结果在进入后续流程前统一做结构化归一化：收紧 Part2 标题识别，避免把长句误判成标题导致词数偏低；超长单段正文会按句子自动拆分为多段，提升可读性与字帖布局稳定性。
+- 批改结果页不再展示“上传原图”区域，也不再单独展示“改进建议”卡片；保留 Step 6 作为总结与建议主入口。
+- 知识库 `article` 标签页改为优先按 `topic_tags` 主题分组展示，并过滤系统 `level='basic'` 素材；主题顺序对齐 `PET写作知识库-v2.0.md`（地点描述、困难事物、人际友谊、居住环境、敬佩的人、兴趣爱好、读书）。
+- 浏览器回归（MCP Playwright + `npm run test:e2e`）依赖可执行 Chrome；本项目统一以 `/opt/google/chrome/chrome` 为预检路径，缺失时先执行 `npx playwright install chrome` 再回归，避免“浏览器未安装导致 E2E 未执行”的假阴性。

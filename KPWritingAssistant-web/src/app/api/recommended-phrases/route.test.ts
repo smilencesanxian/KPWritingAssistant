@@ -178,7 +178,7 @@ describe('GET /api/recommended-phrases', () => {
     it('should accept all valid essay_type values', async () => {
       mockedGetRecommendedPhrases.mockResolvedValue([]);
 
-      const validEssayTypes = ['email', 'article', 'general'];
+      const validEssayTypes = ['email', 'article', 'story', 'general'];
       for (const essayType of validEssayTypes) {
         const request = new NextRequest(`http://localhost:3000/api/recommended-phrases?essay_type=${essayType}`);
         const response = await GET(request);
