@@ -1,6 +1,6 @@
 # 当前状态
 
-最后更新：2026-04-18
+最后更新：2026-04-19
 
 ## 项目快照
 
@@ -17,6 +17,7 @@
 - `apps/web`、`apps/miniapp`、`packages/api-client`、`packages/types` 目前默认视为迁移或实验产物，除非后续 handoff 明确提升为正式入口。
 - `task-v1.2.0.json` 目前只保留历史追踪意义。截止 2026-04-07，其中 41 个任务都已标记为 `passes: true`。
 - 已新增 `docs/harness-engineering/development-spec.md` 作为 Harness Engineering 的仓库级执行基线；后续 agent 会话需先读取该文件，再执行开发任务。
+- `recommended_phrases` 的 article 主题数据已完成首轮回填：`topic_tags` 填充率从 `0%` 提升到 `51.72%`（active article `24 -> 29` 条，`withTags 0 -> 15`），`/api/recommended-phrases?essayType=article&grouped=true` 已可稳定返回 7 个 `article_topic:*` 分组。
 
 ## 已验证基线
 
@@ -40,6 +41,7 @@ npm run build
 - 当前 lint 还不算完全干净，现有 warning 主要是测试文件和少量源码中的未使用变量。
 - `KPWritingAssistant-web/progress.txt` 仍有参考价值，但最近的 git 提交比它更能反映当前真实进展。
 - `recommended_phrases.essay_type` 的代码类型已补齐 `story`，与 008 migration 的数据库约束保持一致，后续新增知识库素材时应继续沿用该枚举。
+- article 主题分组虽然已可见，但仍有约 `48.28%` 的 active article 素材未打 `topic_tags`（继续回退到 `category`），后续可按同一策略做增量补齐。
 - `model_essays.source_spans` 已新增为 JSONB 元数据列，用于承载范文来源高亮的结构化 spans；编辑保存会清空该列，重新生成会重建。
 - 0412 客户反馈整改已完成到可验证状态，最近一轮关键 E2E 已通过：
   - `e2e/copybook-edit-save-real.spec.ts`

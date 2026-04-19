@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "jest",
     "ocr:accuracy": "node scripts/run-ocr-accuracy.mjs",
+    "kb:backfill:article-topics": "node scripts/backfill-article-topic-tags.mjs",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

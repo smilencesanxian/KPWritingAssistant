@@ -43,3 +43,9 @@
 - 批改结果页不再展示“上传原图”区域，也不再单独展示“改进建议”卡片；保留 Step 6 作为总结与建议主入口。
 - 知识库 `article` 标签页改为优先按 `topic_tags` 主题分组展示，并过滤系统 `level='basic'` 素材；主题顺序对齐 `PET写作知识库-v2.0.md`（地点描述、困难事物、人际友谊、居住环境、敬佩的人、兴趣爱好、读书）。
 - 浏览器回归（MCP Playwright + `npm run test:e2e`）依赖可执行 Chrome；本项目统一以 `/opt/google/chrome/chrome` 为预检路径，缺失时先执行 `npx playwright install chrome` 再回归，避免“浏览器未安装导致 E2E 未执行”的假阴性。
+
+## 2026-04-19
+
+- `recommended_phrases` 的 article `topic_tags` 治理采用“先审计再回填”的固定流程：先统计填充率与主题命中，再执行幂等回填脚本，最后用 API 断言验证分组效果。
+- 新增可执行回填入口 `npm run kb:backfill:article-topics`，脚本位于 `KPWritingAssistant-web/scripts/backfill-article-topic-tags.mjs`，默认从 `.env.local` 读取 `SUPABASE_SERVICE_ROLE_KEY` 并直接回写数据库。
+- 同步新增 `KPWritingAssistant-web/supabase/migrations/012_backfill_article_topic_tags.sql` 作为 SQL 版回填基线，确保不同环境可复用同一策略。

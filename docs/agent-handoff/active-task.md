@@ -1,10 +1,10 @@
 # 当前任务
 
-最后更新：2026-04-18
+最后更新：2026-04-19
 
 ## 状态
 
-`in_progress`
+`completed`
 
 ## 当前负责方
 
@@ -114,11 +114,18 @@
   - `knowledge-base` E2E：`8/8` 通过（`e2e/knowledge-base.spec.ts`）。
   - 本地真实接口验证：`POST /api/model-essays/{id}/regenerate` 返回 `200`，未复现 `schema cache relationship` 报错。
   - 页面真实回归：批改页已确认“上传原图”区与独立“改进建议”卡片均不存在，Step 6 保留；编辑弹窗保存按钮可点击。
+- **待办收口完成（2026-04-19）**：
+  - 已执行 article `topic_tags` 现状审计：回填前 `24` 条 active article 中 `withTags=0`，填充率 `0%`。
+  - 新增回填脚本：`KPWritingAssistant-web/scripts/backfill-article-topic-tags.mjs`（语义归类 + 缺失主题种子补齐，幂等执行）。
+  - 新增迁移脚本：`KPWritingAssistant-web/supabase/migrations/012_backfill_article_topic_tags.sql`（与运行脚本同策略，便于后续环境复制）。
+  - 已执行 `npm run kb:backfill:article-topics`：结果 `updated=10`、`inserted=5`。
+  - 回填后审计：active article 共 `29` 条，`withTags=15`，填充率 `51.72%`，7 个目标主题标签全部存在。
+  - 回填后 API 验证：`/api/recommended-phrases?essayType=article&grouped=true` 返回 `topicSectionCount=7`，且 `basicCount=0`。
+  - 门禁复验：`npm run lint`（0 error, 13 warning）、`npm test -- --runInBand`（`34/34` suites）、`npm run build`（通过）。
 
 ## 待验证
 
-- 知识库 article 类型线上 `topic_tags` 的真实填充率与映射命中率（本地连真实数据抽样结果显示 `topicSections=[]`，当前素材大多仍走 `category` 回退）
-- 是否需要补一轮数据侧 `topic_tags` 回填（SQL/脚本）以提升 article 主题分组命中率
+- 无（本任务范围内待办已全部完成）
 
 ## 本轮执行命令（2026-04-18）
 
@@ -141,12 +148,17 @@
 - `ssh root@8.136.127.32 'cd /var/www/kp-writing/KPWritingAssistant-web && git pull --ff-only origin main'`（服务器已到 `aa20e87`）
 - `ssh root@8.136.127.32 'cd /var/www/kp-writing/KPWritingAssistant-web && set -a && . ./.env.production && set +a && docker compose up -d --build'`（容器重建并启动）
 - `ssh root@8.136.127.32 'curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000'`（`200`）
+- `npm run kb:backfill:article-topics`（输出：`updated=10`, `inserted=5`）
+- `node -e ...`（回填后审计：`total=29`, `withTags=15`, `fillRate=51.72%`, `uniqueTags=7`）
+- `curl -H 'Cookie: x-e2e-user-id=00000000-0000-0000-0000-000000000001' 'http://localhost:3000/api/recommended-phrases?essayType=article&grouped=true'` + `node -e ...`（`topicSectionCount=7`, `basicCount=0`）
+- `npm run lint`（0 error，13 warning）
+- `npm test -- --runInBand`（`34 passed`）
+- `npm run build`（通过）
 
 ## 下一位 agent 应先做什么
 
-1. 用真实账号在页面回归“编辑范文→保存”“重新生成范文”“知识库文章分组”三条关键路径，补齐 E2E 证据。
-2. 评估并执行 `recommended_phrases.topic_tags` 数据回填（优先 article），让主题分组从“代码可用”提升到“数据可见”。
-3. 回填后补一条包含真实数据断言的 E2E/API 回归，更新 `current-state.md` 与 `decision-log.md`。
+1. 新任务开始前先阅读 `docs/harness-engineering/development-spec.md` 和 handoff 三件套。
+2. 若要继续提升知识库质量，优先补齐 `email/story` 的主题化素材与 `topic_tags`，保持与 article 一致的数据治理方式。
 
 ---
 
