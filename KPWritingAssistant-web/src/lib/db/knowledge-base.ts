@@ -11,7 +11,7 @@ export async function getKnowledgeBaseSections(
 
   let sectionsQuery = supabase
     .from('kb_sections')
-    .select('id, slug, label_zh, label_en, description, sort_order, is_active, created_at')
+    .select('id, category_slug, slug, label_zh, label_en, description, sort_order, is_active, created_at')
     .eq('is_active', true)
     .order('sort_order', { ascending: true });
 

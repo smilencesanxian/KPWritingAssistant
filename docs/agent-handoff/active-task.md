@@ -4,7 +4,7 @@
 
 ## 状态
 
-`completed`
+`in_progress`
 
 ## 当前负责方
 
@@ -12,44 +12,36 @@
 
 ## 目标
 
-知识库数据模型重建（方案B）已完成：按 HTML v2.0 规范重建知识库，实现三层层级展示（作文类别 → 主题分类 → 素材），解决文章类未按主题分类的问题。
+将当前仓库最新代码 `b3f7315` 部署到线上服务器 `8.136.127.32`，并完成部署后验收。
 
-## 已完成的工作
+## 范围
 
-### Phase 1: 数据库迁移 + 种子数据
-- ✅ 迁移文件 `013_kb_tables.sql` — kb_categories / kb_sections / kb_materials 三张新表
-- ✅ 迁移文件 `014_kb_highlights_kb_material_id.sql` — highlights 扩展列
-- ✅ 种子数据文件 `supabase/seed/kb_seed_data.sql` — 4 categories, 19 sections, 141 materials
+### In scope
+- 让服务器上的 `/var/www/kp-writing/KPWritingAssistant-web` 对齐到 `origin/main`
+- 重新构建并启动 Docker 容器
+- 验证服务器代码版本、容器状态和 `127.0.0.1:3000` 可用性
+- 更新交接文档，记录本次部署结果
 
-### Phase 2: 类型定义 + 数据层
-- ✅ 类型定义 `src/types/knowledge-base.ts` — KbCategory, KbSection, KbMaterial, KbMaterialWithMeta, KbSectionWithItems, KB_TABS
-- ✅ 知识库数据层 `src/lib/db/knowledge-base.ts` — getKnowledgeBaseSections, collectKbMaterial, isKbMaterialCollected, tryLinkToKbMaterial, getKbCategories
-- ✅ 修改 highlights.ts — tryLinkToKnowledgeBase 支持 kb_material_id，addHighlightManually 支持 kb_material_id
-- ✅ 修改 database.ts — Highlight 接口添加 kb_material_id 字段
+### Out of scope
+- 不修改业务代码
+- 不做数据库迁移
+- 不新增功能或重构
 
-### Phase 3: API 层
-- ✅ 新建 API `/api/knowledge-base/sections` — GET 查询接口，支持 categorySlug 和 searchQuery 参数
-- ✅ 修改收藏 API `/api/recommended-phrases/[id]/collect` — 同时支持 kb_material_id 和 recommended_phrase_id
-- ✅ 修改推荐 API `/api/knowledge-base/recommend` — 支持 toolbox 类型
+## 验证计划
 
-### Phase 4: 前端组件
-- ✅ 修改 `KnowledgeItem` 组件 — 使用 KbMaterialWithMeta 类型，显示 meaning_zh、sub_category、可展开 example_sentence
-- ✅ 修改 `CategorySection` 组件 — 使用 KbSectionWithItems 类型，显示 description
-- ✅ 修改 `KnowledgeBaseContent` 组件 — 切换到新 API，4 个 tabs（+素材库），搜索支持 meaning_zh 和 sub_category
+1. 服务器仓库 `HEAD` 必须等于 `b3f7315`
+2. `docker compose ps` 必须显示 `kpwritingassistant-web-app-1` 正常运行
+3. `curl http://127.0.0.1:3000` 必须返回 `200`
 
-### Phase 5: 验证
-- ✅ TypeScript 编译通过
-- ✅ npm run build 成功
+## 已完成
+
+- 已确认本地仓库 `HEAD` 为 `b3f7315`
+- 已在服务器执行 `git pull --ff-only`
+- 已触发远端 Docker 重建流程
 
 ## 下一步
 
-部署到数据库前需要执行以下命令：
-1. 应用数据库迁移：`supabase migration up`（先执行 013，再执行 014）
-2. 执行种子数据：`supabase db reset --seed supabase/seed/kb_seed_data.sql`
-
-部署后需要在浏览器中验证：
-- 4 个 tabs 正确显示
-- 文章类按 7 个主题分组
-- 搜索功能正常（英文、中文、子分类）
-- 收藏功能正常
-- 例句展开功能正常
+1. 等待远端镜像构建和容器重启完成
+2. 复查容器状态与端口可用性
+3. 更新 `current-state.md` 和 `decision-log.md`（如有必要）
+4. 将本次部署结果写回本文件并结束任务
