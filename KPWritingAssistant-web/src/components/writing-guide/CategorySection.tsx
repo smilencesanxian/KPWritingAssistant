@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { KnowledgeSection } from '@/lib/db/recommended-phrases';
+import { KbSectionWithItems } from '@/types/knowledge-base';
 import KnowledgeItem from './KnowledgeItem';
 
 interface CategorySectionProps {
-  section: KnowledgeSection;
+  section: KbSectionWithItems;
   onCollect: (id: string) => void;
   onDelete: (id: string) => void;
   isCollecting?: string | null;
@@ -24,15 +24,18 @@ export default function CategorySection({
   return (
     <div
       className="bg-white rounded-lg border border-neutral-200 overflow-hidden"
-      data-testid={`category-section-${section.category}`}
+      data-testid={`category-section-${section.slug}`}
     >
       {/* Header - Clickable for accordion */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between px-4 py-3 bg-neutral-50 hover:bg-neutral-100 transition-colors"
       >
-        <span className="font-medium text-neutral-800">{section.category_label}</span>
-        <span className="text-sm text-neutral-500">{section.items.length} 条</span>
+        <span className="font-medium text-neutral-800">{section.label_zh}</span>
+        {section.description && (
+          <span className="text-sm text-neutral-500 ml-2">{section.description}</span>
+        )}
+        <span className="text-sm text-neutral-500">{section.materials.length} 条</span>
         <svg
           className={`w-5 h-5 text-neutral-400 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
           fill="none"
@@ -46,7 +49,7 @@ export default function CategorySection({
       {/* Items list */}
       {isExpanded && (
         <div className="animate-in slide-in-from-top-1 duration-200">
-          {section.items.map((item) => (
+          {section.materials.map((item) => (
             <KnowledgeItem
               key={item.id}
               item={item}

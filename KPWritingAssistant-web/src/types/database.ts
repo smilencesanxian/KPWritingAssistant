@@ -96,6 +96,7 @@ export interface Highlight {
   // v1.2.1 新增字段
   knowledge_essay_type: string | null;
   // v1.2.3 新增字段
+  kb_material_id: string | null;
   usage_count: number;
 }
 

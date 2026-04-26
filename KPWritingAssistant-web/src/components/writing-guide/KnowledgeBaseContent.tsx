@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { KnowledgeSection } from '@/lib/db/recommended-phrases';
+import { KbSectionWithItems } from '@/types/knowledge-base';
 import CategorySection from './CategorySection';
 import AddKnowledgeModal from './AddKnowledgeModal';
 
@@ -14,13 +14,14 @@ const tabs = [
   { id: 'email', label: '邮件' },
   { id: 'article', label: '文章' },
   { id: 'story', label: '故事' },
+  { id: 'toolbox', label: '素材库' },
 ] as const;
 
 type TabType = typeof tabs[number]['id'];
 
 export default function KnowledgeBaseContent() {
   const [activeTab, setActiveTab] = useState<TabType>('email');
-  const [sections, setSections] = useState<KnowledgeSection[]>([]);
+  const [sections, setSections] = useState<KbSectionWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -34,7 +35,8 @@ export default function KnowledgeBaseContent() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/recommended-phrases?essayType=${activeTab}&grouped=true`);
+      const categoryParam = activeTab ? `&categorySlug=${activeTab}` : '';
+      const res = await fetch(`/api/knowledge-base/sections?${categoryParam}`);
       if (!res.ok) {
         if (res.status === 401) {
           setError('请先登录');
@@ -71,12 +73,12 @@ export default function KnowledgeBaseContent() {
         method: 'POST',
       });
       if (res.ok) {
-        // Optimistic update
+        const data = await res.json();
         setSections((prev) =>
           prev.map((section) => ({
             ...section,
-            items: section.items.map((item) =>
-              item.id === id ? { ...item, is_collected: true } : item
+            materials: section.materials.map((item) =>
+              item.id === id ? { ...item, is_collected: true, highlight_id: data.highlight?.id || null } : item
             ),
           }))
         );
@@ -103,14 +105,13 @@ export default function KnowledgeBaseContent() {
         method: 'DELETE',
       });
       if (res.ok) {
-        // Remove from local state
         setSections((prev) =>
           prev
             .map((section) => ({
               ...section,
-              items: section.items.filter((item) => item.highlight_id !== highlightId),
+              materials: section.materials.filter((item) => item.highlight_id !== highlightId),
             }))
-            .filter((section) => section.items.length > 0)
+            .filter((section) => section.materials.length > 0)
         );
         setToast({ message: '已删除', type: 'success' });
       } else {
@@ -173,15 +174,17 @@ export default function KnowledgeBaseContent() {
     ? sections
         .map((section) => ({
           ...section,
-          items: section.items.filter((item) =>
-            item.text.toLowerCase().includes(searchQuery.toLowerCase())
+          materials: section.materials.filter((item) =>
+            item.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (item.meaning_zh && item.meaning_zh.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (item.sub_category && item.sub_category.toLowerCase().includes(searchQuery.toLowerCase()))
           ),
         }))
-        .filter((section) => section.items.length > 0)
+        .filter((section) => section.materials.length > 0)
     : sections;
 
   // Check if all sections are empty
-  const isEmpty = filteredSections.length === 0 || filteredSections.every((s) => s.items.length === 0);
+  const isEmpty = filteredSections.length === 0 || filteredSections.every((s) => s.materials.length === 0);
 
   return (
     <>
@@ -298,7 +301,7 @@ export default function KnowledgeBaseContent() {
         <div className="space-y-4">
           {filteredSections.map((section) => (
             <CategorySection
-              key={section.category}
+              key={section.slug}
               section={section}
               onCollect={handleCollect}
               onDelete={handleDelete}

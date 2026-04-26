@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>生产验证报告 - 2026-04-19（登录态补齐）</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #fff;
+      --text: #1f2937;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --pass-bg: #dcfce7;
+      --pass-text: #166534;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; font-family: "PingFang SC","Microsoft YaHei",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; background: var(--bg); color: var(--text); }
+    .wrap { max-width: 1120px; margin: 0 auto; }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    .meta { color: var(--muted); margin-bottom: 16px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+    th, td { border: 1px solid var(--line); padding: 10px; text-align: left; vertical-align: top; }
+    th { background: #f9fafb; }
+    .tag { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .pass { background: var(--pass-bg); color: var(--pass-text); }
+    code, pre { font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size: 12px; }
+    pre { background: #0b1020; color: #d5e4ff; padding: 12px; border-radius: 10px; overflow: auto; }
+    ul { margin: 8px 0 0 20px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>KPWritingAssistant 生产验证报告（登录态补齐版）</h1>
+    <div class="meta">
+      验证日期：2026-04-19（Asia/Shanghai）<br />
+      验证范围：<code>88d36de</code> 上线结果，含真实用户注册/登录后的页面与接口验证
+    </div>
+
+    <div class="card">
+      <h2>总体结论</h2>
+      <ul>
+        <li>本次验证项全部通过（含真实用户登录态操作）。</li>
+        <li>文章知识库主题分组、批改页 UI 调整、重新生成链路在生产环境均已验证生效。</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>验证明细</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>检查项</th>
+            <th>状态</th>
+            <th>证据</th>
+            <th>结论</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>部署版本一致性</td>
+            <td><span class="tag pass">PASS</span></td>
+            <td><code>origin/main=88d36de</code>，服务器 <code>HEAD=88d36de</code></td>
+            <td>生产代码已是最新版本。</td>
+          </tr>
+          <tr>
+            <td>服务可用性</td>
+            <td><span class="tag pass">PASS</span></td>
+            <td><code>curl http://127.0.0.1:3000 => 200</code></td>
+            <td>服务可用。</td>
+          </tr>
+          <tr>
+            <td>真实用户注册与登录</td>
+            <td><span class="tag pass">PASS</span></td>
+            <td>
+              注册账号：<code>kp.autotest.20260419+01@gmail.com</code><br />
+              注册后跳转：<code>/login?registered=1</code><br />
+              登录后落地页：<code>/</code>
+            </td>
+            <td>已完成真实注册与登录流程。</td>
+          </tr>
+          <tr>
+            <td>article topic_tags 数据审计</td>
+            <td><span class="tag pass">PASS</span></td>
+            <td><code>total=29</code>，<code>withTags=15</code>，<code>fillRate=51.72%</code>；7个主题标签全覆盖</td>
+            <td>生产数据已具备主题分组基础。</td>
+          </tr>
+          <tr>
+            <td>登录态 grouped API 结果</td>
+            <td><span class="tag pass">PASS</span></td>
+            <td>
+              <code>GET /api/recommended-phrases?essayType=article&grouped=true => 200</code><br />
+              <code>topicSectionCount=7</code>，<code>basicCount=0</code>
+            </td>
+            <td>主题分组与 basic 过滤规则生效。</td>
+          </tr>
+          <tr>
+            <td>写作知识库页面（文章Tab）</td>
+            <td><span class="tag pass">PASS</span></td>
+            <td>页面文本命中：<code>地点描述/困难事物/人际友谊/居住环境/敬佩的人/兴趣爱好/读书</code></td>
+            <td>7个主题分组在真实登录态页面可见。</td>
+          </tr>
+          <tr>
+            <td>批改页 UI 调整</td>
+            <td><span class="tag pass">PASS</span></td>
+            <td>
+              验证页：<code>/corrections/749c6d93-313e-4335-965c-3a4d476ab35b</code><br />
+              <code>hasStep6=true</code><br />
+              <code>hasUploadOriginalImageText=false</code><br />
+              <code>hasImprovementSuggestionsCard=false</code>
+            </td>
+            <td>“去原图、去独立改进建议卡片、保留Step6”符合预期。</td>
+          </tr>
+          <tr>
+            <td>重新生成范文接口链路</td>
+            <td><span class="tag pass">PASS</span></td>
+            <td>
+              页面触发：<code>POST /api/model-essays/20215b16-8d20-48c6-bcad-964cd69eeb1f/regenerate => 200 OK</code><br />
+              提交后：弹窗关闭、无错误提示、正文词数更新为 <code>116</code> 词
+            </td>
+            <td>重新生成成功，未复现 schema relationship 报错。</td>
+          </tr>
+          <tr>
+            <td>日志异常扫描（本次验证窗口）</td>
+            <td><span class="tag pass">PASS</span></td>
+            <td>近20分钟未检出 <code>Failed to get preference notes</code> / <code>schema cache</code> / relationship 报错。</td>
+            <td>关键异常未出现。</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>关键原始输出摘录</h2>
+      <pre>network proof
+[GET] /api/recommended-phrases?essayType=email&grouped=true => 200
+[GET] /api/recommended-phrases?essayType=article&grouped=true => 200
+[POST] /api/model-essays/20215b16-8d20-48c6-bcad-964cd69eeb1f/regenerate => 200
+
+browser evaluate (article grouped API)
+{
+  "status": 200,
+  "sectionCount": 14,
+  "topicSectionCount": 7,
+  "topicSectionKeys": [
+    "article_topic:favorite_place",
+    "article_topic:difficult_thing",
+    "article_topic:friendship",
+    "article_topic:living_environment",
+    "article_topic:admired_person",
+    "article_topic:hobby",
+    "article_topic:reading"
+  ],
+  "basicCount": 0
+}
+
+browser evaluate (correction page)
+{
+  "hasStep6": true,
+  "hasUploadOriginalImageText": false,
+  "hasImprovementSuggestionsCard": false,
+  "wordLine": "正文 116 词"
+}</pre>
+    </div>
+
+    <div class="card">
+      <h2>附注</h2>
+      <ul>
+        <li>测试账号为本次验证新建，仅用于生产链路校验，可在后续由管理员停用或清理。</li>
+        <li><code>basicCount=4</code> 是数据库原始 article 数据中 basic 条目数量；接口返回已正确过滤为 <code>basicCount=0</code>。</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

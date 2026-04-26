@@ -408,6 +408,41 @@ export async function getRecommendation(
 ): Promise<KnowledgeItem[]> {
   const supabase = await createClient();
 
+  if (essayType === 'toolbox') {
+    const { data: collectedKb } = await supabase
+      .from('highlights_library')
+      .select('kb_material_id')
+      .eq('user_id', userId)
+      .eq('source', 'system')
+      .not('kb_material_id', 'is', null);
+
+    const collectedKbIds = new Set((collectedKb ?? []).map((h) => h.kb_material_id as string));
+
+    let kbQuery = supabase
+      .from('kb_materials')
+      .select('*')
+      .eq('is_active', true)
+      .limit(30);
+
+    const { data: materials, error: kbError } = await kbQuery;
+    if (kbError) throw new Error(`Failed to get kb recommendations: ${kbError.message}`);
+
+    const uncollected = (materials ?? []).filter((m) => !collectedKbIds.has(m.id));
+    const shuffled = uncollected.sort(() => Math.random() - 0.5).slice(0, 2);
+
+    return shuffled.map((material) => ({
+      id: material.id,
+      text: material.text,
+      type: material.type,
+      level: null,
+      category: 'toolbox',
+      source: 'system' as const,
+      is_collected: false,
+      is_in_highlights: false,
+      usage_count: 0,
+    }));
+  }
+
   // 获取用户已收藏的 recommended_phrase_id 列表
   const { data: collected } = await supabase
     .from('highlights_library')

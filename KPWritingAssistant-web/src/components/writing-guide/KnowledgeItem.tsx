@@ -1,9 +1,10 @@
 'use client';
 
-import { KnowledgeItem as KnowledgeItemType } from '@/lib/db/recommended-phrases';
+import { useState } from 'react';
+import { KbMaterialWithMeta } from '@/types/knowledge-base';
 
 interface KnowledgeItemProps {
-  item: KnowledgeItemType;
+  item: KbMaterialWithMeta;
   onCollect: (id: string) => void;
   onDelete: (id: string) => void;
   isCollecting?: boolean;
@@ -17,38 +18,20 @@ export default function KnowledgeItem({
   isCollecting,
   isDeleting,
 }: KnowledgeItemProps) {
+  const [showExample, setShowExample] = useState(false);
+
   const handleCollect = () => {
-    if (!item.is_collected && item.source === 'system') {
+    if (!item.is_collected) {
       onCollect(item.id);
     }
   };
 
   const handleDelete = () => {
-    if (item.source === 'user' && item.highlight_id) {
+    if (item.highlight_id) {
       onDelete(item.highlight_id);
     }
   };
 
-  // Get level badge
-  const getLevelBadge = () => {
-    if (item.level === 'basic') {
-      return (
-        <span className="text-xs px-2 py-0.5 rounded bg-neutral-100 text-neutral-600 shrink-0">
-          [基础]
-        </span>
-      );
-    }
-    if (item.level === 'advanced') {
-      return (
-        <span className="text-xs px-2 py-0.5 rounded bg-orange-100 text-orange-600 shrink-0">
-          [高级★]
-        </span>
-      );
-    }
-    return null;
-  };
-
-  // Get type badge
   const getTypeBadge = () => {
     const typeLabels: Record<string, string> = {
       vocabulary: '词汇',
@@ -64,84 +47,91 @@ export default function KnowledgeItem({
 
   return (
     <div
-      className="flex items-center gap-3 py-3 px-4 border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50 transition-colors"
+      className="flex items-start gap-3 py-3 px-4 border-b border-neutral-100 last:border-b-0 hover:bg-neutral-50 transition-colors"
       data-testid={`knowledge-item-${item.id}`}
     >
-      {/* Level Badge */}
-      {getLevelBadge()}
+      <div className="flex-1">
+        {/* Text content */}
+        <span className="text-base text-neutral-800">{item.text}</span>
 
-      {/* Star indicator if in highlights */}
-      {item.is_in_highlights && (
-        <span className="text-yellow-500 shrink-0" title="已在亮点库中">
-          🌟
-        </span>
-      )}
+        {/* Meaning (Chinese) */}
+        {item.meaning_zh && (
+          <span className="block text-sm text-neutral-500 mt-1">{item.meaning_zh}</span>
+        )}
 
-      {/* Text content */}
-      <span className="flex-1 text-neutral-800">{item.text}</span>
+        {/* Sub-category tag */}
+        {item.sub_category && (
+          <span className="inline-block text-xs px-2 py-0.5 mt-1 rounded bg-primary-50 text-primary-600">
+            {item.sub_category}
+          </span>
+        )}
 
-      {/* Usage count badge */}
-      {(item.usage_count ?? 0) > 0 && (
-        <span
-          className="text-xs text-neutral-400 shrink-0"
-          title="已被注入范文生成的次数"
-        >
-          用{item.usage_count}次
-        </span>
-      )}
+        {/* Example sentence - expandable */}
+        {item.example_sentence && (
+          <div className="mt-2">
+            <button
+              onClick={() => setShowExample(!showExample)}
+              className="text-xs text-primary-600 hover:underline"
+            >
+              {showExample ? '收起例句' : '查看例句'}
+            </button>
+            {showExample && (
+              <div className="mt-2 text-sm text-neutral-600 bg-neutral-50 p-2 rounded">
+                <p>{item.example_sentence}</p>
+                {item.example_source && (
+                  <span className="text-xs text-neutral-400 block mt-1">
+                    {item.example_source}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Type Badge */}
-      {getTypeBadge()}
+      <div className="flex flex-col items-center gap-2 ml-2">
+        {getTypeBadge()}
 
-      {/* Action buttons */}
-      {item.source === 'system' ? (
-        /* System item: show collect button */
-        item.is_collected ? (
-          <button
-            disabled
-            className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium cursor-default"
-            data-testid={`collect-button-${item.id}`}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            已收藏
-          </button>
-        ) : (
-          <button
-            onClick={handleCollect}
-            disabled={isCollecting}
-            className="flex items-center gap-1 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-            data-testid={`collect-button-${item.id}`}
-          >
-            {isCollecting ? (
-              <span className="w-4 h-4 border-2 border-primary-300 border-t-transparent rounded-full animate-spin" />
-            ) : (
+        {/* Star indicator if collected */}
+        {item.is_collected && (
+          <span className="text-yellow-500 shrink-0" title="已收藏">
+            🌟
+          </span>
+        )}
+
+        {/* Action buttons */}
+        <div className="flex gap-1">
+          {item.is_collected ? (
+            <button
+              disabled
+              className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-sm font-medium cursor-default"
+              data-testid={`collect-button-${item.id}`}
+            >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-            )}
-            收藏
-          </button>
-        )
-      ) : (
-        /* User item: show delete button */
-        <button
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="p-2 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-          data-testid={`delete-button-${item.id}`}
-          title="删除"
-        >
-          {isDeleting ? (
-            <span className="w-4 h-4 block border-2 border-neutral-300 border-t-transparent rounded-full animate-spin" />
+              已收藏
+            </button>
           ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <button
+              onClick={handleCollect}
+              disabled={isCollecting}
+              className="flex items-center gap-1 px-3 py-1.5 bg-primary-50 text-primary-600 hover:bg-primary-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
+              data-testid={`collect-button-${item.id}`}
+            >
+              {isCollecting ? (
+                <span className="w-4 h-4 border-2 border-primary-300 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              )}
+              收藏
+            </button>
           )}
-        </button>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import { collectPhrase, isCollected } from '@/lib/db/recommended-phrases';
-import { getRecommendedPhrases } from '@/lib/db/recommended-phrases';
+import { collectPhrase, isCollected, getRecommendedPhrases } from '@/lib/db/recommended-phrases';
+import { collectKbMaterial, isKbMaterialCollected, getKnowledgeBaseSections } from '@/lib/db/knowledge-base';
 import { NextRequest } from 'next/server';
 
 interface RouteParams {
@@ -15,37 +15,57 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { id: phraseId } = await params;
+  const { id: itemId } = await params;
 
-  if (!phraseId) {
-    return Response.json({ error: 'Phrase ID is required' }, { status: 400 });
+  if (!itemId) {
+    return Response.json({ error: 'Item ID is required' }, { status: 400 });
   }
 
   try {
-    // Check if phrase exists
+    // Try to find in recommended_phrases first (backward compatibility)
     const phrases = await getRecommendedPhrases({});
-    const phrase = phrases.find(p => p.id === phraseId);
+    const phrase = phrases.find(p => p.id === itemId);
 
-    if (!phrase) {
-      return Response.json({ error: 'Recommended phrase not found' }, { status: 404 });
+    if (phrase) {
+      const alreadyCollected = await isCollected(user.id, itemId);
+      const highlight = await collectPhrase({
+        userId: user.id,
+        phraseId: itemId,
+        text: phrase.text,
+        type: phrase.type,
+      });
+
+      const status = alreadyCollected ? 200 : 201;
+      return Response.json({ highlight }, { status });
     }
 
-    // Check if already collected (idempotency)
-    const alreadyCollected = await isCollected(user.id, phraseId);
+    // Try to find in kb_materials
+    const sections = await getKnowledgeBaseSections(undefined, user.id, undefined);
+    let material = null;
+    for (const section of sections) {
+      const found = section.materials.find(m => m.id === itemId);
+      if (found) {
+        material = found;
+        break;
+      }
+    }
 
-    // Collect the phrase
-    const highlight = await collectPhrase({
+    if (!material) {
+      return Response.json({ error: 'Knowledge material not found' }, { status: 404 });
+    }
+
+    const alreadyCollected = await isKbMaterialCollected(user.id, itemId);
+    const highlight = await collectKbMaterial({
       userId: user.id,
-      phraseId,
-      text: phrase.text,
-      type: phrase.type,
+      materialId: itemId,
+      text: material.text,
+      type: material.type,
     });
 
-    // Return 200 if already collected, 201 if newly created
     const status = alreadyCollected ? 200 : 201;
     return Response.json({ highlight }, { status });
   } catch (err) {
-    console.error('Failed to collect phrase:', err);
+    console.error('Failed to collect item:', err);
     return Response.json({ error: '收藏失败，请重试' }, { status: 500 });
   }
 }

@@ -29,4 +29,5 @@ automation-logs/
 # Test results
 KPWritingAssistant-web/test-results/
 交流记录.txt
+交流记录-codex.md
 .claude/

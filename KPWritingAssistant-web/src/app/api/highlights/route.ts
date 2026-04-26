@@ -36,14 +36,33 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  let body: unknown;
+  let body: Record<string, string | undefined>;
   try {
-    body = await request.json();
+    body = await request.json() as Record<string, string | undefined>;
   } catch {
     return Response.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
 
   const { text, type, knowledge_essay_type } = body as Record<string, unknown>;
+
+  // Extract IDs for proper typing
+  let recommendedPhraseId: string | undefined;
+  let kbMaterialId: string | undefined;
+
+  // Check if kb_material_id was provided (new format)
+  if ('kb_material_id' in body && body.kb_material_id) {
+    kbMaterialId = body.kb_material_id as string | undefined;
+  } else {
+    // Check if recommended_phrase_id was provided (old format)
+    if ('recommended_phrase_id' in body && body.recommended_phrase_id) {
+      recommendedPhraseId = body.recommended_phrase_id as string | undefined;
+    }
+  }
+
+  // Validate at least one ID is provided
+  if (!recommendedPhraseId && !kbMaterialId) {
+    return Response.json({ error: '必须提供 recommended_phrase_id 或 kb_material_id' }, { status: 400 });
+  }
 
   if (!text || typeof text !== 'string' || text.trim() === '') {
     return Response.json({ error: '亮点内容不能为空' }, { status: 400 });
@@ -65,11 +84,23 @@ export async function POST(request: NextRequest) {
 
   try {
     // Try to link to knowledge base (pre-link on write)
-    const recommendedPhraseId = await tryLinkToKnowledgeBase(text.trim(), supabase);
+    const linkResult = await tryLinkToKnowledgeBase(text.trim(), supabase);
+
+    let finalRecommendedPhraseId: string | undefined;
+    let finalKbMaterialId: string | undefined;
+
+    if (linkResult) {
+      if (linkResult.is_kb_material) {
+        finalKbMaterialId = linkResult.id;
+      } else {
+        finalRecommendedPhraseId = linkResult.id;
+      }
+    }
 
     const highlight = await addHighlightManually(user.id, text.trim(), type, {
       knowledge_essay_type: knowledge_essay_type as 'email' | 'article' | 'story' | 'general' | undefined,
-      recommended_phrase_id: recommendedPhraseId ?? undefined,
+      recommended_phrase_id: finalRecommendedPhraseId ?? undefined,
+      kb_material_id: finalKbMaterialId ?? undefined,
     });
     return Response.json({ highlight }, { status: 201 });
   } catch (err) {

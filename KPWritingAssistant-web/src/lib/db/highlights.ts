@@ -6,6 +6,7 @@ export interface CreateHighlightInput {
   type: 'vocabulary' | 'phrase' | 'sentence';
   source?: 'user' | 'system';
   recommended_phrase_id?: string;
+  kb_material_id?: string;
 }
 
 export async function createHighlights(
@@ -37,10 +38,14 @@ export async function createHighlights(
   // Pre-link each highlight to knowledge base before writing
   const highlightsWithLinks = await Promise.all(
     uniqueHighlights.map(async (h) => {
-      const phraseId = h.recommended_phrase_id ?? await tryLinkToKnowledgeBase(h.text, supabase);
+      const linkResult = h.recommended_phrase_id
+        ? { id: h.recommended_phrase_id, is_kb_material: false }
+        : await tryLinkToKnowledgeBase(h.text, supabase);
+
       return {
         ...h,
-        recommended_phrase_id: phraseId,
+        recommended_phrase_id: linkResult?.is_kb_material ? null : linkResult?.id,
+        kb_material_id: linkResult?.is_kb_material ? linkResult.id : null,
       };
     })
   );
@@ -52,6 +57,7 @@ export async function createHighlights(
     source_submission_id: sourceSubmissionId ?? null,
     source: h.source ?? 'user',
     recommended_phrase_id: h.recommended_phrase_id ?? null,
+    kb_material_id: h.kb_material_id ?? null,
   }));
 
   const { data, error } = await supabase
@@ -145,6 +151,7 @@ export async function addHighlightManually(
   options?: {
     knowledge_essay_type?: 'email' | 'article' | 'story' | 'general';
     recommended_phrase_id?: string;
+    kb_material_id?: string;
   }
 ): Promise<Highlight> {
   const supabase = await createClient();
@@ -168,6 +175,9 @@ export async function addHighlightManually(
     }
     if (options?.recommended_phrase_id !== undefined && existing.recommended_phrase_id !== options.recommended_phrase_id) {
       updates.recommended_phrase_id = options.recommended_phrase_id;
+    }
+    if (options?.kb_material_id !== undefined && existing.kb_material_id !== options.kb_material_id) {
+      updates.kb_material_id = options.kb_material_id;
     }
 
     if (Object.keys(updates).length > 0) {
@@ -290,23 +300,37 @@ export async function incrementHighlightUsageCount(ids: string[]): Promise<void>
 export async function tryLinkToKnowledgeBase(
   text: string,
   supabaseClient?: Awaited<ReturnType<typeof createClient>>
-): Promise<string | null> {
+): Promise<{ id: string; is_kb_material: boolean } | null> {
   const supabase = supabaseClient ?? (await createClient());
 
   const trimmedText = text.trim();
   if (!trimmedText) return null;
 
-  // 使用 ilike 进行大小写不敏感匹配，但要求完整文本匹配
-  const { data, error } = await supabase
+  const { data: kbData, error: kbError } = await supabase
+    .from('kb_materials')
+    .select('id')
+    .ilike('text', trimmedText)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (kbError) {
+    throw new Error(`Failed to link to kb materials: ${kbError.message}`);
+  }
+
+  if (kbData) {
+    return { id: kbData.id, is_kb_material: true };
+  }
+
+  const { data: rpData, error: rpError } = await supabase
     .from('recommended_phrases')
     .select('id')
     .ilike('text', trimmedText)
     .eq('is_active', true)
     .maybeSingle();
 
-  if (error) {
-    throw new Error(`Failed to link to knowledge base: ${error.message}`);
+  if (rpError) {
+    throw new Error(`Failed to link to recommended phrases: ${rpError.message}`);
   }
 
-  return data?.id ?? null;
+  return rpData ? { id: rpData.id, is_kb_material: false } : null;
 }
