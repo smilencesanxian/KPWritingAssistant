@@ -1,6 +1,6 @@
 # 当前状态
 
-最后更新：2026-04-19
+最后更新：2026-04-26
 
 ## 项目快照
 
@@ -65,9 +65,10 @@ npm run build
 
 ## 线上部署状态
 
-- 已将当前最新代码部署到服务器 `8.136.127.32` 的 `/var/www/kp-writing/KPWritingAssistant-web`
-- 已在服务器目录内执行 `set -a && . ./.env.production && set +a && docker compose up -d --build`
+- 已将当前最新代码 `1b796ae` 部署到服务器 `8.136.127.32` 的 `/var/www/kp-writing/KPWritingAssistant-web`
+- 已在服务器目录内执行 `set -a && . ./.env.production && set +a && docker compose up -d --build --force-recreate`
 - 当前容器 `kpwritingassistant-web-app-1` 运行正常，`127.0.0.1:3000` 返回 `200`
+- 本次部署修复了 `src/lib/db/knowledge-base.ts` 中 `kb_sections` 查询漏选 `category_slug` 的问题，服务器生产构建已验证通过
 
 ## 文档语言约定
 

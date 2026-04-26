@@ -49,3 +49,8 @@
 - `recommended_phrases` 的 article `topic_tags` 治理采用“先审计再回填”的固定流程：先统计填充率与主题命中，再执行幂等回填脚本，最后用 API 断言验证分组效果。
 - 新增可执行回填入口 `npm run kb:backfill:article-topics`，脚本位于 `KPWritingAssistant-web/scripts/backfill-article-topic-tags.mjs`，默认从 `.env.local` 读取 `SUPABASE_SERVICE_ROLE_KEY` 并直接回写数据库。
 - 同步新增 `KPWritingAssistant-web/supabase/migrations/012_backfill_article_topic_tags.sql` 作为 SQL 版回填基线，确保不同环境可复用同一策略。
+
+## 2026-04-26
+
+- `KPWritingAssistant-web/src/lib/db/knowledge-base.ts` 的 `kb_sections` 查询必须显式包含 `category_slug`，否则生产构建会在 TypeScript 阶段失败。
+- 服务器线上代码已更新到 `1b796ae`，并通过 `set -a && . ./.env.production && set +a && docker compose up -d --build --force-recreate` 重新构建和启动，端口 `3000` 验证通过。
