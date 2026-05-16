@@ -1,6 +1,7 @@
 import {
   buildCorrectionUserPrompt,
   getCorrectionSystemPrompt,
+  getModelEssaySystemPrompt,
 } from './prompts';
 
 describe('AI prompts', () => {
@@ -20,5 +21,15 @@ describe('AI prompts', () => {
     expect(systemPrompt).toContain('Part 2 Story 额外要求');
     expect(systemPrompt).toContain('不得按 Article 标准批改');
     expect(userPrompt).toContain('Part 2 Story');
+  });
+
+  test('Part2 correction prompt should contain step6 bullet format requirement', () => {
+    const systemPrompt = getCorrectionSystemPrompt('part2', 'q1');
+    expect(systemPrompt).toContain('step6');
+  });
+
+  test('Part2 model essay system prompt should contain strict word count self-check instruction', () => {
+    const systemPrompt = getModelEssaySystemPrompt('part2', 'q1');
+    expect(systemPrompt).toContain('必须数词');
   });
 });

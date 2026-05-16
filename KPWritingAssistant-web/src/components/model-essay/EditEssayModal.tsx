@@ -129,6 +129,12 @@ export default function EditEssayModal({
             正文 {wordCountMetrics.wordCount} 词，目标 {wordCountLimits.targetMin}-{wordCountLimits.targetMax}，上限 {wordCountLimits.hardMax}
           </p>
 
+          {!wordCountMetrics.withinHardLimit && (
+            <p className="mt-2 text-xs text-amber-600" data-testid="over-limit-warning">
+              ⚠️ 字数超过{wordCountLimits.hardMax}词上限，建议精简后再保存
+            </p>
+          )}
+
           {error && (
             <p className="mt-3 text-sm text-red-500" data-testid="edit-error">
               {error}
@@ -144,7 +150,7 @@ export default function EditEssayModal({
           <Button
             onClick={handleSave}
             loading={isLoading}
-            disabled={isLoading || !wordCountMetrics.withinHardLimit}
+            disabled={isLoading}
             data-testid="save-edit-button"
           >
             保存这个版本

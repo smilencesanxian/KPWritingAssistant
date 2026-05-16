@@ -40,7 +40,7 @@ describe('EditEssayModal', () => {
     expect(screen.getByText(new RegExp(`正文 ${WORD_COUNT_LIMITS.targetMin} 词`))).toBeInTheDocument();
   });
 
-  it('disables save button when body word count exceeds hard limit', () => {
+  it('shows warning but keeps save button enabled when body word count exceeds hard limit', () => {
     const overLimit = WORD_COUNT_LIMITS.hardMax + 1;
     render(<EditEssayModal {...defaultProps} />);
 
@@ -48,17 +48,19 @@ describe('EditEssayModal', () => {
     fireEvent.change(textarea, { target: { value: repeatWords('long', overLimit) } });
 
     const saveButton = screen.getByTestId('save-edit-button');
-    expect(saveButton).toBeDisabled();
+    expect(saveButton).toBeEnabled();
     expect(screen.getByText(new RegExp(`正文 ${overLimit} 词`))).toBeInTheDocument();
+    expect(screen.getByTestId('over-limit-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('over-limit-warning').textContent).toContain('字数超过');
   });
 
   it('resets content to initialContent when modal reopens after unsaved over-limit edit', () => {
     const { rerender } = render(<EditEssayModal {...defaultProps} />);
 
-    // User types too many words, button becomes disabled
+    // User types too many words, button stays enabled but warning shown
     const textarea = screen.getByTestId('edit-essay-textarea');
     fireEvent.change(textarea, { target: { value: repeatWords('extra', 125) } });
-    expect(screen.getByTestId('save-edit-button')).toBeDisabled();
+    expect(screen.getByTestId('save-edit-button')).toBeEnabled();
 
     // User closes modal (isOpen = false), then reopens (isOpen = true)
     rerender(<EditEssayModal {...defaultProps} isOpen={false} />);

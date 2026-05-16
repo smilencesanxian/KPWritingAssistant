@@ -479,13 +479,11 @@ export function wrapTextWithFontMetrics(
 
   if (structure.salutationLine) {
     lines.push({ text: structure.salutationLine, align: 'left' });
-    lines.push({ text: '', align: 'left' });
   }
 
   appendParagraphs(structure.bodyParagraphs);
 
   if (structure.signoffLines.length > 0) {
-    lines.push({ text: '', align: 'left' });
     lines.push(...structure.signoffLines.map((item) => ({ text: item, align: 'left' as const })));
   }
 

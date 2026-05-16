@@ -555,14 +555,14 @@ describe('Task 27: 弹性分行和词间距调整', () => {
   });
 
   describe('UT-027-011: 邮件格式保留 - 称呼+正文+落款', () => {
-    it('should preserve email structure with paragraph spacing', () => {
+    it('should preserve email structure without empty line tokens', () => {
       const doc = createMockDoc();
       const text = 'Dear Sir or Madam,\n\nI am writing to...\n\nYours faithfully,';
       const lines = wrapTextWithFontMetrics(doc, text, 600, 16, 'GochiHand', 'part1', null, 10);
 
       expect(lines.length).toBeGreaterThan(0);
       expect(lines[0].text).toContain('Dear Sir or Madam');
-      expect(lines.some(line => line.text === '')).toBe(true);
+      expect(lines.some(line => line.text === '')).toBe(false);
       expect(lines[lines.length - 1].text).toContain('Yours faithfully');
     });
   });
@@ -644,7 +644,7 @@ Student`;
       // Should have multiple lines of content
       expect(lines.length).toBeGreaterThanOrEqual(3);
       const emptyLines = lines.filter(line => line.text === '');
-      expect(emptyLines.length).toBeGreaterThan(0);
+      expect(emptyLines.length).toBe(0);
 
       // Each line should have reasonable word count (1-12 words)
       lines.filter(line => line.text !== '').forEach(line => {
