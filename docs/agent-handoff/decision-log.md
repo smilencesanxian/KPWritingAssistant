@@ -60,6 +60,15 @@
 - `run-automation.sh` 不再包含任何硬编码密钥。所有敏感信息（如 `KIMI_API_KEY`）必须通过系统环境变量提供。
 - 在 `run-automation.sh` 中增加了针对 `KIMI_API_KEY` 的空值预检，确保在执行前环境配置正确。
 
+## 2026-05-17
+
+- **Part2 总评分条格式**：`part2ExtraGuidance` 末尾新增「step6 总评格式要求（必须严格遵守）」段，强制模型用 `•` 分条展示改进建议，根因是 guidance 5步与 JSON 格式 6步的编号冲突，导致模型对 Part2 的 step6 格式依从性弱于 Part1。
+- **Part2 范文字数约束强化**：`part2SystemPrompt` 加入"生成后必须数词"指令，`part2UserPromptTemplate` 字数要求改为"字数硬性要求（不可违反）"，因为文章/故事体裁内容压力比邮件大，模型更容易优先内容完整性而非字数限制。
+- **字帖无空行**：`renderer.ts` `wrapTextWithFontMetrics` 移除称呼后和落款前的空白行 token，字帖中所有格子均有文字可供描摹，相应更新 UT-027-011 和 Integration 测试断言（期望空行数为 0）。
+- **编辑范文保存体验**：`EditEssayModal` 保存按钮不再因字数超限而禁用，改为在字数超限时显示 `⚠️ 字数超过120词上限，建议精简后再保存` 的警告文字（data-testid="over-limit-warning"），允许用户自行决定是否保存。
+- **AI 批改超时优化**：`llm.ts` 将 `max_tokens: 4096→2800`、重试 sleep `3000ms→500ms`、每次 LLM 调用新增 15 秒 `AbortSignal` 超时；不改动提示词内容以保留批改质量。
+- **服务器线上代码已更新到 `502f41b`**，通过 `set -a && . ./.env.production && set +a && docker compose up -d --build --force-recreate` 重新构建并启动，端口 `3000` 验证通过。
+
 ## 2026-05-16
 
 - **防回归测试机制**：新建 `src/lib/regression-anchors.test.ts`，专门收录曾经真实出现过的 bug 的最小复现场景，任何后续改动触碰相关逻辑即报红。规则：只收录历史真实 bug，每条标注对应问题和根因，禁止修改断言来绕过测试。
