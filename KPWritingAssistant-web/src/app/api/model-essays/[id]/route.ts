@@ -92,8 +92,8 @@ export async function PUT(
     const historyEntry: EditHistoryItem = {
       timestamp: new Date().toISOString(),
       original: originalContent,
-      edited: user_edited_content,
-      note: user_preference_notes,
+      edited: user_edited_content ?? '',
+      note: user_preference_notes ?? undefined,
     };
 
     // Update the model essay (returns void - no SELECT after UPDATE to avoid RLS issues)

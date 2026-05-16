@@ -2,10 +2,10 @@ import { createClient } from '@/lib/supabase/server';
 import type { ModelEssay, EditHistoryItem, ModelEssaySourceSpan } from '@/types/database';
 
 export interface UpdateModelEssayInput {
-  user_edited_content?: string;
+  user_edited_content?: string | null;
   is_user_edited?: boolean;
   edit_history?: EditHistoryItem[];
-  user_preference_notes?: string;
+  user_preference_notes?: string | null;
   source_spans?: ModelEssaySourceSpan[] | null;
 }
 
