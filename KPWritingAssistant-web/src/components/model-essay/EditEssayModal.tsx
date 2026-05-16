@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Button from '@/components/ui/Button';
 import {
   getModelEssayWordCount,
@@ -31,6 +31,13 @@ export default function EditEssayModal({
   const [error, setError] = useState<string | null>(null);
   const wordCountMetrics = getModelEssayWordCount(content, examPart, questionType);
   const wordCountLimits = getModelEssayWordCountLimits();
+
+  useEffect(() => {
+    if (isOpen) {
+      setContent(initialContent);
+      setError(null);
+    }
+  }, [isOpen, initialContent]);
 
   const handleSave = useCallback(async () => {
     setIsLoading(true);

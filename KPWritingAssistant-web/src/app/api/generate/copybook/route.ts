@@ -101,6 +101,8 @@ export async function POST(request: NextRequest) {
     ? `v7_${fontStyle}@${tracingOpacity}_${contentHash}`
     : `v7_${fontStyle}_${contentHash}`;
 
+  console.log(`[copybook] Content Length: ${essayContent.length}, Hash: ${contentHash}, Key: ${cacheKey}`);
+
   // Cache check: (model_essay_id, template_id, mode, cacheKey)
   const existing = await getCopybookByModelEssayId(model_essay_id, user.id, templateId, copybookMode, cacheKey);
   if (existing) {

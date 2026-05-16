@@ -543,14 +543,14 @@ describe('Task 27: 弹性分行和词间距调整', () => {
     });
   });
 
-  describe('UT-027-010: 多段落保留空行', () => {
-    it('should insert empty lines between paragraphs', () => {
+  describe('UT-027-010: 正文段落间无空行', () => {
+    it('should NOT insert empty lines between body paragraphs', () => {
       const doc = createMockDoc();
       const text = 'First paragraph here.\n\nSecond paragraph here.';
       const lines = wrapTextWithFontMetrics(doc, text, 600, 16, 'GochiHand', undefined, undefined, 10);
 
       const emptyLines = lines.filter(line => line.text === '');
-      expect(emptyLines).toHaveLength(1);
+      expect(emptyLines).toHaveLength(0);
     });
   });
 
@@ -568,13 +568,13 @@ describe('Task 27: 弹性分行和词间距调整', () => {
   });
 
   describe('UT-027-012: 空段落过滤', () => {
-    it('should filter out empty paragraphs', () => {
+    it('should filter out empty paragraphs and not insert blank lines between body paragraphs', () => {
       const doc = createMockDoc();
       const text = 'Paragraph one.\n\n\n\nParagraph two.';
       const lines = wrapTextWithFontMetrics(doc, text, 600, 16, 'GochiHand', undefined, undefined, 10);
 
       const emptyLines = lines.filter(line => line.text === '');
-      expect(emptyLines).toHaveLength(1);
+      expect(emptyLines).toHaveLength(0);
       expect(lines.some(line => line.text.includes('Paragraph one'))).toBe(true);
       expect(lines.some(line => line.text.includes('Paragraph two'))).toBe(true);
     });

@@ -34,7 +34,7 @@ const STEPS: StepConfig[] = [
   { key: 'step3', title: 'Step 3: 组织结构审查', icon: '🏗️' },
   { key: 'step4', title: 'Step 4: 语言校对', icon: '🔍' },
   { key: 'step5', title: 'Step 5: 亮点分析', icon: '📚' },
-  { key: 'step6', title: 'Step 6: 总评与改进建议', icon: '✏️' },
+  { key: 'step6', title: 'Step 6: 总评', icon: '✏️' },
 ];
 
 export default function CorrectionDetails({ correctionSteps }: CorrectionDetailsProps) {

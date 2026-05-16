@@ -16,6 +16,40 @@ describe('ModelEssayView', () => {
     push.mockClear();
   });
 
+  it('renders multi-paragraph essay as separate p elements without blank paragraph between them', () => {
+    const multiParaContent = 'Dear friend,\n\nHow are you?\n\nBest wishes,';
+    render(
+      <ModelEssayView
+        correctionId="c-2"
+        examPart="part1"
+        questionType={null}
+        initialEssays={[
+          {
+            id: 'essay-2',
+            correction_id: 'c-2',
+            target_level: 'excellent',
+            content: multiParaContent,
+            created_at: '2026-04-14T00:00:00.000Z',
+            user_edited_content: null,
+            is_user_edited: false,
+            edit_history: null,
+            user_preference_notes: null,
+            source_spans: [],
+          },
+        ]}
+      />
+    );
+
+    const essayBody = document.querySelector('[data-testid="essay-body"]');
+    expect(essayBody).not.toBeNull();
+    const paragraphs = essayBody!.querySelectorAll('p');
+    // Each \n\n-separated block should be its own <p>; no empty <p> elements
+    expect(paragraphs.length).toBeGreaterThanOrEqual(3);
+    for (const p of paragraphs) {
+      expect(p.textContent?.trim()).not.toBe('');
+    }
+  });
+
   it('renders source spans with provenance legend', () => {
     render(
       <ModelEssayView

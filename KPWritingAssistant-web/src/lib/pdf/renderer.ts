@@ -466,12 +466,9 @@ export function wrapTextWithFontMetrics(
   const lines: PreparedCopybookLine[] = [];
 
   const appendParagraphs = (paragraphs: string[]) => {
-    paragraphs.forEach((paragraph, index) => {
+    paragraphs.forEach((paragraph) => {
       const wrapped = wrapParagraph(doc, paragraph, maxWidth, targetWordsPerLine);
       lines.push(...wrapped.map((item) => ({ text: item, align: 'left' as const })));
-      if (index < paragraphs.length - 1) {
-        lines.push({ text: '', align: 'left' });
-      }
     });
   };
 

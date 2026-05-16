@@ -37,7 +37,7 @@ npm run build
 
 ## 已知风险
 
-- `run-automation.sh` 中仍然存在硬编码 API Key，后续如果继续依赖该脚本，需要先清理并轮换密钥。
+- `run-automation.sh` 中的硬编码 API Key 已清理，现在依赖环境变量 `KIMI_API_KEY`。
 - 当前 lint 还不算完全干净，现有 warning 主要是测试文件和少量源码中的未使用变量。
 - `KPWritingAssistant-web/progress.txt` 仍有参考价值，但最近的 git 提交比它更能反映当前真实进展。
 - `recommended_phrases.essay_type` 的代码类型已补齐 `story`，与 008 migration 的数据库约束保持一致，后续新增知识库素材时应继续沿用该枚举。
@@ -65,10 +65,9 @@ npm run build
 
 ## 线上部署状态
 
-- 已将当前最新代码 `1b796ae` 部署到服务器 `8.136.127.32` 的 `/var/www/kp-writing/KPWritingAssistant-web`
-- 已在服务器目录内执行 `set -a && . ./.env.production && set +a && docker compose up -d --build --force-recreate`
-- 当前容器 `kpwritingassistant-web-app-1` 运行正常，`127.0.0.1:3000` 返回 `200`
-- 本次部署修复了 `src/lib/db/knowledge-base.ts` 中 `kb_sections` 查询漏选 `category_slug` 的问题，服务器生产构建已验证通过
+- 最新代码已于 2026-05-16 部署到服务器 `8.136.127.32`（部署 commit 见 decision-log）
+- 部署命令：`set -a && . ./.env.production && set +a && docker compose up -d --build --force-recreate`
+- 本次部署包含 2026-04-29 客户反馈的 6 条问题修复，以及防回归测试机制
 
 ## 文档语言约定
 

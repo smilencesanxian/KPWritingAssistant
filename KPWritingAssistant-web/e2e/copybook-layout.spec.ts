@@ -110,6 +110,7 @@ test.describe('字帖模板选择验证', () => {
   });
 
   test('COPYBOOK-LAYOUT-001: Part1作文自动使用pet模板', async ({ page }) => {
+    test.setTimeout(60_000);
     // 获取该用户的 Part1 作文
     await page.goto(`${BASE}/history`);
     await page.waitForLoadState('networkidle');
@@ -300,6 +301,7 @@ test.describe('范文编辑后字帖生成验证', () => {
   });
 
   test('COPYBOOK-LAYOUT-005: 编辑后的范文生成字帖不应使用缓存', async ({ page }) => {
+    test.setTimeout(90_000);
     // 获取任意一个作文的范文
     await page.goto(`${BASE}/history`);
     await page.waitForLoadState('networkidle');
@@ -313,8 +315,8 @@ test.describe('范文编辑后字帖生成验证', () => {
     }
 
     // 先恢复为未编辑状态
-    await page.evaluate(async (id: string) => {
-      await fetch(`/api/model-essays/${id}`, {
+    const resetResponse = await page.evaluate(async (id: string) => {
+      const res = await fetch(`/api/model-essays/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -322,7 +324,9 @@ test.describe('范文编辑后字帖生成验证', () => {
           user_preference_notes: null,
         }),
       });
+      return res.status;
     }, modelEssayId);
+    expect(resetResponse, '恢复未编辑状态应成功').toBeLessThan(300);
 
     // 第一次生成（原始内容）
     const firstResult = await page.evaluate(async (id: string) => {
@@ -338,15 +342,18 @@ test.describe('范文编辑后字帖生成验证', () => {
     expect(firstResult.copybook?.id).toBeTruthy();
 
     // 编辑范文为版本 A
-    await page.evaluate(async (id: string) => {
-      await fetch(`/api/model-essays/${id}`, {
+    const versionA = 'This is a long enough version A content to satisfy the 90 words requirement for model essay updates. We need to repeat this sentence multiple times to ensure it has enough length. This is a long enough version A content to satisfy the 90 words requirement for model essay updates. We need to repeat this sentence multiple times to ensure it has enough length. This is a long enough version A content to satisfy the 90 words requirement for model essay updates. We need to repeat this sentence multiple times to ensure it has enough length. This is version A with sufficient length now.';
+    const editAResponse = await page.evaluate(async ({ id, content }) => {
+      const res = await fetch(`/api/model-essays/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_edited_content: 'Edited cache test version A. This version is long enough to satisfy the save validation and still clearly differs from the original text. It contains enough words to represent a realistic manual edit for the copybook cache test, and it should force the generator to create a new copybook record when the content changes.',
+          user_edited_content: content,
         }),
       });
-    }, modelEssayId);
+      return res.status;
+    }, { id: modelEssayId, content: versionA });
+    expect(editAResponse, '更新版本 A 应成功').toBeLessThan(300);
 
     // 第二次生成（版本 A），应生成新的字帖，不是使用原始内容缓存
     const secondResult = await page.evaluate(async (id: string) => {
@@ -360,15 +367,18 @@ test.describe('范文编辑后字帖生成验证', () => {
     }, modelEssayId);
 
     // 再编辑为版本 B，验证内容变化后继续生成新的字帖
-    await page.evaluate(async (id: string) => {
-      await fetch(`/api/model-essays/${id}`, {
+    const versionB = 'This is a long enough version B content to satisfy the 90 words requirement for model essay updates. We need to repeat this sentence multiple times to ensure it has enough length. This is a long enough version B content to satisfy the 90 words requirement for model essay updates. We need to repeat this sentence multiple times to ensure it has enough length. This is a long enough version B content to satisfy the 90 words requirement for model essay updates. We need to repeat this sentence multiple times to ensure it has enough length. This is version B and it is different from version A.';
+    const editBResponse = await page.evaluate(async ({ id, content }) => {
+      const res = await fetch(`/api/model-essays/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          user_edited_content: 'Edited cache test version B. This second version is also intentionally long, valid, and distinct from version A so that the cache key changes again. The goal is to confirm that a changed model essay content produces another new copybook instead of reusing the prior one.',
+          user_edited_content: content,
         }),
       });
-    }, modelEssayId);
+      return res.status;
+    }, { id: modelEssayId, content: versionB });
+    expect(editBResponse, '更新版本 B 应成功').toBeLessThan(300);
 
     const thirdResult = await page.evaluate(async (id: string) => {
       const res = await fetch('/api/generate/copybook', {

@@ -7,6 +7,7 @@ import ModelEssayView from '@/components/correction/ModelEssayView';
 import type { Correction } from '@/types/database';
 import ScoreOverview from './components/ScoreOverview';
 import CorrectionDetails from './components/CorrectionDetails';
+import ImprovementSuggestions from './components/ImprovementSuggestions';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -79,6 +80,12 @@ export default async function CorrectionPage({ params, searchParams }: PageProps
       {/* Block 2: Correction Details */}
       <CorrectionDetails
         correctionSteps={correction.correction_steps}
+      />
+
+      {/* Block 2.5: Improvement Suggestions (structured bullet cards) */}
+      <ImprovementSuggestions
+        structuredSuggestions={correction.structured_suggestions}
+        fallbackSuggestions={correction.improvement_suggestions}
       />
 
       {/* Block 3: Model Essay */}

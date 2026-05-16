@@ -93,9 +93,9 @@ test.describe('Part1 完整批改流程（邮件类）', () => {
     // 等待范文生成完毕（loading 消失）
     await expect(page.locator('[data-testid="model-essay"]')).toBeVisible({ timeout: 30000 });
 
-    // 读取页面显示的词数（"共 N 词"）
-    const wordCountText = await page.locator('p:has-text("共") >> text=/共 \\d+ 词/').first().textContent({ timeout: 10000 });
-    const match = wordCountText?.match(/共\s+(\d+)\s+词/);
+    // 读取页面显示的词数（"正文 N 词"，见 ModelEssayView 词数显示区域）
+    const wordCountText = await page.locator('p:has-text("正文") >> text=/正文 \\d+ 词/').first().textContent({ timeout: 10000 });
+    const match = wordCountText?.match(/正文\s+(\d+)\s+词/);
     expect(match, `找不到词数显示，实际文本：${wordCountText}`).toBeTruthy();
 
     const wordCount = parseInt(match![1], 10);

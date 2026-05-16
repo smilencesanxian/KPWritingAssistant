@@ -12,10 +12,17 @@ export interface ModelEssayWordCountResult extends ModelEssayStructure {
   withinHardLimit: boolean;
 }
 
-const TARGET_MIN_WORDS = 100;
-const TARGET_MAX_WORDS = 110;
-const GENERATION_MIN_WORDS = 90;
-const HARD_MAX_WORDS = 120;
+export const WORD_COUNT_LIMITS = {
+  targetMin: 100,
+  targetMax: 110,
+  generationMin: 90,
+  hardMax: 120,
+} as const;
+
+const TARGET_MIN_WORDS = WORD_COUNT_LIMITS.targetMin;
+const TARGET_MAX_WORDS = WORD_COUNT_LIMITS.targetMax;
+const GENERATION_MIN_WORDS = WORD_COUNT_LIMITS.generationMin;
+const HARD_MAX_WORDS = WORD_COUNT_LIMITS.hardMax;
 const TITLE_MAX_WORDS = 10;
 
 const SALUTATION_RE = /^(dear|hi|hello)\b/i;
@@ -23,6 +30,7 @@ const SIGNOFF_RE = /^(best wishes|best regards|regards|yours|yours sincerely|you
 const TITLE_RE = /^[A-Z][^.!?]*$/;
 
 function normalizeEssayText(text: string): string {
+  if (!text) return '';
   return text
     .replace(/\r\n/g, '\n')
     .replace(/\*\*(.*?)\*\*/g, '$1')

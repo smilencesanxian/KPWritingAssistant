@@ -54,3 +54,17 @@
 
 - `KPWritingAssistant-web/src/lib/db/knowledge-base.ts` 的 `kb_sections` 查询必须显式包含 `category_slug`，否则生产构建会在 TypeScript 阶段失败。
 - 服务器线上代码已更新到 `1b796ae`，并通过 `set -a && . ./.env.production && set +a && docker compose up -d --build --force-recreate` 重新构建和启动，端口 `3000` 验证通过。
+
+## 2026-04-28
+
+- `run-automation.sh` 不再包含任何硬编码密钥。所有敏感信息（如 `KIMI_API_KEY`）必须通过系统环境变量提供。
+- 在 `run-automation.sh` 中增加了针对 `KIMI_API_KEY` 的空值预检，确保在执行前环境配置正确。
+
+## 2026-05-16
+
+- **防回归测试机制**：新建 `src/lib/regression-anchors.test.ts`，专门收录曾经真实出现过的 bug 的最小复现场景，任何后续改动触碰相关逻辑即报红。规则：只收录历史真实 bug，每条标注对应问题和根因，禁止修改断言来绕过测试。
+- **字数常量统一导出**：`format.ts` 的 `WORD_COUNT_LIMITS`（targetMin/targetMax/generationMin/hardMax）改为显式 export，测试文件应引用常量而非硬编码数字；常量变化时测试会自动感知，不会静默失效。
+- **OCR 过滤测试场景规范**：OCR 噪音过滤的测试必须包含"噪音 token 夹在两行正文之间"的中间位置场景，不能只测末尾位置（`trim()` 会遮盖空行 bug）。
+- **用户编辑字数限制**：`EditEssayModal` 的保存按钮只受硬上限（`hardMax=120`）约束，不受 `generationMin(90)` 约束；`generationMin` 仅用于 AI 生成阶段的校验，不应阻止用户手动保存较短的范文。
+- **知识库例句**：`scripts/fix-kb-example-sentences.mjs` 脚本已执行，93 条 `kb_materials` 词条的 `example_sentence` 已更新为唯一且上下文匹配的例句，使用 DeepSeek API 生成。
+- **批改结果页改进建议展示**：`ImprovementSuggestions` 组件已接入 `corrections/[id]/page.tsx`，`structured_suggestions` 字段优先展示结构化条目，`Step 6` 标题调整为"总评"（不含改进建议）。

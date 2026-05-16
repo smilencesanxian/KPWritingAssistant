@@ -92,6 +92,31 @@ describe('cleanOcrText', () => {
     it('should remove standalone all-caps OCR noise tokens', () => {
       expect(cleanOcrText('正文内容\nIGV')).toBe('正文内容');
       expect(cleanOcrText('IGV')).toBe('');
+      // 中间位置：trim() 不能遮盖空行 bug，必须测 token 夹在两行之间的场景
+      expect(cleanOcrText('Line one.\nIGV\nLine two.')).toBe('Line one.\nLine two.');
+    });
+
+    it('should filter mixed digit+uppercase short noise tokens like "1GV"', () => {
+      expect(cleanOcrText('Dear friend,\n1GV\n\nHow are you?')).toBe('Dear friend,\n\nHow are you?');
+      expect(cleanOcrText('1GV')).toBe('');
+      expect(cleanOcrText('A3')).toBe('');
+      expect(cleanOcrText('3B2')).toBe('');
+    });
+
+    it('should filter standalone lowercase OCR fragment noise like "ight" and "vol"', () => {
+      expect(cleanOcrText('I had a great time.\nIght\nWe enjoyed it.')).toBe('I had a great time.\nWe enjoyed it.');
+      expect(cleanOcrText('The book is very\nvol\ngood to read.')).toBe('The book is very\ngood to read.');
+      expect(cleanOcrText('ight')).toBe('');
+      expect(cleanOcrText('vol')).toBe('');
+    });
+
+    it('should NOT filter common short English words', () => {
+      expect(cleanOcrText('the')).toBe('the');
+      expect(cleanOcrText('and')).toBe('and');
+      expect(cleanOcrText('good')).toBe('good');
+      expect(cleanOcrText('they')).toBe('they');
+      expect(cleanOcrText('with')).toBe('with');
+      expect(cleanOcrText('have')).toBe('have');
     });
 
     it('should handle multi-digit numbers', () => {

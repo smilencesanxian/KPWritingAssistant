@@ -57,8 +57,8 @@ export async function PUT(
   }
 
   const { user_edited_content, user_preference_notes } = body as {
-    user_edited_content?: string;
-    user_preference_notes?: string;
+    user_edited_content?: string | null;
+    user_preference_notes?: string | null;
   };
 
   if (user_edited_content === undefined) {
@@ -66,20 +66,23 @@ export async function PUT(
   }
 
   try {
-    const wordCount = getModelEssayWordCount(
-      user_edited_content,
-      modelEssayData.corrections?.essay_submissions?.exam_part ?? null,
-      modelEssayData.corrections?.essay_submissions?.question_type ?? null
-    );
-    const limits = getModelEssayWordCountLimits();
-
-    if (!wordCount.withinHardLimit || wordCount.wordCount < 90) {
-      return Response.json(
-        {
-          error: `正文词数需控制在 90-${limits.hardMax} 词之间，当前为 ${wordCount.wordCount} 词`,
-        },
-        { status: 400 }
+    // If user_edited_content is null, we are resetting to original content
+    if (user_edited_content !== null) {
+      const wordCount = getModelEssayWordCount(
+        user_edited_content,
+        modelEssayData.corrections?.essay_submissions?.exam_part ?? null,
+        modelEssayData.corrections?.essay_submissions?.question_type ?? null
       );
+      const limits = getModelEssayWordCountLimits();
+
+      if (!wordCount.withinHardLimit || wordCount.wordCount < 90) {
+        return Response.json(
+          {
+            error: `正文词数需控制在 90-${limits.hardMax} 词之间，当前为 ${wordCount.wordCount} 词`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Record the previously effective essay text, not always the first AI draft.

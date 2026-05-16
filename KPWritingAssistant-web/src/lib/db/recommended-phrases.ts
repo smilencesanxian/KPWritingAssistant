@@ -418,7 +418,7 @@ export async function getRecommendation(
 
     const collectedKbIds = new Set((collectedKb ?? []).map((h) => h.kb_material_id as string));
 
-    let kbQuery = supabase
+    const kbQuery = supabase
       .from('kb_materials')
       .select('*')
       .eq('is_active', true)

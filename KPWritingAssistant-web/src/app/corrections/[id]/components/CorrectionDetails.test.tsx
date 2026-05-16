@@ -30,6 +30,6 @@ describe('CorrectionDetails', () => {
     expect(screen.getByText('Step 3: 组织结构审查')).toBeInTheDocument();
     expect(screen.getByText('Step 4: 语言校对')).toBeInTheDocument();
     expect(screen.getByText('Step 5: 亮点分析')).toBeInTheDocument();
-    expect(screen.getByText('Step 6: 总评与改进建议')).toBeInTheDocument();
+    expect(screen.getByText('Step 6: 总评')).toBeInTheDocument();
   });
 });

@@ -86,6 +86,35 @@ function renderEssayWithSourceSpans(
   return nodes;
 }
 
+function renderEssayByParagraphs(
+  content: string,
+  sourceSpans: ModelEssaySourceSpan[]
+): ReactNode[] {
+  const blocks = content.split('\n\n');
+  let offset = 0;
+
+  return blocks.map((block, idx) => {
+    const blockStart = offset;
+    const blockEnd = blockStart + block.length;
+
+    const blockSpans = sourceSpans
+      .filter((s) => s.start >= blockStart && s.end <= blockEnd)
+      .map((s) => ({ ...s, start: s.start - blockStart, end: s.end - blockStart }));
+
+    offset = blockEnd + 2;
+
+    return (
+      <p
+        key={idx}
+        className="text-sm text-neutral-800 whitespace-pre-wrap select-text"
+        style={{ fontFamily: 'monospace', lineHeight: '1.8', margin: 0 }}
+      >
+        {renderEssayWithSourceSpans(block, blockSpans)}
+      </p>
+    );
+  });
+}
+
 interface ModelEssayViewProps {
   correctionId: string;
   initialEssays: ModelEssay[];
@@ -314,12 +343,9 @@ export default function ModelEssayView({
                 </span>
               </div>
             )}
-            <p
-              className="text-sm text-neutral-800 whitespace-pre-wrap select-text"
-              style={{ fontFamily: 'monospace', lineHeight: '1.8' }}
-            >
-              {renderEssayWithSourceSpans(displayContent, sourceSpans)}
-            </p>
+            <div data-testid="essay-body">
+              {renderEssayByParagraphs(displayContent, sourceSpans)}
+            </div>
             {/* Word count */}
             <p
               className={`text-xs mt-2 text-right ${
