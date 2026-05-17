@@ -118,25 +118,18 @@ export async function correctEssay(
     }
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      let response;
-      try {
-        response = await client.chat.completions.create({
-          model: LLM_MODEL,
-          messages: [
-            { role: 'system', content: getCorrectionSystemPrompt(examPart, questionType) },
-            {
-              role: 'user',
-              content: buildCorrectionUserPrompt(text, examPart, questionType),
-            },
-          ],
-          max_tokens: 2800,
-          temperature: 0.3,
-        }, { signal: controller.signal });
-      } finally {
-        clearTimeout(timeoutId);
-      }
+      const response = await client.chat.completions.create({
+        model: LLM_MODEL,
+        messages: [
+          { role: 'system', content: getCorrectionSystemPrompt(examPart, questionType) },
+          {
+            role: 'user',
+            content: buildCorrectionUserPrompt(text, examPart, questionType),
+          },
+        ],
+        max_tokens: 2800,
+        temperature: 0.3,
+      });
 
       const content = response.choices[0]?.message?.content;
       if (!content) {
